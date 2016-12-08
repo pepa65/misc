@@ -1,11 +1,10 @@
 #!/bin/bash
 
 ## Count character occurrences in file
-## Packages required: uni2ascii
 
 f=1
 [[ $1 = "-s" ]] && f=0 && shift
-! [[ -f "$1" ]] && echo -e "Usage: $0 <file> [-s]\n (-s means sort by code point instead of frequency)\n\nNo input file: $1\nAborting" && exit 1
+! [[ -f "$1" ]] && echo -e "Usage: $0 <file> [-s]\n (-s means sort by code point instead of frequency)\n\nNo input file: $1\nAborting" && exit 2
 [[ $2 = '-s' ]] && f=0
 
 ((f)) && f1='s/\s*\([0-9][0-9]*\).*u\([0-9A-F]*\)/\1 U\2  u\2/' ||\
@@ -23,4 +22,5 @@ uni2ascii -psaU "$1" |\
 		sed -e 's/\W+/\t/g' -e "$f1" |\
 		## Convert 0xHHHH unicode points to UTF-8 as <Uhhhh>, and sort
 		ascii2uni -aE |eval "$f2"
+
 exit 0

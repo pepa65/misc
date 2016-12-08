@@ -1,7 +1,7 @@
 #!/bin/bash
 #set -vx
 
-## Required package: swath dwdiff
+## Required packages: swath dwdiff
 
 Help(){
 	cat <<-EOF
@@ -15,8 +15,8 @@ Help(){
 	EOF
 }
 
-[[ -z $(type -P swath) ]] && echo "ABORT: package swath not installed" && exit1
-[[ -z $(type -P dwdiff) ]] && echo "ABORT: package dwdiff not installed" && exit2
+! type -p swath &>dev/null && echo "ABORT: package swath not installed" && exit1
+! type -p dwdiff &>dev/null && echo "ABORT: package dwdiff not installed" && exit2
 [[ -z $2 ]] && Help && echo "ABORT: At least 2 filenames necessary" && exit 3
 [[ $4 ]] && Help && echo "ABORT: More than 3 arguments" && exit 4
 ! ai=$(readlink -e "$1") && Help && echo "ABORT: First argument no file: $1" && exit 5
