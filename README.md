@@ -24,3 +24,9 @@ Usage: `count <file> [-s]`
 **Remove old kernels from Debian/Ubuntu**
 
 Usage: `rmkernels`
+
+## backup
+**A utility to back up a list of files and directories**
+
+Usage: `$self [-h|--help] [<backup-list> [<backup-file>]]`
+

@@ -1,0 +1,79 @@
+#!/bin/bash
+
+Help(){
+	cat <<-END
+		 A utility to back up a list of files and directories (links are followed)
+	
+		 Usage: $self [-h|--help] [<backup-list> [<backup-file>]]
+		   backup-list: file with all files/directories for backing up, one per line
+		                - multiple file/dir(s) with bash globbing (with * ? and [...])
+		                - comments with # as first character
+		                - commands to be executed with $ as first character
+		                defaults to $HOME/backup.lst
+		   backup-name: output file name (.txz will be appended)
+		                defaults to $HOME/backup
+	END
+}
+
+self=$(readlink -e "$0")
+list="$HOME/backup.lst"
+xz="$HOME/backup.txz"
+tar="$xz$RANDOM.tar"
+
+for a in $@
+do
+	[[ $a = -h || $a = --help ]] && Help && exit 1
+done
+[[ $1 ]] && list="$1"
+[[ $2 ]] && xz="$2.txz"
+[[ ! -f "$list" ]] && Help && echo "No backup list file $list present, EXITING" && exit 2
+rlist=$(readlink -e "$list")
+
+! >"$xz" && Help && echo "Can't write to backup file $xz, EXITING" && exit 3
+! >"$tar" && Help && echo "Can't write to temporary file $tar, EXITING" && exit 4
+
+mapfile -t files <"$rlist"
+declare -i n_files=${#files[@]} n=0
+! tar cPf "$tar" "$rlist" && Help && echo "Cannot output to $tar, EXITING" && exit 5
+echo -e "  Files and directories backed up to $xz:\nSCRIPT $self\nLIST $rlist"
+tar rhPf "$tar" "$self"
+
+while ((n<n_files))
+do
+	fileglob=${files[$((n++))]}
+	if [[ $fileglob ]] && [[ ${fileglob%%#*} ]]
+	then  ## no comment or empty line
+		if [[ ${fileglob:0:1} = '$' ]]
+		then  ## line with $: command to be executed
+			echo "RUN ${fileglob:1}"
+			eval "${fileglob:1}"
+		else  ## file/dir(s) to be backed up
+			for file in $fileglob
+			do
+				rfile=$(readlink -e "$file")
+				if [[ "$rfile" ]]  ## file exists
+				then
+					if [[ -L "$file" && "${rfile:0:6}" = '/data/' ]]
+					then  ## link to a file in /data: tar the link
+						tar rhPf "$tar" "$rfile"
+						echo -n "LINK "
+					else  ## tar the file
+						tar rPf "$tar" "$rfile"
+					fi
+					[[ -d "$rfile" ]] && type='DIR' || type='FILE'
+					[[ $file = "$rfile" ]] && rf='' || rf=" => \"$rfile\""
+					echo "$type \"$file\" $rf"
+				else  ## missing file/dir
+					echo " MISSING: $file"
+				fi
+			done
+		fi
+	else  ## line with #: comment or empty line
+		echo "  $fileglob"
+	fi
+done
+
+xz --stdout -f "$tar" >"$xz"
+rm "$tar"
+
+exit 0
