@@ -20,10 +20,7 @@ list="$HOME/backup.lst"
 xz="$HOME/backup.txz"
 tar="$xz$RANDOM.tar"
 
-for a in $@
-do
-	[[ $a = -h || $a = --help ]] && Help && exit 1
-done
+grep -q -e ' -h ' -e ' -- help ' <<<" $@ " && Help && exit 1
 [[ $1 ]] && list="$1"
 [[ $2 ]] && xz="$2.txz"
 [[ ! -f "$list" ]] && Help && echo "ABORT: no backup list file $list present" && exit 2
