@@ -16,7 +16,11 @@ file1 and file2 mandatory, file html-out optional (otherwise to stdout)
 
 Packages required: uni2ascii
 
-Usage: count <file> [-s]
+Usage: `count <file> [-s]`
 
 -s means sort by code point instead of frequency
 
+## rmkernels
+**Remove old kernels from Debian/Ubuntu**
+
+Usage: `rmkernels`
