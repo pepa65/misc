@@ -1,0 +1,37 @@
+#!/bin/bash
+
+## Update duckdns.org DDNS service
+## "date" as first argument puts a timestamp in the log
+## Example crontab lines (replace /PATH_TO by the actual path of the script):
+##  0 0 * * * /PATH_TO/duckdns date
+##  */15 * * * * /PATH_TO/duckdns
+
+## The subdomain of duckdns.org and the token
+domain=''
+token=''
+duckdir="$HOME"
+
+log="$duckdir/duckdns.log"
+msg="$duckdir/duckdns.msg"
+ip='' res=''
+urlv="https://www.duckdns.org/update?domains=$domain&token=$token&verbose=true"
+
+Long(){
+	res=$(echo url="$urlv" |curl -k -o - -K -)
+	ip=$(echo $res |grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*')
+	! grep "$res" <<<$(tail -1 "$msg") && echo -e "$res" >>"$msg" && echo -n "[$ip]" >>"$log"
+}
+
+[[ $1 = date ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
+Long
+if [[ ${res:0:2} = OK ]]
+then
+	echo -n '.' >>"$log"
+	#! [[ ${res: -8:8} = NOCHANGE ]] && echo -n $ip >>"$log"
+else
+	echo -n '-' >>"$log"
+	Long
+	! [[ ${res:0:2} = OK ]] && echo -n $res >>"$log"
+fi
+
+exit 0

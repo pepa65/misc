@@ -30,3 +30,7 @@ Usage: `rmkernels`
 
 Usage: `$self [-h|--help] [<backup-list> [<backup-file>]]`
 
+## duckdns
+**Update duckdns.org DDNS service**
+
+Usage: `duckdns [date]`
