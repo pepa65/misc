@@ -6,8 +6,6 @@
 ##  0 0 * * * /PATH_TO/duckdns date
 ##  */15 * * * * /PATH_TO/duckdns
 
-## Required packages: curl
-
 ## The subdomain of duckdns.org and the token
 domain=''
 token=''
@@ -16,15 +14,14 @@ duckdir="$HOME"
 log="$duckdir/duckdns.log"
 msg="$duckdir/duckdns.msg"
 ip='' res=''
-urlv="https://www.duckdns.org/update?domains=$domain&token=$token&verbose=true"
+url="https://www.duckdns.org/update?domains=$domain&token=$token&verbose=true"
 
 Long(){
-	res=$(curl -k -o - -K - <<<"url=$urlv")
+	res=$(wget -O - --quiet $url)
 	ip=$(grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' <<<$res)
 	! grep "$res" <<<$(tail -1 "$msg") && echo -e "$res" >>"$msg" && echo -n "[$ip]" >>"$log"
 }
 
-! type -p curl &>/dev/null && echo "ABORT: package curl not installed" && exit 1
 [[ $1 = date ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
 Long
 if [[ ${res:0:2} = OK ]]
