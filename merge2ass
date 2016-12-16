@@ -1,0 +1,191 @@
+#!/bin/bash
+#set -x
+
+## merge2ass 0.92c
+## Script for merging two text-subtitles into an ass subtitle file
+##
+## Dependencies: (functioning) mplayer (convert to srt)
+##
+## Examples:
+##  merge2ass movie.avi english.srt slovak.sub
+##   mplayer -noautosub -ass movie.avi -sub movie.ass -subcp utf8
+##  merge2ass movie.avi english.srt slovak.sub -p
+##  merge2ass --detect movie.avi -p
+##
+## Release history:
+## 0.8a 2007-07-29 initial public release
+## 0.8.1a 2007-07-30 check_syntax fixed (d.watzke)
+##  multiline echo -> cat (d.watzke)
+##  removes temp files after conversion
+## 0.8.2 2007-08-01 check whether the input files exist prior to running MPlayer
+##  check for MPlayer binary
+##  help page added
+##  new optional CLI parameters: -p (plays movie after conversion), --help
+## 0.8.2.1 2007-08-02 timestamp in output more compatible (reported by
+##    belisarivs)
+## 0.9 2007-08-08 performs a check for writable output
+##  check for MPlayer's support of ass/ssa if -p is used
+##  pointers to subtitle files stored as arraysF
+##  autorecognition of subtitles based on MPlayer's -sub-fuzziness feature
+##    (--detect)
+##  output filename based on movie filename (+.ass)
+##  bash now mandatory (non-POSIX syntax used)
+##  flag -p has a long alias (--play-movie)
+## 0.9a 2012-04-27 added compatibility with SRT subtitles using
+##    milliseconds precision (thanks juan!)
+## 0.9b 2013-02-02 define encoding in ssa header (thanks mathieu!) jose1711@gmail.com
+## 0.9c 2016-12-15 pepa65 <solusos@passchier.net> restructured and cleaned up
+##
+## Thanks to:
+## - d.watzke for comments
+## - belisarivs for testing
+## - boris dušek <boris.dusek@gmail.com> for testing/ideas
+## - swans100 - patch for milliseconds precision srt subs
+##
+## Some future thoughts:
+## - more optional flags: do_not_remove_temp_files,
+##   play_but_dont_delete_output_afterwards, dont_do_the_conversion_just_merging,
+##   output_file
+## - cleaner sed/awk code
+## - support for other players (xine, totem, kmplayer, vlc)
+## - subtitle encoding detection based on enca (if present) - boris?
+##
+## Docs:
+## - http://en.wikipedia.org/wiki/SubStation_Alpha
+## - http://www.perlfu.co.uk/projects/asa/ass-specs.doc
+
+## Place for mplayer's error output
+#err=/dev/null
+err=/dev/stderr
+#err=mplayer.err
+
+## Function declarations
+
+show_help(){
+	cat <<-EOF
+		______________________________________________________________________
+		|                                                                    |
+		|                           merge2ass                                |
+		|   script for merging 2 text subtitles into an .ass subtitle file   |
+		|                  author: jose1711@gmail.com  2007-08               |
+		|____________________________________________________________________|
+
+		 Usage:  merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]
+		    or:  merge2ass --detect <movie> [-p | --play-movie]
+		    or:  merge2ass [-h | --help]
+		 <movie>:  movie file, anything that MPlayer can play
+		 <subtitleN>  file containing text subtitles that MPlayer recognizes
+		 -p | --play-movie:  play movie instantly, remove output after finishing
+		 --detect:  try to detect subtitles using MPlayer's sub-fuzziness=1 flag
+		 -h | --help:  show this help page and exit
+
+	EOF
+}
+
+detect_subtitles(){ ## Needs $mplayer $movie $err, changes $sub1 $sub2
+	mapfile -t sub <<<\
+			"$($mplayer -sub-fuzziness 1 -frames 0 "$movie" 2>"$err" \
+			|sed -n "s/^SUB: Added subtitle file ([0-9]*): \(.*\)$/\1/p")"
+	[[ ${sub[0]} ]] && n=${#sub[@]} || n=0
+	echo " ${sub[@]}"
+	! ((n)) && echo "Aborting, no subtitles were found" && exit 1
+	((n==1)) && echo "Aborting, only 1 subtitle was found" && exit 2
+	sub1=${sub[0]} sub2=${sub[1]}
+	echo -e "$n subtitles were found, the first two will be used:\n$sub1\n$sub2"
+}
+
+generate_ssa_header(){ ## Needs $movie,changes $output
+	cat >"$output" <<-EOF
+		[Script Info]
+		Title:
+		Original Script: 
+		Original Translation:
+		Original Editing: 
+		Original Timing: 
+		Original Script Checking:
+		ScriptType: v4.00
+		Collisions: Normal
+		PlayResY: 1024
+		PlayDepth: 0
+		Timer: 100,0000
+
+		[V4 Styles]
+		Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
+		Style: lang1style,Arial,64,65535,65535,65535,-2147483640,-1,0,1,3,0,6,30,30,30,0,0
+		Style: lang2style,Arial,64,15724527,15724527,15724527,4144959,0,0,1,1,2,2,5,5,30,0,0
+		Encoding:0
+
+		[Events]
+		Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text 
+	EOF
+}
+
+convert_subs(){ ## Needs $mplayer $movie $sub1 $sub2 $err $output
+	# This would be slower but does not require the video file for conversion:
+	# mplayer /dev/zero -rawvideo pal:fps=25 -demuxer rawvideo -vc null -vo null -noframedrop -benchmark -sub "$movie" -dumpsrtsub
+	echo "Converting subtitle file $sub1 to a time-based format"
+	$mplayer -dumpsrtsub -noautosub -really-quiet -frames 0 -sub "$sub1" "$movie" 2>"$err" \
+			&& echo "Done"
+	! [[ -f dumpsub.srt ]] && echo "Aborting, conversion of $sub1 failed" && exit 3
+	sed -e "/ --> /s/,/./g" dumpsub.srt |tr -d "\r" \
+			|awk 'BEGIN{ORS="";print " "} / --> /,/^$/ {ORS=" ";print} /^$/{print "\n"}' \
+			|sed -e "s/ --> /,/g" \
+				-e "s/^ \([^ ]*\) \(.*\)/Dialogue: Marked=0,\1,lang1style,Cher,0000,0000,0000,,\2/" \
+				-e "s/,00:/,0:/g" -e "s/\([:,]\)0\([0-9]\)/\1\2/g" \
+				-e "s/\([0-9]\)\(\.\)\([0-9]\)\([0-9]\)0\(,\)/\1\2\3\4\5/g" \
+			>>"$output"
+	rm dumpsub.srt
+	echo "Converting subtitle file $sub2 to a time-based format"
+	$mplayer -dumpsrtsub -noautosub -really-quiet -frames 0 -sub "$sub2" "$movie" 2>"$err" \
+			&& echo "Done"
+	! [[ -f dumpsub.srt ]] && echo "Aborting, conversion of $sub2 failed" && exit 4
+	sed -e "/ --> /s/,/./g" dumpsub.srt |tr -d "\r" \
+			|awk 'BEGIN{ORS="";print " "} / --> /,/^$/ {ORS=" ";print} /^$/{print "\n"}' \
+			|sed -e "s/ --> /,/g" \
+				-e "s/^ \([^ ]*\) \(.*\)/Dialogue: Marked=0,\1,lang2style,Cher,0000,0000,0000,,\2/" \
+				-e "s/,00:/,0:/g" -e "s/^ *//g" -e "s/\([:,]\)0\([0-9]\)/\1\2/g" \
+				-e "s/\([0-9]\)\(\.\)\([0-9]\)\([0-9]\)0\(,\)/\1\2\3\4\5/g" \
+			>>"$output"
+	rm dumpsub.srt
+}
+
+play_movie(){ ## Needs: $movie $output
+	! $mplayer -ass &>/dev/null && echo "Abort, MPlayer can't handle .ass subtitles" && exit 5
+	$mplayer -really-quiet -fs "$movie" -sub "$output" -ass -subcp utf8 -noautosub
+	rm -- "$output"
+}
+
+## Start processing
+
+declare movie pm=0 detect=0 sub1="" sub2="" output
+
+! (($#)) && show_help && exit 0
+grep -q -e ' -h ' -e ' --help ' <<<" $@ " && show_help && exit 0
+grep -q -e ' -p ' -e ' --play-movie ' <<<" $@ " && pm=1
+grep -q ' --detect ' <<<" $@ " && detect=1
+mplayer=$(type -P mplayer)
+[[ -z $mplayer ]] && echo "Abort, MPlayer not found" && exit 6
+
+if ((detect))
+then
+	while (($#))
+	do  ## The only non-commandline switch should be $movie
+		! [[ $1 = --detect || $1 = -p || $1 = --play-movie ]] && movie="$1" && break
+		shift
+	done
+	detect_subtitles
+else
+	movie=$1 sub1=$2 sub2=$3
+fi
+
+[[ ! -f "$movie" ]] && echo "Aborting, movie $movie not found" && exit 7
+[[ ! -f "$sub1" ]] && echo "Aborting, subtitle file $sub1 not found" && exit 8
+[[ ! -f "$sub2" ]] && echo "Aborting, subtitle file $sub2 not found" && exit 9
+output="${movie%.*}-DUAL.ass"
+
+echo "Processing..."
+generate_ssa_header
+convert_subs
+((pm)) && play_movie
+
+exit 0

@@ -34,3 +34,10 @@ Usage: `$self [-h|--help] [<backup-list> [<backup-file>]]`
 **Update duckdns.org DDNS service**
 
 Usage: `duckdns [date]`
+
+## merge2ass
+**Merge 2 subtitle files into one**
+
+Usage: `merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]`
+ or: `merge2ass --detect <movie> [-p | --play-movie]`
+ or: `merge2ass [-h | --help]`
