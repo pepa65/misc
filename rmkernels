@@ -1,22 +1,24 @@
 #!/bin/bash
 
-## Remove old kernels from Debian/Ubuntu
-## Usage: rmkernels
-
 a="$(ls -1 /boot/vmlinuz-* |sed 's@^/boot/vmlinuz-@@' |sort -nr)" ## all
-c=$(uname -r) ## currently running kernel version
+c=$(uname -r)  ## currently running kernel version
 r="$(grep -v "$c" <<<"$a")" ## rest
 echo -e "$c (currently running)\n$r"
-## superfluous versions (keep only the latest of same major.minor version)
+## Superfluous versions: keep only the latest of same major.minor version of
+## the rest of the kernels
 s=$(ao= bo=
-while IFS='.' read a b c
-do
-	[[ $ao = $a && $bo = $b ]] && echo "$a.$b.${c%-*}"
-	ao=$a bo=$b
-done <<<"$r")
+	while IFS='.' read a b c
+	do
+		[[ $ao = $a && $bo = $b ]] && echo "$a.$b.${c%-*}"
+		ao=$a bo=$b
+	done <<<"$r")
 if [[ $s ]]
 then
 	echo -e "Remove:\n$s\n"
+	(while read k
+		do
+			[[ $c < $k ]] && echo "but $k is more recent than currently running!"
+		done) <<<"$s"
 	g=$(sed 's/ /\\|/g' <<<$s)
 	p=$(dpkg -l | grep "$g" | cut -d' ' -f3)
 	sudo apt purge $p
