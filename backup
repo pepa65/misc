@@ -20,18 +20,18 @@ list="$HOME/backup.lst"
 xz="$HOME/backup.txz"
 tar="$xz$RANDOM.tar"
 
-grep -q -e ' -h ' -e ' -- help ' <<<" $@ " && Help && exit 1
+grep -q -e ' -h ' -e ' --help ' <<<" $@ " && Help && exit 1
 [[ $1 ]] && list="$1"
 [[ $2 ]] && xz="$2.txz"
-[[ ! -f "$list" ]] && Help && echo "ABORT: no backup list file $list present" && exit 2
+[[ ! -f "$list" ]] && Help && echo "ABORT: no backup list file '$list' present" && exit 2
 rlist=$(readlink -e "$list")
 
-! >"$xz" && Help && echo "ABORT: can't write to backup file $xz" && exit 3
-! >"$tar" && Help && echo "ABORT: can't write to temporary file $tar" && exit 4
+! >"$xz" && Help && echo "ABORT: can't write to backup file '$xz'" && exit 3
+! >"$tar" && Help && echo "ABORT: can't write to temporary file '$tar'" && exit 4
 
 mapfile -t files <"$rlist"
 declare -i n_files=${#files[@]} n=0
-! tar cPf "$tar" "$rlist" && Help && echo "ABORT: cannot output to $tar" && exit 5
+! tar cPf "$tar" "$rlist" && Help && echo "ABORT: cannot output to '$tar'" && exit 5
 echo -e "  Files and directories backed up to $xz:\nSCRIPT $self\nLIST $rlist"
 tar rhPf "$tar" "$self"
 
