@@ -58,7 +58,7 @@ out=$(echo -e "LIST $list\nBACKUP $txz\nLOG $log\n"
 			continue
 		fi
 		## files/dirs for backup
-		shopt -s globstar dotglob nullglob
+		shopt -s dotglob nullglob
 		none=1
 		for file in $line  ## in case of globbing
 		do
