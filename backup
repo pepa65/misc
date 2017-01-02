@@ -1,76 +1,100 @@
 #!/bin/bash
+#set -x
 
-Help(){
-	cat <<-END
-		 A utility to back up a list of files and directories (links are followed)
+help(){
+cat <<-END
+	 A utility to backup a list of files and directories (links are followed)
 	
-		 Usage: $self [-h|--help] [<backup-list> [<backup-file>]]
-		   backup-list: file with all files/directories for backing up, one per line
-		                - multiple file/dir(s) with bash globbing (with * ? and [...])
-		                - comments with # as first character
-		                - commands to be executed with $ as first character
-		                defaults to $HOME/backup.lst
-		   backup-name: output file name (.txz will be appended)
-		                defaults to $HOME/backup
-	END
+	 Usage: $self [<backup-list> [<backup-file> [<backup-log>]]]
+	   backup-list: file with list of all files to be backed up, one per line
+	     multiple file/dir(s) possible with bash globbing (with * ? and [...])
+	   backup-file: output file name (.txz will be appended)
+	     backup-file can also be specified in the first line of backup-list, like:
+	     @<backup-file>
+	   backup-log: log file
+	 Lines in backup-list are taken to be filenames, except when the first character is:
+	   '@' (at):     line specifying <backup-file> (only in the very first line)
+	   ' ' (space):  skipped line
+	   '#' (pound):  comment line
+	   '$' (dollar): command line
+
+END
 }
 
 self=$(readlink -e "$0")
-list="$HOME/backup.lst"
-xz="$HOME/backup.txz"
-tar="$xz$RANDOM.tar"
+root="$HOME"
+list="$root/backup.lst"
+txz="$root/backup.txz"
+tar="$txz-$RANDOM.tar"
+log="$root/backup.log"
 
-grep -q -e ' -h ' -e ' --help ' <<<" $@ " && Help && exit 1
 [[ $1 ]] && list="$1"
-[[ $2 ]] && xz="$2.txz"
-[[ ! -f "$list" ]] && Help && echo "ABORT: no backup list file '$list' present" && exit 2
-rlist=$(readlink -e "$list")
+[[ $2 ]] && txz="$2"
+[[ $3 ]] && log="$3"
 
-! >"$xz" && Help && echo "ABORT: can't write to backup file '$xz'" && exit 3
-! >"$tar" && Help && echo "ABORT: can't write to temporary file '$tar'" && exit 4
+[[ ! -f "$list" ]] && help && echo "ABORT: no backup list file $list present" && exit 1
+! >"$txz" && help && echo "ABORT: can't write to backup file $txz" && exit 2
+! >"$log" && help && echo "ABORT: can't write to log file $tar" && exit 3
 
-mapfile -t files <"$rlist"
-declare -i n_files=${#files[@]} n=0
-! tar cPf "$tar" "$rlist" && Help && echo "ABORT: cannot output to '$tar'" && exit 5
-echo -e "  Files and directories backed up to $xz:\nSCRIPT $self\nLIST $rlist"
-tar rhPf "$tar" "$self"
+list=$(readlink -e "$list")
+readarray -t files <"$list"
+! tar cPf "$tar" "$list" && help && echo "ABORT: can't write to temporary file $tar" && exit 4
+trap "rm $tar" EXIT
 
-while ((n<n_files))
-do
-	fileglob=${files[$((n++))]}
-	if [[ $fileglob ]] && [[ ${fileglob%%#*} ]]
-	then  ## no comment or empty line
-		if [[ ${fileglob:0:1} = '$' ]]
-		then  ## line with $: command to be executed
-			echo "RUN ${fileglob:1}"
-			eval "${fileglob:1}"
-		else  ## file/dir(s) to be backed up
-			for file in $fileglob
-			do
-				rfile=$(readlink -e "$file")
-				if [[ "$rfile" ]]  ## file exists
-				then
-					if [[ -L "$file" && "${rfile:0:6}" = '/data/' ]]
-					then  ## link to a file in /data: tar the link
-						tar rhPf "$tar" "$rfile"
-						echo -n "LINK "
-					else  ## tar the file
-						tar rPf "$tar" "$rfile"
-					fi
-					[[ -d "$rfile" ]] && type='DIR' || type='FILE'
-					[[ $file = "$rfile" ]] && rf='' || rf=" => \"$rfile\""
-					echo "$type \"$file\" $rf"
-				else  ## missing file/dir
-					echo " MISSING: $file"
-				fi
-			done
+n_files=${#files[@]}
+n=0
+((n_files)) && line=${files[n++]} && [[ ${line:0:1} = '@' ]] && txz=${line:1}
+out=$(echo -e "LIST $list\nBACKUP $txz\nLOG $log\n"
+	while ((n<n_files))
+	do
+		line=${files[$((n++))]}
+		! [[ $line ]] && echo && continue  ## empty line
+		[[ ${line:0:1} = ' ' ]] && continue  ## start with space
+		[[ ${line:0:1} = '#' ]] && echo "    $line" && continue  ## comment
+		if [[ ${line:0:1} = '$' ]]
+		then  ## command
+			eval "${line:1}"
+			echo "RUN ${line:1}"
+			continue
 		fi
-	else  ## line with #: comment or empty line
-		echo "  $fileglob"
-	fi
-done
+		## files/dirs for backup
+		shopt -s globstar dotglob nullglob
+		none=1
+		for file in $line  ## in case of globbing
+		do
+			none=0
+			real=$(readlink -e "$file")
+			if [[ $real ]]
+			then  ## file/dir exists
+				[[ -d "$real" ]] && echo -n ' DIR' || echo -n 'FILE'
+				if [[ $file = "$real" ]]
+				then  ## no link
+					tar rPf "$tar" "$real"
+					echo " $real"
+				else  # link
+					## file not in data: tar file
+					if [[ ${real:0:6} = '/data/' ]]
+					then
+						echo -n '-'
+					else
+						tar rPf "$tar" "$real"
+						echo -n '+'
+					fi
+					tar rhPf "$tar" "$real"  ## tar link
+					echo -e "LINK $file\n  TO $real"
+				fi
+			else  ## link doesn't exist
+				tar rhPf "$tar" "$file"  ## tar dangling link
+				echo -e "DANGLING $file"
+			fi
+		done
+		((none)) && echo " NO  $line"  ## No file/dir
+	done
+)
+! less -KPs"Ctrl-C to abort the backup" <<<"$out" && echo "Aborted" && exit 5
 
-xz --stdout -f "$tar" >"$xz"
-rm "$tar"
+xz --stdout -f "$tar" >"$txz"
+echo "$out" >"$log"
+echo -e "Backup of list $list successful, log at $log, backup file:\n$(ls -AFl $txz)"
 
 exit 0
