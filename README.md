@@ -41,3 +41,8 @@ Usage: `duckdns [date]`
 Usage: `merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]`
  or: `merge2ass --detect <movie> [-p | --play-movie]`
  or: `merge2ass [-h | --help]`
+
+## pair.c
+**Utility to pair Logitech unify or nano receivers with remote devices**
+
+See the file for instructions to compile and use.
