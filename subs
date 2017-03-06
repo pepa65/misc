@@ -1,0 +1,75 @@
+#!/bin/bash
+set +vx
+## subs
+## Download subtitles from subscene.com
+
+domain='https://subscene.com'
+lang='english'
+
+search="$*"
+ss="ss.$search"
+surl="$domain/subtitles/title?q=${search/ /%20}&l=$lang"
+echo "$ss $surl"
+[[ -f $ss ]] || wget -qO "$ss" "$surl"
+
+mapfile -t -O 1 tit <<<"$(grep '^..<a href="/subtitles/' "$ss" |
+		sed 's@</a>@@g' |sed 's@^[^>]*>@@')"
+mapfile -t -O 1 url <<<"$(grep '^..<a href="/subtitles/' "$ss" |
+		sed 's@..<a href=\"@@' |sed 's@\".*@@')"
+
+[[ -z ${tit[1]} ]] && echo "Not found" && exit 1
+n=${#tit[@]}
+d=${#n}
+i=0
+echo 'Movies found:'
+while ((i<n))
+do
+	((i++))
+	printf "%*d: %s\n" $d $i "${tit[$i]}"
+done |less +Gg -~RXQFP"%pB\% %f press Q then enter number of movie"
+
+((n==1)) && c=1 || read -rp "Which movie? " c
+[[ -z ${tit[$c]} ]] && echo "Exit: no valid choice" && exit 2
+title=${tit[$c]//$'\r'/}
+
+sturl=$domain${url[$c]}
+st="st.$title"
+echo "$st $sturl"
+[[ -f "$st" ]] || wget -qO "$st" "$sturl"
+
+mapfile -t -O 1 slurl <<<"$(grep "/$lang/" "$st" |sed 's@....<a href="@@' |sed 's@">.$@@')"
+mapfile -t -O 1 sltit <<<"$(awk '/\/english\//{nr[NR+5]}; NR in nr' "$st" |sed 's@[\t\r]@@g')"
+
+n=${#sltit[@]}
+d=${#n}
+i=0
+echo 'Subtitle files:'
+while ((i<n))
+do
+	((i++))
+	printf "%*d: %s\n" $d $i "${sltit[$i]//$'\t'/}"
+	printf "%s\n" "${slurl[$i]//$'\t'/}"
+done |less +Gg -~RXQFP"%pB\% %f press Q then enter number of subtitle"
+read -rp "Which subtitle? " c
+subtitle=${sltit[$c]% }
+[[ -z $subtitle ]] && echo "Exit: no valid choice" && exit 3
+subtitle=${subtitle# }
+sfurl=$domain${slurl[$c]}
+
+sf="sf.$subtitle"
+echo "$sf $sfurl"
+[[ -f "$sf" ]] || wget -qO "$sf" "$sfurl"
+
+szurl=$domain$(grep 'mac=' "$sf" |sed 's@^.*<a href="@@' |sed 's@\".*@@')
+sz="sz.$subtitle.zip"
+echo "$sz $szurl"
+wget -qO "$sz" "$szurl"
+
+episode=$(grep -o '[Ss][0-9]*[Ee][0-9]*' <<<"$subtitle" |sed 's@[Ss]0*@@' |sed 's@[Ee]@x@')
+[[ $episode ]] && episode=" $episode"
+#srt="$title${episode}_$lang.srt
+srt="$title$episode.srt"
+unzip -p "$sz" >"$srt"
+echo "Downloaded: $srt"
+
+exit 0

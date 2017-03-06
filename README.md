@@ -46,3 +46,8 @@ Usage: `merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]`
 **Utility to pair Logitech unify or nano receivers with remote devices**
 
 See the file for instructions to compile and use.
+
+## subs
+**Download subtitles from subscene.com**
+
+Usage: `subs <search terms>`
