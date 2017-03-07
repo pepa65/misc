@@ -90,8 +90,8 @@ $wget "$sz" "$szurl"
 
 episode=$(grep -o '[Ss][0-9]*[Ee][0-9]*' <<<"$subtitle" |sed 's@[Ss]0*@@' |sed 's@[Ee]@x@')
 [[ $episode ]] && episode=" $episode"
-((addlang)) && addlang="_$lang"
-srt=$title$episode$addlang.srt
+((addlang)) && al="_$lang"
+srt=$title$episode$al.srt
 unzip -p "$sz" >"$srt"
 ((debug)) || rm -- "$sz"
 echo "Downloaded: $srt"
