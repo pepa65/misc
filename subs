@@ -2,16 +2,23 @@
 set +vx
 ## subs
 ## Download subtitles from subscene.com
+## Required: wget less unzip sed grep coreutils(rm)
 
-domain='https://subscene.com'
-lang='english'
+## subtitles language -- see: https://subscene.com/filter/edit
+lang='English'
+## addlang=1 adds the language to the subtitles file name
+addlang=0
+## debug=1 gives extra output and preserves intermediate files
 debug=0
 
+domain='https://subscene.com'
+lang=${lang,,}
+wget='wget -qO'
 search="$*"
 ss="ss.$search"
-surl="$domain/subtitles/title?q=${search/ /%20}&l=$lang"
+surl="$domain/subtitles/title?q=${search/ /%20}"
 ((debug)) && echo "$ss $surl"
-[[ -f $ss ]] || wget -qO "$ss" "$surl"
+[[ -f $ss ]] || $wget "$ss" "$surl"
 
 mapfile -t -O 1 tit <<<"$(grep '^..<a href="/subtitles/' "$ss" |
 		sed 's@</a>@@g' |sed 's@^[^>]*>@@')"
@@ -39,13 +46,13 @@ title=${tit[$c]//$'\r'/}
 sturl=$domain${url[$c]}
 st="st.$title"
 ((debug)) && echo "$st $sturl"
-[[ -f "$st" ]] || wget -qO "$st" "$sturl"
+[[ -f "$st" ]] || $wget "$st" "$sturl"
 
 mapfile -t -O 1 slurl <<<"$(grep "/$lang/" "$st" |sed 's@....<a href="@@' |sed 's@">.$@@')"
-mapfile -t -O 1 sltit <<<"$(awk '/\/english\//{nr[NR+5]}; NR in nr' "$st" |sed 's@[\t\r]@@g')"
+mapfile -t -O 1 sltit <<<"$(sed -n "/\/$lang\//{n;n;n;n;n;p}" <"$st" |sed 's@[\t\r]@@g')"
 
 [[ -z ${sltit[1]} ]] && {
-	langs=$(grep -o '[a-z][a-z][a-z]*/[1-9][0-9]*">.$' "$st" |sed 's@/.*$@@' |sort |uniq)
+	langs=$(grep -o '[a-z][a-z][-_a-z]*/[1-9][0-9]*">.$' "$st" |sed 's@/.*$@@' |sort |uniq)
 	echo "No $lang subtitles found, only:" $langs
 	exit 3
 }
@@ -59,31 +66,32 @@ i=0
 	while ((i<n))
 	do
 		((i++))
-		printf "%*d: %s[%s]\n" $d $i "${sltit[$i]//$'\t'/}" "${slurl[$i]##*/}"
+		sltit[$i]=${sltit[$i]% }
+		sltit[$i]=${sltit[$i]# }
+		printf "%*d: %s [%s]\n" $d $i "${sltit[$i]}" "${slurl[$i]##*/}"
 	done;} |
 		less +Gg -~RXQFP"%pB\% %f press Q then enter number of subtitle"
 
 ((n==1)) && c=1 || read -rp "Which subtitle? " c
-subtitle=${sltit[$c]% }
+subtitle=${sltit[$c]}
 [[ -z $subtitle ]] && echo "Exit: no valid choice" && exit 4
-subtitle=${subtitle# }
 sfurl=$domain${slurl[$c]}
 
 sf="sf.$subtitle"
 ((debug)) && echo "$sf $sfurl"
-[[ -f "$sf" ]] || wget -qO "$sf" "$sfurl"
+[[ -f "$sf" ]] || $wget "$sf" "$sfurl"
 
 szurl=$domain$(grep 'mac=' "$sf" |sed 's@^.*<a href="@@' |sed 's@\".*@@')
 ((debug)) || rm -- "$sf"
 
-sz="sz.$subtitle.zip"
+sz="sz.$title$subtitle.zip"
 ((debug)) && echo "$sz $szurl"
-wget -qO "$sz" "$szurl"
+$wget "$sz" "$szurl"
 
 episode=$(grep -o '[Ss][0-9]*[Ee][0-9]*' <<<"$subtitle" |sed 's@[Ss]0*@@' |sed 's@[Ee]@x@')
 [[ $episode ]] && episode=" $episode"
-#srt="$title${episode}_$lang.srt
-srt="$title$episode.srt"
+((addlang)) && addlang="_$lang"
+srt=$title$episode$addlang.srt
 unzip -p "$sz" >"$srt"
 ((debug)) || rm -- "$sz"
 echo "Downloaded: $srt"
