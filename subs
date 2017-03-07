@@ -1,8 +1,7 @@
 #!/bin/bash
-set +vx
-## subs
-## Download subtitles from subscene.com
-## Required: wget less unzip sed grep coreutils(rm)
+set -vx
+## subs: download subtitles from subscene.com
+## Required: wget less/zenity unzip sed grep coreutils(rm)
 
 ## subtitles language -- see: https://subscene.com/filter/edit
 lang='English'
@@ -11,10 +10,46 @@ addlang=0
 ## debug=1 gives extra output and preserves intermediate files
 debug=0
 
+Info(){ ## $1: Message
+	((zen)) && $zenity --info --text="$1" || echo "$1"
+}
+
+Error(){ ## $1: Message
+	((zen)) && $zenity --error --text="$1" || echo "$1"
+	exit $2
+}
+
+Entry(){ ## $1: Message
+	((zen)) && echo "$($zenity --entry --text="$1")" || {
+		read -rp "$1"
+		echo "$REPLY"
+	}
+}
+
 domain='https://subscene.com'
 lang=${lang,,}
-wget='wget -qO'
+wget=$(type -p wget)
+[[ -z $wget ]] && Error "Exit: 'wget' required" 1
+wget="$wget -qO"
+less=$(type -p less)
+zenity=$(type -p zenity)
+if [[ $zenity ]]
+then
+	exec 2>/dev/null
+	zen=1
+	header=$'Subtitles\xC2\xA0downloader'
+	zenity="$zenity --title=$header"
+	zlist="$zenity --list --height=2000 --width=600 --hide-column=1 --column=c"
+else
+	[[ -z $less ]] && echo "Exit: either 'zenity' or 'less' is required" && exit 2
+fi
+
 search="$*"
+[[ -z $search ]] && search=$(Entry "Search movie: ")
+[[ -z $search ]] && {
+	((zen)) && exit 3 || Error "Exit: no search term" 4
+}
+
 ss="ss.$search"
 surl="$domain/subtitles/title?q=${search/ /%20}"
 ((debug)) && echo "$ss $surl"
@@ -26,22 +61,33 @@ mapfile -t -O 1 url <<<"$(grep '^..<a href="/subtitles/' "$ss" |
 		sed 's@..<a href=\"@@' |sed 's@\".*@@')"
 ((debug)) || rm -- "$ss"
 
-[[ -z ${tit[1]} ]] && echo "Not found" && exit 1
+[[ -z ${tit[1]} ]] && Error "Exit: nothing found" 5
 n=${#tit[@]}
 d=${#n}
 i=0
-{
-	echo 'Movies found:'
-	while ((i<n))
-	do
-		((i++))
-		printf "%*d: %s\n" $d $i "${tit[$i]}"
-	done;} |
-		less +Gg -~RXQFP"%pB\% %f press Q then enter number of movie"
+((zen)) || titles='Movies found:\n'
+while ((i<n))
+do
+	((i++))
+	tit[$i]=${tit[$i]//$'\r'/}
+	((zen)) && titlez+="$i ${tit[$i]// /$'\xC2\xA0'} " \
+			|| titles+=$(printf "%*d: %s" $d $i "${tit[$i]}\n")
+done
 
-((n==1)) && c=1 || read -rp "Which movie? " c
-[[ -z ${tit[$c]} ]] && echo "Exit: no valid choice" && exit 2
-title=${tit[$c]//$'\r'/}
+((n==1)) && c=1 || {
+	if ((zen))
+	then
+		c=$($zlist --column=Movie $titlez)
+	else
+		echo -e "$titles" |
+				less +Gg -~RXQFP"%pB\% %f press Q then enter number of movie"
+		read -rp "Which movie? " c
+	fi
+}
+[[ $c ]] && title=${tit[$c]}
+[[ -z $title ]] && {
+	((zen)) && exit 6 || Error "Exit: no valid choice" 7
+}
 
 sturl=$domain${url[$c]}
 st="st.$title"
@@ -53,30 +99,40 @@ mapfile -t -O 1 sltit <<<"$(sed -n "/\/$lang\//{n;n;n;n;n;p}" <"$st" |sed 's@[\t
 
 [[ -z ${sltit[1]} ]] && {
 	langs=$(grep -o '[a-z][a-z][-_a-z]*/[1-9][0-9]*">.$' "$st" |sed 's@/.*$@@' |sort |uniq)
-	echo "No $lang subtitles found, only:" $langs
-	exit 3
+	Error "Exit: no $lang subtitles found, only: $langs" 8
 }
 ((debug)) || rm -- "$st"
 
 n=${#sltit[@]}
 d=${#n}
 i=0
-{
-	echo 'Subtitle files:'
-	while ((i<n))
-	do
-		((i++))
-		sltit[$i]=${sltit[$i]% }
-		sltit[$i]=${sltit[$i]# }
-		printf "%*d: %s [%s]\n" $d $i "${sltit[$i]}" "${slurl[$i]##*/}"
-	done;} |
-		less +Gg -~RXQFP"%pB\% %f press Q then enter number of subtitle"
 
-((n==1)) && c=1 || read -rp "Which subtitle? " c
-subtitle=${sltit[$c]}
-[[ -z $subtitle ]] && echo "Exit: no valid choice" && exit 4
+subtitles='Subtitles found:\n'
+while ((i<n))
+do
+	((i++))
+	sltit[$i]=${sltit[$i]% }
+	sltit[$i]=${sltit[$i]# }
+	subtitles+=$(printf "%*d: %s - %s" $d $i "${sltit[$i]}" "${slurl[$i]##*/}\n")
+	subtitlez+=" $i ${sltit[$i]// /$'\xC2\xA0'} ${slurl[$i]##*/}"
+done
+
+((n==1)) && c=1 || {
+	if ((zen))
+	then
+		c=$($zlist --column=Subtitle --column=Filenumber $subtitlez)
+	else
+		echo -e "$subtitles" |
+				less +Gg -~RXQFP"%pB\% %f press Q then enter number of subtitles file"
+		read -rp "Which subtitles file? " c
+	fi
+}
+[[ $c ]] && subtitle=${sltit[$c]}
+[[ -z $subtitle ]] && {
+	((zen)) && exit 9 || Error "Exit: no valid choice" 10
+}
+
 sfurl=$domain${slurl[$c]}
-
 sf="sf.$subtitle"
 ((debug)) && echo "$sf $sfurl"
 [[ -f "$sf" ]] || $wget "$sf" "$sfurl"
@@ -94,6 +150,7 @@ episode=$(grep -o '[Ss][0-9]*[Ee][0-9]*' <<<"$subtitle" |sed 's@[Ss]0*@@' |sed '
 srt=$title$episode$al.srt
 unzip -p "$sz" >"$srt"
 ((debug)) || rm -- "$sz"
-echo "Downloaded: $srt"
+
+Info "Downloaded: $srt"
 
 exit 0
