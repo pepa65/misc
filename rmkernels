@@ -27,6 +27,7 @@ main(){
 				[[ $c < $k ]] && {
 					echo "But $k is more recent than currently running!"
 					[[ ! $1 = -f ]] && echo "Run with '-f' to force this" && exit 1
+				}
 			done) <<<"$s"
 		g=$(sed 's/ /\\|/g' <<<$s)
 		p=$(dpkg -l | grep "$g" | cut -d' ' -f3)
