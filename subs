@@ -1,6 +1,6 @@
 #!/bin/bash
 set +vx
-## subs: download subtitles from subscene.com
+## subs - download subtitles from subscene.com
 ## Usage: subs <search terms>
 ## Required: wget less/zenity unzip sed grep coreutils(rm)
 
@@ -10,6 +10,7 @@ lang='English'
 addlang=0
 ## debug=1 gives extra output and preserves intermediate files
 debug=0
+
 
 Info(){ ## $1: Message
 	((zen)) && $zenity --info --text="$1" || echo "$1"
@@ -41,7 +42,7 @@ then
 	zen=1
 	header=$'Subtitles\xC2\xA0downloader'
 	zenity="$zenity --title=$header"
-	zlist="$zenity --list --height=2000 --width=600 --hide-column=1 --column=c"
+	zlist="$zenity --list --height=800 --width=600 --hide-column=1 --column=c"
 else
 	[[ -z $less ]] && echo "Exit: either 'zenity' or 'less' is required" && exit 2
 fi
@@ -116,13 +117,14 @@ do
 	sltit[$i]=${sltit[$i]% }
 	sltit[$i]=${sltit[$i]# }
 	subtitles+=$(printf "%*d: %s - %s" $d $i "${sltit[$i]}" "${slurl[$i]##*/}\n")
-	subtitlez+=" $i ${sltit[$i]// /$'\xC2\xA0'} ${slurl[$i]##*/}"
+	subtitlez+=" $i ${sltit[$i]// /$'\xC2\xA0'} ${slurl[$i]##*/}\n"
 done
+subs=$(echo -e "$subtitlez" |sort -bnuk 3)
 
 ((n==1)) && c=1 || {
 	if ((zen))
 	then
-		c=$($zlist --column=Subtitle --column=Filenumber $subtitlez --multiple)
+		c=$($zlist --column=Subtitle --column=Filenumber $subs --multiple)
 	else
 		echo -e "$subtitles" |
 				less +Gg -~RXQFP"%pB\% %f press Q then enter number of subtitles file (multiple by comma) "

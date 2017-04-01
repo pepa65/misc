@@ -1,16 +1,18 @@
 #!/bin/bash
 
-## Update duckdns.org DDNS service
-## "date" as first argument puts a timestamp in the log
+## duckdns - update duckdns.org DDNS service
+## Usage: duckdns [-d]  # -d adds a timestamp in the log
+##  domain and token variables need to be set below
+
 ## Example crontab lines (replace /PATH_TO by the actual path of the script):
-##  0 0 * * * /PATH_TO/duckdns date
+##  0 0 * * * /PATH_TO/duckdns -d
 ##  */15 * * * * /PATH_TO/duckdns
 
 ## The subdomain of duckdns.org and the token
 domain=''
 token=''
-duckdir="$HOME"
 
+duckdir="$HOME"
 log="$duckdir/duckdns.log"
 msg="$duckdir/duckdns.msg"
 ip='' res=''
@@ -22,7 +24,7 @@ Long(){
 	! grep "$res" <<<$(tail -1 "$msg") && echo -e "$res" >>"$msg" && echo -n "[$ip]" >>"$log"
 }
 
-[[ $1 = date ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
+[[ $1 = -d ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
 Long
 if [[ ${res:0:2} = OK ]]
 then

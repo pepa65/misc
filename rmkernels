@@ -1,5 +1,8 @@
 #!/bin/bash
 
+## rmkernels -- remove extraneous kernels from /boot on Ubuntu bases systems
+## usage: source rmkernels (or: bash rmkernels)
+
 main(){
 	a="$(ls -1 /boot/vmlinuz-* |
 			sed 's@^/boot/vmlinuz-@@' |
