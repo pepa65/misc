@@ -1,36 +1,39 @@
 #!/bin/bash
-
-## rmkernels -- remove extraneous kernels from /boot on Ubuntu bases systems
-## usage: source rmkernels (or: bash rmkernels)
+set +xv
+## rmkernels - remove extraneous kernels from /boot on Ubuntu based systems
+## Usage: bash rmkernels [-f]
+##  (if the -f option is given, newer than currently running can be removed)
 
 main(){
 	a="$(ls -1 /boot/vmlinuz-* |
 			sed 's@^/boot/vmlinuz-@@' |
 			grep -v '\.efi\.signed' |
-			sort -nr)" ## all	
-	c=$(uname -r)  ## currently running kernel version
-	r="$(grep -v "$c" <<<"$a")" ## rest
-	echo -e "$c (currently running)\n$r"
+			sort -nr)" ## All	installed images according to name
+	c=$(uname -r)  ## Currently running kernel version
+	n="$(grep -v "$c" <<<"$a")" ## Non-running installed images
+	echo -e "Found kernel images:\n$c (currently running)\n$n"
 	## Superfluous versions: keep only the latest of same major.minor version of
-	## the rest of the kernels
-	s=$(ao= bo=
-		while IFS='.' read a b c
+	## non-running kernels
+	s=$(while IFS='.' read a b c
 		do
 			[[ $ao = $a && $bo = $b ]] && echo "$a.$b.${c%-*}"
 			ao=$a bo=$b
-		done <<<"$r")
+		done <<<"$n")
 	if [[ $s ]]
 	then
-		echo -e "Remove:\n$s\n"
-		(while read k
-			do
-				[[ $c < $k ]] && {
-					echo "But $k is more recent than currently running!"
-					[[ ! $1 = -f ]] && echo "Run with '-f' to force this" && exit 1
-				}
-			done) <<<"$s"
-		g=$(sed 's/ /\\|/g' <<<$s)
-		p=$(dpkg -l | grep "$g" | cut -d' ' -f3)
+		echo -e "Removing:\n$s\n"
+		## Check if an older kernel is currently running
+		while read k
+		do
+			[[ $c < $k ]] && newer+="$k\n"
+		done <<<"$s"
+		if [[ $newer ]]
+		then
+			echo -e "Found installed kernels newer than currently running:\n$newer"
+			[[ ! $1 = -f ]] && echo "Run with '-f' to force this" && exit 1
+		fi
+		## Purge all that is found with these superfluous versions
+		p=$(dpkg -l | grep "-e ${s// / -e }" | cut -d' ' -f3)
 		sudo apt purge $p
 	else
 		echo "Nothing to remove"
