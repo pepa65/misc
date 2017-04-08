@@ -1,14 +1,27 @@
 #!/bin/bash
 set +xv
-## rmkernels - remove extraneous kernels from /boot on Ubuntu based systems
-## Usage: bash rmkernels [-f|--force] [<version>]...
-##  - if the -f option is given, newer than currently running can be removed
-##  - anything installed that matches <version> will be proposed for removal
+## rmkernels - uninstall extraneous kernels on Ubuntu based systems
+## Usage: bash rmkernels [-h|--help] [-f|--force] [<version>]...
+##  -h, --help:    display help text
+##  -f, --force:   force removal of newer than currently running kernel
+##  anything installed that matches <version> will be proposed for removal
 
-main(){
+Usage(){
+	cat <<-EOS
+		 rmkernels - uninstall extraneous kernels on Ubuntu based systems
+
+		 Usage: bash rmkernels [-h|--help] [-f|--force] [<version>]...
+		  -h, --help:    display help text
+		  -f, --force:   force removal of newer than currently running kernel
+		  anything installed that matches <version> will be proposed for removal
+		EOS
+}
+
+Main(){
 	force=0 e=
 	while [[ $1 ]]
 	do
+		[[ $1 = -h || $1 = --help ]] && Usage && return 0
 		[[ $1 = -f || $1 = --force ]] && force=1 || e+=" $1"  ## Extra removals
 		shift
 	done
@@ -59,4 +72,4 @@ main(){
 	sudo apt purge $ps $pe
 }
 
-main $*
+Main $*
