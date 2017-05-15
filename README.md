@@ -51,3 +51,25 @@ See the file for instructions to compile and use.
 **Download subtitles from subscene.com**
 
 Usage: `subs <search terms>`
+
+## qemu-create-os-img
+**Create a fresh Debian/Ubuntu qemu image**
+
+Usage:
+```
+qemu-create-os-img [-h] [-r <release>] [-h <hostname>] [-i <img_file>]
+                           [-s <disk_size>] [-b <boot_size>] [<debootstrap>]
+  -h:              This help text
+  -r <release>:    A supported Debian or Ubuntu release name
+  -h <hostname>:   Desired hostname
+  -i <img_file>:   Location of the image file (overwritten if existing)
+  -d <disk_size>:  Size of the virtual disk
+  -b <boot_size>:  Size of the boot partition (rest: root partition)
+  <debootstrap>:   Extras arguments for debootstrap
+Default values when options are not supplied:
+  <release>:       xenial
+  <hostname>:      <release>
+  <img_file>:      <hostname>-<os>-<release>.qcow2
+  <disk_size>:     $disk_size
+  <boot_size>:     $boot_size
+```
