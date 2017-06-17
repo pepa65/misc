@@ -43,7 +43,7 @@ Usage: `merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]`
  or: `merge2ass [-h | --help]`
 
 ## pair.c
-**Utility to pair Logitech unify or nano receivers with remote devices**
+**Utility to pair Logitech USB unifying or nano receivers with wireless input devices**
 
 See the file for instructions to compile and use.
 

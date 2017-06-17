@@ -1,18 +1,9 @@
-// pair.c  Pairing Logitech receivers with remote devices
+// pair.c
+// pair - Pair Logitech USB receivers with wireless input devices
 // Copyright 2011 Benjamin Tissoires <benjamin.tissoires@gmail.com> GNU GPL3+ license
 // pepa65 <solusos@passchier.net> http://github.com/pepa65/misc/blob/master/pair.c
-
-// Compile by:  gcc -o pair pair.c
-// Prepare for executing:  chmod +x pair
-// Usage:  pair [-l] [<device>...]
-// - Usually <device> is /dev/hidraw# (where # is a number)
-// - If no <device> is given, all starting with /dev/hidraw1 are tried in order
-//   until one isn't accessible
-// - If one <device> or more are given, all those will be tried
-//   until one is found that is willing to be paired
-// Example:  pair /dev/hidraw*  # the * causes all devices to be listed
-// If a receiver is found that is ready to be paired, the first remote device
-//  that gets switched on will be paired (it could be switched off and then on)
+// Compile:  gcc -o pair pair.c
+// Prepare:  chmod +x pair
 
 #include <linux/input.h>
 #include <linux/hidraw.h>
@@ -26,6 +17,19 @@
 #define USB_DEVICE_ID_UNIFYING_RECEIVER_2 (__s16)0xc532
 #define USB_DEVICE_ID_RECEIVER (__s16)0xc534  // blue
 #define USB_DEVICE_ID_NANO_RECEIVER (__s16)0xc52f
+
+int help(void) {
+	printf(" pair - Pair Logitech USB receivers with wireless input devices\n");
+	printf(" USAGE: pair [ -h | [-n] [<device>...] ]\n");
+	printf("   - Usually <device> is /dev/hidraw# (where # is a number below 100)\n");
+	printf("   - With -n no pairing is attempted, but all devices are checked\n");
+	printf("   - If no <device> is given, all starting with /dev/hidraw1 are tried in order\n");
+	printf("     until one isn't accessible or is ready to pair\n");
+	printf("   - If one <device> or more are given, all are be tried in order\n");
+	printf("     until one is ready to pair\n");
+	printf("   - With -h only this helptext is shown\n");
+	return 0;
+}
 
 int main(int argc, char **argv) {
 	int fd;
@@ -43,7 +47,8 @@ int main(int argc, char **argv) {
 	int len_magic = sizeof(magic_sequence);
 
 	if (argc <= arg) try_seq = 1;
-	else if (!strcmp(argv[arg], "-l")) {
+	else if (!strcmp(argv[arg], "-h")) return help();
+	else if (!strcmp(argv[arg], "-n")) {
 		list = 1;
 		arg++;
 		if (argc <= arg) try_seq = 1;
