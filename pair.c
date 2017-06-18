@@ -12,10 +12,10 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#define USB_VENDOR_ID_LOGITECH (__u32)0x046d
+#define USB_VENDOR_ID_LOGITECH (__s16)0x046d
 #define USB_DEVICE_ID_UNIFYING_RECEIVER (__s16)0xc52b  // kb+m
 #define USB_DEVICE_ID_UNIFYING_RECEIVER_2 (__s16)0xc532
-#define USB_DEVICE_ID_RECEIVER (__s16)0xc534  // blue
+#define USB_DEVICE_ID_OTHER_RECEIVER (__s16)0xc534  // blue
 #define USB_DEVICE_ID_NANO_RECEIVER (__s16)0xc52f
 
 int help(void) {
@@ -31,13 +31,20 @@ int help(void) {
 	return 0;
 }
 
+int noreceiver(int device) {
+  return (device != USB_DEVICE_ID_UNIFYING_RECEIVER &&
+    device != USB_DEVICE_ID_UNIFYING_RECEIVER_2 &&
+    device != USB_DEVICE_ID_OTHER_RECEIVER &&
+    device != USB_DEVICE_ID_NANO_RECEIVER);
+}
+
 int main(int argc, char **argv) {
 	int fd;
 	int res;
-	int dev = 0;
+	int seqdev = 0;
 	int arg = 1;
 	int try_seq = 0;
-	int list = 0;
+	int check = 0;
 	char *device;
 	char hidraw[14] = "/dev/hidraw";
 	hidraw[12]='\0';
@@ -46,32 +53,33 @@ int main(int argc, char **argv) {
 	char magic_sequence[] = {0x10, 0xFF, 0x80, 0xB2, 0x01, 0x00, 0x00};
 	int len_magic = sizeof(magic_sequence);
 
-	if (argc <= arg) try_seq = 1;
-	else if (!strcmp(argv[arg], "-h")) return help();
-	else if (!strcmp(argv[arg], "-n")) {
-		list = 1;
-		arg++;
-		if (argc <= arg) try_seq = 1;
+	printf("%d > %d\n", argc, arg);
+	if (argc > arg) {
+		if (!strcmp(argv[arg], "-h")) return help();
+		else if (!strcmp(argv[arg], "-n")) {
+			check = 1;
+			arg++;
+		}
 	}
+	printf("%d == %d\n", argc, arg);
+	if (argc == arg) try_seq = 1;
 
 	while (1) { // try all devices given
 		if (try_seq) {
-			if (++dev > 99) {
+			if (seqdev > 99) {
 				printf("Devices above /dev/hidraw99 not supported");
 				break;
 			}
-
-			if (dev < 10) hidraw[11] = dev + 48;
+			else if (seqdev < 10) hidraw[11] = seqdev + 48;
 			else {
-				hidraw[11] = dev / 10 + 48;
-				hidraw[12] = dev % 10 + 48;
+				hidraw[11] = seqdev / 10 + 48;
+				hidraw[12] = seqdev % 10 + 48;
 			}
-
 			device = hidraw;
+			++seqdev;
 		}
 		else {
 			if (arg >= argc) break;
-
 			device = argv[arg++];
 		}
 
@@ -88,19 +96,15 @@ int main(int argc, char **argv) {
 		else {
 			// Get raw info
 			res = ioctl(fd, HIDIOCGRAWINFO, &info);
-			printf("%sing device %04x:%04x on %s: ", (list ? "Check" : "Try"),
+			printf("%sing device %04x:%04x on %s: ", (check ? "Check" : "Try"),
 					info.vendor, info.product, device);
 			if (res < 0) printf("no info from device\n");
 			else if (info.bustype != BUS_USB) printf("not a USB device\n");
 			else if (info.vendor != USB_VENDOR_ID_LOGITECH) printf("not a Logitech device\n");
-			else if (info.product != USB_DEVICE_ID_UNIFYING_RECEIVER &&
-					info.product != USB_DEVICE_ID_NANO_RECEIVER &&
-					info.product != USB_DEVICE_ID_RECEIVER &&
-					info.product != USB_DEVICE_ID_UNIFYING_RECEIVER_2)
-				printf("not a known Logitech receiver\n");
+			else if (noreceiver(info.product)) printf("not a known Logitech receiver\n");
 			else {
 				printf("a Logitech receiver\n");
-				if (list) {
+				if (!check) {
 					// Send the magic sequence to the receiver
 					res = write(fd, magic_sequence, len_magic);
 					if (res < 0) printf("Could not initialize the receiver\n");
