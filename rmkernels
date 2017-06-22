@@ -45,7 +45,8 @@ Main(){
 #	[[ -z $sf && -z $pat ]] && echo "Nothing to remove" && return 0
 	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'
 	pkgs=$(dpkg -l | tail -n +6 |sed "$sedpkg")  ## Installed
-	[[ $sf ]] && pkgsf=$(echo "$pkgs" |grep -e ${sf// / -e })
+	sfg=$(sed 's@ @ -e @g' <<<' '$sf)
+	[[ $sf ]] && pkgsf=$(grep $sfg <<<"$pkgs")
 	if [[ $pkgsf ]]
 	then  ## Superflous kernels installed as packages
 		echo -e "\nRemoving:\n$sf\nFound packages:"
