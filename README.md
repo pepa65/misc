@@ -73,3 +73,13 @@ Default values when options are not supplied:
   <disk_size>:     $disk_size
   <boot_size>:     $boot_size
 ```
+
+## earthwallpaperlive
+**Set current earthimage as wallpaper**
+
+Usage:
+```
+earthwallpaperlive [<projection>]
+  <projection> is one of: mercator (default), peters, rectangular, random
+Required: wget, convert (imagemagick) [for peters projection]
+```

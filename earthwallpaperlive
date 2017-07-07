@@ -1,0 +1,82 @@
+#!/bin/bash
+## earthwallpaperlive
+## USAGE: earthwallpaperlive [<projection>]
+##   <projection> is one of: mercator (default), peters, rectangular, random
+## Required: wget, convert (imagemagick) [for peters projection]
+
+Wallpaper(){  # $1: imagefile
+	# Get desktop environment
+	local de=$XDG_CURRENT_DESKTOP
+	[[ -z $de ]] && type -p xprop >/dev/null 2>&1 &&
+		de=$(xprop -root |awk '/KDE_SESSION_VERSION|^_MUFFIN|xfce4|xfce5/')
+
+	case $de in
+	*MUFFIN*|*Cinnamon*)
+		gsettings set org.cinnamon.desktop.background picture-uri "file://$1" ;;
+	*MATE*)
+		gsettings set org.mate.background picture-filename "$1" ;;
+	*GNOME*)
+		gsettings set org.gnome.desktop.background picture-uri "file://$1" ;;
+	*XFCE*)
+		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/image-path --set "$1" 2>/dev/null
+		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null ;;
+	*)
+		if type -p feh >/dev/null
+		then
+			feh --bg-fill "$1"
+		elif type -p nitrogen >/dev/null
+		then
+			nitrogen --set-zoom-fill "$1"
+		elif type -p bgs >/dev/null
+		then
+			bgs "$1"
+		elif type -p hsetroot >/dev/null
+		then
+			hsetroot -fill "$1"
+		elif type -p habak >/dev/null
+		then
+			habak -mS "$1"
+		elif [[ $(uname) = "Darwin" ]]
+		then
+			osascript -e "Tell 'Finder' to set desktop picture to POSIX file '${1/#\~/$HOME}'"
+		else
+			gsettings set org.gnome.desktop.background picture-uri "file://$1"
+		fi ;;
+	esac
+}
+
+
+Main(){
+	type -p wget || return 1
+
+	# default is the first element, random the last
+	p=(mercator peters rectangular random)
+	proj=$1
+	printf '%s\n' ${p[@]} |grep -q "^$proj$" || proj=$p
+	[[ $proj = random ]] && proj=${p[$((RANDOM%(${#p[@]-1)}))]}
+
+	# 1600x770/887 1280x616 1024x493
+	width=1600
+
+	dir=/tmp/$USER
+	mkdir -p "$dir"
+	pic=$dir/earthwallpaperlive.jpg
+
+	wget -qpO "pic-wget" "https://static.die.net/earth/$proj/$width.jpg"
+	sleep 1
+
+	# For peters cut 26 pixels from top and bottom
+	if [[ $proj = peters ]]
+	then
+		type -p convert || return 2
+		convert -trim -fuzz 90% "$pic-wget" +repage "$pic"
+		rm -- "$pic-wget"
+	else
+		mv "$pic-wget" "$pic"
+	fi
+	Wallpaper "$pic"
+
+	return 0
+}
+
+Main "$@"
