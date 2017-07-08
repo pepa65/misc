@@ -7,7 +7,7 @@
 Wallpaper(){  # $1: imagefile
 	# Get desktop environment
 	local de=$XDG_CURRENT_DESKTOP
-	[[ -z $de ]] && type -p xprop >/dev/null 2>&1 &&
+	[[ -z $de ]] && type -p xprop >/dev/null &&
 		de=$(xprop -root |awk '/KDE_SESSION_VERSION|^_MUFFIN|xfce4|xfce5/')
 
 	case $de in
@@ -47,7 +47,7 @@ Wallpaper(){  # $1: imagefile
 
 
 Main(){
-	type -p wget 2>/dev/null || return 1
+	type -p wget >/dev/null || return 1
 
 	# default is the first element, random the last
 	p=(mercator peters rectangular random)
@@ -68,7 +68,7 @@ Main(){
 	# For peters cut 26 pixels from top and bottom
 	if [[ $proj = peters ]]
 	then
-		type -p convert 2>/dev/null || return 2
+		type -p convert >/dev/null || return 2
 		convert -trim -fuzz 90% "$pic-wget" +repage "$pic"
 		rm -- "$pic-wget"
 	else

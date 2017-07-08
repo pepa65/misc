@@ -2,9 +2,10 @@
 set +xv
 ## rmkernels - uninstall extraneous kernels on Ubuntu based systems
 ## Usage: bash rmkernels [-h|--help] [-f|--force] [<version>]...
-##  -h, --help:    display help text
-##  -f, --force:   force removal of newer than currently running kernel
+##   -h, --help:    display help text
+##   -f, --force:   force removal of newer than currently running kernel
 ##  anything installed that matches <version> will be proposed for removal
+## Requires: grep, sed, find, coreutils(sort, uname, tail), dpkg, apt. sudo
 
 Usage(){
 	cat <<-EOS
@@ -26,7 +27,7 @@ Main(){
 		shift
 	done
 
-	all=$(ls -1 /boot/vmlinuz-* |
+	all=$(find /boot/vmlinuz-* |
 			sed 's@^/boot/vmlinuz-@@' |
 			grep -v '\.efi\.signed' |
 			sort -nr)  ## All kernels in /boot according to name
