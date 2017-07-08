@@ -55,24 +55,29 @@ Main(){
 	printf '%s\n' ${p[@]} |grep -q "^$proj$" || proj=$p
 	[[ $proj = random ]] && proj=${p[$((RANDOM%(${#p[@]-1)}))]}
 
-	# 1600x770/887 1280x616 1024x493
-	width=1600
-
 	dir=/tmp/$USER
 	mkdir -p "$dir"
 	pic=$dir/earthwallpaperlive.jpg
 
-	wget -qpO "$pic-wget" "https://static.die.net/earth/$proj/$width.jpg"
-	sleep 1
-
-	# For peters cut 26 pixels from top and bottom
-	if [[ $proj = peters ]]
-	then
-		type -p convert >/dev/null || return 2
-		convert -trim -fuzz 90% "$pic-wget" +repage "$pic"
-		rm -- "$pic-wget"
+	if [[ $proj = mercator ]]
+	then  # mercator 1600
+		wget -qpO "$pic-wget" "http://i.imgur.com/KEnStsU.jpg"
+		sleep 1
 	else
-		mv "$pic-wget" "$pic"
+		# available dimensions: 1600x770/887 1280x616 1024x493
+		width=1600
+		wget -qpO "pic-wget" "https://static.die.net/earth/$proj/$width.jpg"
+		sleep 1
+
+		# For peters cut 26 pixels from top and bottom
+		if [[ $proj = peters ]]
+		then
+			type -p convert >/dev/null || return 2
+			convert -trim -fuzz 90% "$pic-wget" +repage "$pic"
+			rm -- "$pic-wget"
+		else
+			mv "$pic-wget" "$pic"
+		fi
 	fi
 	Wallpaper "$pic"
 
