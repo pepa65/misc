@@ -1,48 +1,44 @@
 #!/bin/bash
 ## earthwallpaperlive
+##
 ## USAGE: earthwallpaperlive [<projection>]
 ##   <projection> is one of: mercator (default), peters, rectangular, random
-## Required: wget, convert (imagemagick) [for peters projection]
+##
+## Required: wget; pgrep (procps); rm, mv, sleep (coreutils);
+##   [for peters projection] convert (imagemagick); [app for setting wallpaper]
+##
+## A cron job could be setup (crontab -e) to run every hour automatically:
+##  * 44 * * * /PATH/TO/earthwallpaperlive
+## The script has to have execute permissiom then:
+##  chmod +x /PATH/TO/earthwallpaperlive
+
 
 Wallpaper(){  # $1: imagefile
-	# Get desktop environment
-	local de=$XDG_CURRENT_DESKTOP
-	[[ -z $de ]] && type -p xprop >/dev/null &&
-		de=$(xprop -root |awk '/KDE_SESSION_VERSION|^_MUFFIN|xfce4|xfce5/')
-
-	case $de in
-	*MUFFIN*|*Cinnamon*)
-		gsettings set org.cinnamon.desktop.background picture-uri "file://$1" ;;
-	*MATE*)
-		gsettings set org.mate.background picture-filename "$1" ;;
-	*GNOME*)
-		gsettings set org.gnome.desktop.background picture-uri "file://$1" ;;
-	*XFCE*)
+	if pgrep mate-session
+	then gsettings set org.mate.background picture-filename "$1"
+	elif pgrep cinnamon-session
+	then gsettings set org.cinnamon.desktop.background picture-uri "file://$1"
+	elif pgrep gnome-session
+	then gsettings set org.gnome.desktop.background picture-uri "file://$1"
+	elif pgrep xfce4-session
+	then
 		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/image-path --set "$1" 2>/dev/null
-		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null ;;
-	*)
-		if type -p feh >/dev/null
-		then
-			feh --bg-fill "$1"
-		elif type -p nitrogen >/dev/null
-		then
-			nitrogen --set-zoom-fill "$1"
-		elif type -p bgs >/dev/null
-		then
-			bgs "$1"
-		elif type -p hsetroot >/dev/null
-		then
-			hsetroot -fill "$1"
-		elif type -p habak >/dev/null
-		then
-			habak -mS "$1"
-		elif [[ $(uname) = "Darwin" ]]
-		then
-			osascript -e "Tell 'Finder' to set desktop picture to POSIX file '${1/#\~/$HOME}'"
-		else
-			gsettings set org.gnome.desktop.background picture-uri "file://$1"
-		fi ;;
-	esac
+		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null
+	elif type -p feh >/dev/null
+	then feh --bg-fill "$1"
+	elif type -p nitrogen >/dev/null
+	then nitrogen --set-zoom-fill "$1"
+	elif type -p bgs >/dev/null
+	then bgs "$1"
+	elif type -p hsetroot >/dev/null
+	then hsetroot -fill "$1"
+	elif type -p habak >/dev/null
+	then habak -mS "$1"
+	elif [[ $(uname) = "Darwin" ]]
+	then osascript -e "Tell 'Finder' to set desktop picture to POSIX file '${1/#\~/$HOME}'"
+	else  # trying GNOME..?
+		gsettings set org.gnome.desktop.background picture-uri "file://$1"
+	fi
 }
 
 
