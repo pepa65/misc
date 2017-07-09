@@ -1,4 +1,5 @@
 #!/bin/bash
+set +xv
 ## earthwallpaperlive
 ##
 ## USAGE: earthwallpaperlive [<projection>]
@@ -14,13 +15,13 @@
 
 
 Wallpaper(){  # $1: imagefile
-	if pgrep mate-session
+	if pgrep -f mate-settings-daemon >/dev/null
 	then gsettings set org.mate.background picture-filename "$1"
-	elif pgrep cinnamon-session
+	elif pgrep -f cinnamon-session >/dev/null
 	then gsettings set org.cinnamon.desktop.background picture-uri "file://$1"
-	elif pgrep gnome-session
+	elif pgrep -f gnome-session >/dev/null
 	then gsettings set org.gnome.desktop.background picture-uri "file://$1"
-	elif pgrep xfce4-session
+	elif pgrep -f xfce4-session >/dev/null
 	then
 		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/image-path --set "$1" 2>/dev/null
 		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null
@@ -51,30 +52,17 @@ Main(){
 	printf '%s\n' ${p[@]} |grep -q "^$proj$" || proj=$p
 	[[ $proj = random ]] && proj=${p[$((RANDOM%(${#p[@]-1)}))]}
 
-	dir=/tmp/$USER
-	mkdir -p "$dir"
+	dir=/tmp
 	pic=$dir/earthwallpaperlive.jpg
 
-	if [[ $proj = mercator ]]
-	then  # mercator 1600
-		wget -qpO "$pic-wget" "http://i.imgur.com/KEnStsU.jpg"
-		sleep 1
-	else
-		# available dimensions: 1600x770/887 1280x616 1024x493
-		width=1600
-		wget -qpO "pic-wget" "https://static.die.net/earth/$proj/$width.jpg"
-		sleep 1
+	# available dimensions: 1600x770/887 1280x616 1024x493
+	width=1600
+	wget -qpO "$pic" "https://static.die.net/earth/$proj/$width.jpg"
 
-		# For peters cut 26 pixels from top and bottom
-		if [[ $proj = peters ]]
-		then
-			type -p convert >/dev/null || return 2
-			convert -trim -fuzz 90% "$pic-wget" +repage "$pic"
-			rm -- "$pic-wget"
-		else
-			mv "$pic-wget" "$pic"
-		fi
-	fi
+	# For peters cut 26 pixels from top and bottom
+	[[ $proj = peters ]] && type -p convert >/dev/null &&
+		convert "$pic" +repage -trim -fuzz 90% +repage "$pic"
+
 	Wallpaper "$pic"
 
 	return 0
