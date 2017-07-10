@@ -64,7 +64,7 @@ Main(){
 	[[ $proj = peters ]] && type -p convert >/dev/null &&
 		convert "$pic" +repage -trim -fuzz 90% +repage "$pic"
 
-	Wallpaper "$pic"
+	Wallpaper "$pic" >/dev/null
 
 	return 0
 }
