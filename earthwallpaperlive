@@ -58,6 +58,7 @@ Main(){
 	# available dimensions: 1600x770/887 1280x616 1024x493
 	width=1600
 	wget -qpO "$pic" "https://static.die.net/earth/$proj/$width.jpg"
+	sleep 1
 
 	# For peters cut 26 pixels from top and bottom
 	[[ $proj = peters ]] && type -p convert >/dev/null &&
