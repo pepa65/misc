@@ -16,7 +16,7 @@ set +xv
 
 Wallpaper(){  # $1: imagefile
 	if pgrep -f mate-settings-daemon >/dev/null
-	then gsettings set org.mate.background picture-filename "$1"
+	then DISPLAY=':0.0' gsettings set org.mate.background picture-filename "$1"
 	elif pgrep -f cinnamon-session >/dev/null
 	then gsettings set org.cinnamon.desktop.background picture-uri "file://$1"
 	elif pgrep -f gnome-session >/dev/null
@@ -63,7 +63,7 @@ Main(){
 	[[ $proj = peters ]] && type -p convert >/dev/null &&
 		convert "$pic" +repage -trim -fuzz 90% +repage "$pic"
 
-	Wallpaper "$pic"
+	Wallpaper "$pic" >/dev/null
 
 	return 0
 }
