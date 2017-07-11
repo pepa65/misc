@@ -5,7 +5,7 @@ set +xv
 ## USAGE: earthwallpaperlive [<projection>]
 ##   <projection> is one of: mercator (default), peters, rectangular, random
 ##
-## Required: wget; pgrep (procps); rm, mv, sleep (coreutils);
+## Required: wget; pgrep (procps); rm, mv, sleep, sync (coreutils);
 ##   [for peters projection] convert (imagemagick); [app for setting wallpaper]
 ##
 ## A cron job could be setup (crontab -e) to run every hour automatically:
@@ -57,8 +57,10 @@ Main(){
 
 	# available dimensions: 1600x770/887 1280x616 1024x493
 	width=1600
-	wget -qpO "$pic" "https://static.die.net/earth/$proj/$width.jpg"
+	wget -qpO "$pic" -w 10 --connect-timeout=20 \
+			"https://static.die.net/earth/$proj/$width.jpg"
 	sleep 1
+	sync
 
 	# For peters cut 26 pixels from top and bottom
 	[[ $proj = peters ]] && type -p convert >/dev/null &&
