@@ -83,3 +83,14 @@ earthwallpaperlive [<projection>]
   <projection> is one of: mercator (default), peters, rectangular, random
 Required: wget, convert (imagemagick) [for peters projection]
 ```
+
+## mountgcfs
+**Mount gocryptfs encrypted directory**
+
+Required: zenity fuse gocryptfs tar grep procps coreutils (and <command>)
+
+Set <mount>, <dir> and <name> in this script (and optionally <command>)
+
+Setup: `gocryptfs -init [-plaintextnames] <dir>/<name>`
+
+Usage: `mountgcfs`

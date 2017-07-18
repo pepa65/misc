@@ -1,0 +1,75 @@
+#!/bin/bash
+set +x
+## Required: zenity fuse gocryptfs tar grep procps coreutils (and <command>)
+##
+## Set <mount>, <dir> and <name> in this script (and optionally <command>)
+## Setup: gocryptfs -init [-plaintextnames] <dir>/<name>
+## Usage: mountgcfs
+
+mount=$HOME/Private  ## Must start with slash
+dir=/data/MyDocuments/SECURE
+name=SECRET
+
+## <command> to run after successful mounting
+#command="/usr/bin/qiv -etnB $mount/tanpac.jpg"
+command="/usr/bin/caja $mount/"
+
+Info(){  ## $1: Info message
+	zenity --info --title="$title" --text="<b>$1</b>" 2>/dev/null
+}
+
+Unmount(){  ## $1: Mount directory
+	fusermount -qu "$mount" && Info "Now unmounted $name from:\n$mount" ||
+		Info "Unable to unmount $name:\n$mount"
+	exit 0
+}
+
+Abend(){  ## $1: Error message
+	Info "ERROR: $1"
+	exit 1
+}
+
+Password(){  ## $1: boolean-Failed
+	(($1)) && failed="Decryption failed, try a different password!\n\n" || failed=
+	2>/dev/null zenity --entry --hide-text --title="$title" \
+			--text="$failed(Run again to manually unmount $name)\n\nMounting $name on $mount\n\nPassword:" ||
+		kill $$  ## Action to take on Cancel
+		#{ Info 'STOP: Access cancelled, no attempt to mount'; kill $$;}
+}
+
+#if [[ -r "$mount" ]] && [[ ! -e "$mount" ]] || mkdir -p "$mount" 2>/dev/null
+
+title="Decrypt $name"
+! [[ -s $dir/$name/gocryptfs.conf ]] && Abend "$dir/$name is not a gocryptfs directory"
+
+if grep "$mount" <<<"$(mount)" |grep -q ' fuse\.gocryptfs '
+then  ## Directory is FUSE-mounted: unmount, done
+	Unmount "$mount"
+else  ## Directory not FUSE-mounted
+	if mkdir -p "$mount" 2>/dev/null
+	then  ## Directory now exists
+		chmod 700 "$mount"  ## Force access restriction
+	else  ## $mount could not be created: abend
+		Abend "Mount point $mount could not be created or \nalready exists and isn't a directory"
+	fi
+	if [[ $(ls -A "$mount") ]] 2>/dev/null
+	then  ## Directory not empty; abend
+		Abend "Mount directory $mount not empty, won't use it"
+	else  ## Directory is empty and exists and is not mounted; mount
+		pass=$(mktemp)
+		Password 0 >"$pass"
+		while ! gocryptfs -q -passfile "$pass" "$dir/$name" "$mount" 2>/dev/null
+		do
+			shred -u "$pass"
+			Password 1 >"$pass"
+		done
+		shred -u "$pass"
+		sync
+		[[ $command ]] && $command &
+		## Tar-up the encrypted directory for backup
+		tar cfC "$dir/$name.tar" "$dir" "$name"
+		sync
+	fi
+fi
+
+exit 0
