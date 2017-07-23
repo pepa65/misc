@@ -94,3 +94,31 @@ Set <mount>, <dir> and <name> in this script (and optionally <command>)
 Setup: `gocryptfs -init [-plaintextnames] <dir>/<name>`
 
 Usage: `mountgcfs`
+
+## healbitrot
+**Automatic check and self-healing for bitrot**
+
+ Required: bitrot, par2, grep, find, libc-bin(getconf), coreutils(rm,mv,cp,mkdir,cd,du)
+```
+Usage: healbitrot [<dir>]...
+   <dir> are the directories to check
+   if no directories specified, the file in $BITROT_BACKUPS_DEST is read
+```
+
+*The python script `bitrot` is included*
+
+## spr
+**Script to paste stdin to sprunge.us**
+
+* Original: Copyright Han Boetes <hboetes@gmail.com>
+* Modified by TerrorBite //github.com/TerrorBite
+* Licence: public domain
+
+Requires: any POSIX shell, netcat (nc), coreutils (cat, od), date (if /dev/urandom not present)
+
+```
+Usage examples:
+    spr <file
+    spr <<<$string
+    spr  # end the input with Ctrl-D on a new line
+```

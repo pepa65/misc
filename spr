@@ -1,0 +1,53 @@
+#!/bin/sh
+# spr - A script to paste stdin to sprunge.us
+# Requires: any POSIX shell, netcat (nc), coreutils (cat, od),
+#           date (if /dev/urandom not present)
+# Original: Copyright Han Boetes <hboetes@gmail.com>
+# Modified by TerrorBite //github.com/TerrorBite
+# Licence: public domain
+# Usage examples:
+#     spr <file
+#     spr <<<$string
+#     spr  # end the input with Ctrl-D on a new line
+
+host=sprunge.us
+
+nc=$(command -v nc) || {
+	echo "ABORT: nc (netcat) not installed"
+	exit 1
+}
+
+stdin=$(cat)
+
+# Generate (hopefully) unique boundary
+if [ -f /proc/sys/kernel/random/uuid ]
+then  # On Linux kernels only: easily grab a random UUID
+	boundary="------$(cat /proc/sys/kernel/random/uuid)"
+elif [ -c /dev/urandom ]
+then  # Otherwise use POSIX utils to generate a UUID-like string
+	boundary="------$(od -An -tx -N16 /dev/urandom | tr ' ' -)"
+else  # If urandom is unusable, just use the current seconds since epoch
+	boundary="------------------MULTIPART-BOUNDARY-$(date +%s)"
+fi
+
+# Create the body of the HTML request. (Note that HTTP/1.1 uses CRLF line terminators)
+# We create the body separately so we get the right length for the Content-Length header
+body="--$boundary\r
+Content-Disposition: form-data; name=\"sprunge\"\r
+\r
+$stdin\r
+--$boundary--\r
+"
+
+# Send headers and body using netcat
+{ $nc $host 80 | tail -n 1; } <<EOF
+POST / HTTP/1.1\r
+User-Agent: str/1.0 (unix; N; $(uname -s -r -i); ${LANG-:C}; +http://github.com/rupa/sprunge/issues/5)\r
+Host: $host\r
+Accept: */*\r
+Content-Length: ${#body}\r
+Connection: close\r
+Content-Type: multipart/form-data; boundary=$boundary\r
+\r
+$body
+EOF
