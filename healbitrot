@@ -3,7 +3,7 @@ set +vx
 # healbitrot
 # Automatic check and self-healing for bitrot
 # Required: bitrot, par2, grep, find, libc-bin(getconf),
-#           coreutils(rm,mv,cp,mkdir,cd,du)
+#           coreutils(rm,mv,cp,mkdir,cd,du,readlink)
 # Usage: healbitrot [<dir>]...
 #   <dir> are the directories to check
 #   if no directories specified, the file in $BITROT_BACKUPS_DEST is read
@@ -39,15 +39,15 @@ declare -i redundancy=5
 
 Generate_par2files() {
 	local -a target_files
-	local target_dir=$(realpath -P "$1")
+	local target_dir=$(readlink -e "$1")
 	local source_dir=$BITROT_BACKUPS/${target_dir:1}
 	local par2_files=$source_dir/$files_par2
 	local local_options
 
 	Err() {
 		echo -e "$@\nFor errors, see:"
-		[[ -f $createlog ]] && echo -n "$createlog"
-		[[ -f $repairlog ]] && echo " and $repairlog" || echo
+		[[ -f $createlog ]] && echo "$createlog"
+		[[ -f $repairlog ]] && echo "$repairlog"
 		exit 4
 	}
 
@@ -114,7 +114,7 @@ Generate_par2files() {
 Split_dir() {
 	cd "$pwd"
 	local line temp_file par2_files
-	local target_dir=$(realpath -P "$1" 2>/dev/null)
+	local target_dir=$(readlink -e "$1" 2>/dev/null)
 	local source_dir=$BITROT_BACKUPS/${target_dir:1}
 	local regex_bitrot='error: SHA.* mismatch for (.*): expected .*'
 	local regex_changes='([[:digit:]]* entries in the database. )?([[:digit:]]*) entries (updated|new|missing):'
@@ -129,7 +129,10 @@ Split_dir() {
 	local -i count_moved=0
 
 	Err() {
-		echo -e "$@\nSee $bitrotlog, $createlog or $repairlog for errors"
+		echo -e "$@\nFor errors, see:"
+		[[ -f $bitrotlog ]] && echo "$bitrotlog"
+		[[ -f $createlog ]] && echo "$createlog"
+		[[ -f $repairlog ]] && echo "$repairlog"
 		exit 5
 	}
 
