@@ -6,28 +6,39 @@ set +vx
 #           coreutils(rm,mv,cp,mkdir,cd,du,readlink)
 # bitrot: https://github.com/liloman/bitrot
 # heal-bitrots: https://github.com/liloman/heal-bitrots
-# par2: https://github.com/Parchive/par2cmdline
 #
 # Usage: healbitrot [<dir>]...
-#   <dir> are the directories to check
+#   <dir> are the target paths to check
 #   if no directories specified, the file in $BITROT_BACKUPS_DEST is read
 
-# Location of recovery data (bitrot dbs and par2 files)
+# Location of recovery data (bitrot databases and par2 files)
 BITROT_BACKUPS=${BITROT_BACKUPS:-~/.bitrot_backups}
 BITROT_BACKUPS_DEST=${BITROT_BACKUPS_DEST:-$BITROT_BACKUPS/bitrot_dirs}
 
-type -p bitrot >/dev/null || {
-	echo "Install bitrot to use"
+if ! type -p bitrot >/dev/null
+then
+	echo "Install bitrot to use, see: https://github.com/liloman/bitrot"
 	exit 1
-}
-type -p par2 >/dev/null || {
+fi
+
+if type -p par2 >/dev/null
+then
+	par2=$(par2 -V)
+	par2m=$(cut -d'.' -f2 <<<${par2%%* })
+	if ((par2m<6))
+	then
+		echo "Warning: $par2 might choke on some unicode filenames"
+		echo "Newer version available at: https://github.com/Parchive/par2cmdline"
+	fi
+else
 	echo "Install par2 to use"
 	exit 2
-}
+fi
+
 if (($#==0)) && [[ ! -f $BITROT_BACKUPS_DEST ]]
 then
 	echo "Pass target paths as arguments, or set variable BITROT_BACKUPS_DEST"
-	echo " with filename of a file that has an absolute target path on each line"
+	echo "with filename of a file that has an absolute target path on each line"
 	exit 3
 fi
 
@@ -288,14 +299,15 @@ Split_dir() {
 }
 
 Main(){
-	# Settings for par2create
-	# Use half free memory in MB
+	# par2 option: use half free memory (in MB)
 	local mem=$(grep -e '^MemAvailable:' -e '^MemTotal:' /proc/meminfo |grep -o '[0-9]*')
 	default_options+=" -m$((mem/2048))"
-	# par2 0.6.2 doesn't support '-t <threads>' yet (see repo for more recent)
-	## Set number of threads (if more than 2 processors: leave 2 for other tasks)
-	#local cpus=$(getconf _NPROCESSORS_ONLN)
-	#((cpus>2)) && default_options+=" -t$((cpus-2))"
+	if ((par2m>6))
+	then
+		# par2 option: set number of threads (more than 2 processors: leave 2)
+		local cpus=$(getconf _NPROCESSORS_ONLN)
+		((cpus>2)) && default_options+=" -t$((cpus-2))"
+	fi
 
 	pwd=$PWD
 	if (($#))
@@ -313,3 +325,4 @@ Main(){
 }
 
 Main "$@"
+exit 0
