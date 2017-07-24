@@ -306,6 +306,7 @@ Main(){
 	then
 		# par2 option: set number of threads (more than 2 processors: leave 2)
 		local cpus=$(getconf _NPROCESSORS_ONLN)
+		((cpus==2)) && default_options+=" -t1"
 		((cpus>2)) && default_options+=" -t$((cpus-2))"
 	fi
 
