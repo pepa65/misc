@@ -290,7 +290,7 @@ Split_dir() {
 Main(){
 	# Settings for par2create
 	# Use half free memory in MB
-	local mem=$(grep '^MemAvailable:' /proc/meminfo |grep -o '[0-9]*')
+	local mem=$(grep -e '^MemAvailable:' -e '^MemTotal:' /proc/meminfo |grep -o '[0-9]*')
 	default_options+=" -m$((mem/2048))"
 	# par2 0.6.2 doesn't support '-t <threads>' yet (see repo for more recent)
 	## Set number of threads (if more than 2 processors: leave 2 for other tasks)
