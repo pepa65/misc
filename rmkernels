@@ -19,6 +19,7 @@ Usage(){
 }
 
 Main(){
+	## Process commandline
 	local force=0 pat= pkgsf= pkgpat=
 	while [[ $1 ]]
 	do
@@ -27,59 +28,55 @@ Main(){
 		shift
 	done
 
-	all=$(find /boot/vmlinuz-* |
-			sed 's@^/boot/vmlinuz-@@' |
-			grep -v '\.efi\.signed' |
-			sort -nr)  ## All kernels in /boot according to name
+	## Find superfluous kernels
+	all=$(find /boot/vmlinuz-* |  ## Kernel images in /boot
+			sed 's@^/boot/vmlinuz-@@' |  ## Truncate to the version
+			grep -v '\.efi\.signed' |  ## Exclude additional efi-signed versions
+			sort -Vr)  ## Sort by version
 	cur=$(uname -r)  ## Currently running kernel version
 	non=$(grep -v "$cur" <<<"$all")  ## Non-running kernels in /boot
-	echo -e "Found kernel images in /boot:\n$cur (currently running)\n$non"
-	## Superfluous versions: latest of same major.minor version of non-running kernels
+	echo -e "\nFound kernel images in /boot:\n$cur (currently running)\n$non"
+	## Superfluous versions: latest of same major.minor version all kernels
 	sf=$(ao= bo=
 		while IFS='.' read a b c
 		do
 			[[ $a || $b || $c ]] && [[ $ao = $a && $bo = $b ]] && echo "$a.$b.${c%-*}"
 			ao=$a bo=$b
-		done <<<"$non"
+		done <<<"$all"
 	)
+	grep "$cur" <<<"$sf" &&  ## Currently running kernel is superfluous!
+		echo -e "\nThe currently running kernel is superfluous itself!" &&
+		echo "It can only be removed after a reboot with a newer kernel" &&
+		sf=$(grep -v "$cur" <<<"$sf")
 
-#	[[ -z $sf && -z $pat ]] && echo "Nothing to remove" && return 0
-	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'
-	pkgs=$(dpkg -l | tail -n +6 |sed "$sedpkg")  ## Installed
-	sfg=$(sed 's@ @ -e @g' <<<' '$sf)
-	[[ $sf ]] && pkgsf=$(grep $sfg <<<"$pkgs")
+	## Check kernel images and commandline patterns against installed packages
+	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'  ## Installed packages sed pattern
+	ipkg=$(dpkg -l | tail -n +6 |sed "$sedpkg")  ## Installed packages
+	sedsf=$(sed 's@ @ -e @g' <<<' '$sf)  ## Sed pattern for superfluous kernels
+	[[ $sf ]] && pkgsf=$(grep $sedsf <<<"$ipkg")  ## Superfluous packages
 	if [[ $pkgsf ]]
 	then  ## Superflous kernels installed as packages
-		echo -e "\nRemoving:\n$sf\nFound packages:"
-		## Check if an older kernel is currently running
-		newer=
-		while read k
-		do
-			[[ $cur < $k ]] && newer+="$k\n"
-		done <<<"$sf"
-		if [[ $newer ]]
-		then
-			echo -e "\nFound installed kernels newer than currently running:\n$newer"
-			((~force)) && echo "Run with '-f' or '--force' to force removal" && return 1
-		fi
+		echo -e "\nRemoving:\n$sf\nFound packages:\n$pkgsf"
 	else
 		echo "No superfluous packages found based on kernel images in /boot"
 	fi
 
+	## Check the commandline patterns
 	if [[ $pat ]]
 	then
-		pkgpat=$(echo "$pkgs" |grep ${pat// / -e })
+		pkgpat=$(echo "$ipkg" |grep ${pat// / -e })
+		pkgpat=$(grep -v "$cur" <<<"$pkgpat")  ## Not current kernel
 		if [[ $pkgpat ]]
 		then
-			echo -e "Extra removal patterns from commandline:$pat\nPackages:" $pkgpat
+			echo -e "\nExtra removal patterns from commandline:$pat\nPackages:" $pkgpat
 		else
-			echo -e "No packages found based on removal patterns on commandline:$pat"
+			echo -e "\nNo packages found based on removal patterns on commandline:$pat"
 		fi
 	fi
 
-
+	## Removing incompletely uninstalled packages
 	rc=$(dpkg -l |grep ^rc |sed "$sedpkg")
-	[[ $rc ]] && echo -e "Uninstalled packages that have not been properly removed:\n" $rc
+	[[ $rc ]] && echo -e "\nUninstalled packages that have not been properly removed:\n" $rc
 
 	## Purge all superfluous and extra versions, and improperly removed packages
 	[[ $pkgsf || $pkgpat || $rc ]] && sudo apt purge $pkgsf $pkgpat $rc || echo "Nothing to remove"
