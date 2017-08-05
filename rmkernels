@@ -35,7 +35,7 @@ Main(){
 			sort -Vr)  ## Sort by version
 	cur=$(uname -r)  ## Currently running kernel version
 	non=$(grep -v "$cur" <<<"$all")  ## Non-running kernels in /boot
-	echo -e "\nFound kernel images in /boot:\n$cur (currently running)\n$non"
+	echo -e "Found kernel images in /boot:\n$cur (currently running)\n$non"
 	## Superfluous versions: latest of same major.minor version all kernels
 	sf=$(ao= bo=
 		while IFS='.' read a b c
@@ -56,7 +56,7 @@ Main(){
 	[[ $sf ]] && pkgsf=$(grep $sedsf <<<"$ipkg")  ## Superfluous packages
 	if [[ $pkgsf ]]
 	then  ## Superflous kernels installed as packages
-		echo -e "\nRemoving:\n$sf\nFound packages:\n$pkgsf"
+		echo -e "\nRemoving:\n$sf\n\nFound packages:\n$pkgsf"
 	else
 		echo "No superfluous packages found based on kernel images in /boot"
 	fi
@@ -76,7 +76,9 @@ Main(){
 
 	## Removing incompletely uninstalled packages
 	rc=$(dpkg -l |grep ^rc |sed "$sedpkg")
-	[[ $rc ]] && echo -e "\nUninstalled packages that have not been properly removed:\n" $rc
+	[[ $rc ]] &&
+		echo -e "\nUninstalled packages that have not been properly removed:\n" $rc &&
+		echo
 
 	## Purge all superfluous and extra versions, and improperly removed packages
 	[[ $pkgsf || $pkgpat || $rc ]] && sudo apt purge $pkgsf $pkgpat $rc || echo "Nothing to remove"
