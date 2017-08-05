@@ -50,7 +50,7 @@ Main(){
 		sf=$(grep -v "$cur" <<<"$sf")
 	nall=$(wc -l <<<"$all")
 	nsf=$(wc -l <<<"$sf")
-	((nall-nsf<2 && nsf>1)) &&  ## Keep at least 1 fallback kernel
+	((nall-nsf<2 && nsf>0)) &&  ## Keep at least 1 fallback kernel
 		sf=$(tail -n +1 <<<"$sf")  ## Remove most recent from superfluous list
 	## Check kernel images and commandline patterns against installed packages
 	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'  ## Installed packages sed pattern
