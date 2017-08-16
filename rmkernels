@@ -44,7 +44,7 @@ Main(){
 			ao=$a bo=$b
 		done <<<"$all"
 	)
-	grep "${cur%-*}" <<<"$sf" &&  ## Currently running kernel is superfluous!
+	grep -q "${cur%-*}" <<<"$sf" &&  ## Currently running kernel is superfluous!
 		echo -e "\nThe currently running kernel is superfluous itself!" &&
 		echo "It can only be removed after a reboot with a newer kernel" &&
 		sf=$(grep -v "${cur%-*}" <<<"$sf")
