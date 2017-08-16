@@ -44,10 +44,10 @@ Main(){
 			ao=$a bo=$b
 		done <<<"$all"
 	)
-	grep "$cur" <<<"$sf" &&  ## Currently running kernel is superfluous!
+	grep "${cur%-*}" <<<"$sf" &&  ## Currently running kernel is superfluous!
 		echo -e "\nThe currently running kernel is superfluous itself!" &&
 		echo "It can only be removed after a reboot with a newer kernel" &&
-		sf=$(grep -v "$cur" <<<"$sf")
+		sf=$(grep -v "${cur%-*}" <<<"$sf")
 	nall=$(wc -l <<<"$all")
 	nsf=$(wc -l <<<"$sf")
 	((nall-nsf<2 && nsf>0)) &&  ## Keep at least 1 fallback kernel
