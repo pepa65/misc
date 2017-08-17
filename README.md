@@ -122,3 +122,8 @@ Usage examples:
     spr <<<$string
     spr  # end the input with Ctrl-D on a new line
 ```
+
+## sct.c
+**Utility to set the screen "temperature" to shift the blue-red balance**
+
+See the file for instructions to compile and use.
