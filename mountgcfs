@@ -1,43 +1,52 @@
 #!/bin/bash
-set +x
-## Required: zenity fuse gocryptfs tar grep procps coreutils (and <command>)
+set +vx
+## Required: gocryptfs (github) fuse tar grep procps coreutils (and <command>)
+## Optional: zenity (otherwise: whiptail)
 ##
 ## Set <mount>, <dir> and <name> in this script (and optionally <command>)
 ## Setup: gocryptfs -init [-plaintextnames] <dir>/<name>
 ## Usage: mountgcfs
 
-mount=$HOME/Private  ## Must start with slash
+mount=$HOME/Private  ## Must start with slash, has to exist
 dir=/data/MyDocuments/SECURE
 name=SECRET
 
 ## <command> to run after successful mounting
-#command="/usr/bin/qiv -etnB $mount/tanpac.jpg"
 command="/usr/bin/caja $mount/"
 
 Info(){  ## $1: Info message
-	zenity --info --title="$title" --text="<b>$1</b>" 2>/dev/null
+	((zenity)) &&
+		zenity --info --title="$title" --text="<b>$1</b>" 2>/dev/null ||
+		whiptail --title="$title" --msgbox "$1" 10 78
 }
 
 Unmount(){  ## $1: Mount directory
-	fusermount -qu "$mount" && Info "Now unmounted $name from:\n$mount" ||
-		Info "Unable to unmount $name:\n$mount"
+	fusermount -qu "$mount" && Info "Now unmounted $name from:\n\n$mount" ||
+		Info "Unable to unmount $name:\n\n$mount"
 	exit 0
 }
 
 Abend(){  ## $1: Error message
 	Info "ERROR: $1"
-	exit 1
+	exit 2
 }
 
 Password(){  ## $1: boolean-Failed
 	(($1)) && failed="Decryption failed, try a different password!\n\n" || failed=
-	2>/dev/null zenity --entry --hide-text --title="$title" \
-			--text="$failed(Run again to manually unmount $name)\n\nMounting $name on $mount\n\nPassword:" ||
-		kill $$  ## Action to take on Cancel
-		#{ Info 'STOP: Access cancelled, no attempt to mount'; kill $$;}
+	text="$failed(Run again to manually unmount $name)\n\nMounting $name on $mount\n\nPassword:"
+	if ((zenity))
+	then
+		zenity --entry --hide-text --title="$title" --text="$text" 2>/dev/null ||
+			exit 1
+#			kill $$ >/dev/null  ## Action to take on Cancel
+	else
+		whiptail --title "$title" --passwordbox "$text" 16 78 3>&1 1>&2 2>&3 ||
+			exit 1
+#			kill $$ >/dev/null  ## Action to take on Cancel
+	fi
 }
 
-#if [[ -r "$mount" ]] && [[ ! -e "$mount" ]] || mkdir -p "$mount" 2>/dev/null
+type -p zenity >/dev/null && zenity=1 || zenity=0
 
 title="Decrypt $name"
 ! [[ -s $dir/$name/gocryptfs.conf ]] && Abend "$dir/$name is not a gocryptfs directory"

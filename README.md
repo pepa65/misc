@@ -124,6 +124,6 @@ Usage examples:
 ```
 
 ## sct.c
-**Utility to set the screen "temperature" to shift the blue-red balance**
+**Utility to set the screen "temperature" to adjust the red-blue balance**
 
 See the file for instructions to compile and use.
