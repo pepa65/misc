@@ -2,7 +2,8 @@
 set +xv
 ## earthwallpaperlive
 ##
-## USAGE: earthwallpaperlive [<projection>]
+## USAGE: earthwallpaperlive [-p] [<projection>]
+##   -p:                     pause for 10 seconds to settle the net connection
 ##   <projection> is one of: mercator (default), peters, rectangular, random
 ##
 ## Required: wget; pgrep (procps); rm, mv, sleep, sync (coreutils);
@@ -12,7 +13,6 @@ set +xv
 ##  * 44 * * * /PATH/TO/earthwallpaperlive
 ## The script has to have execute permissiom then:
 ##  chmod +x /PATH/TO/earthwallpaperlive
-
 
 Wallpaper(){  # $1: imagefile
 	if pgrep -f mate-settings-daemon >/dev/null
@@ -44,12 +44,16 @@ Wallpaper(){  # $1: imagefile
 
 
 Main(){
-	type -p wget >/dev/null || return 1
+	! type -p wget >/dev/null && echo "ERROR: wget required" && return 1
+	pause=0
+	[[ $1 = "-p" ]] && pause=1 && shift
+	[[ $1 ]] && proj=$1 && shift
+	[[ $1 = "-p" ]] && pause=1 && shift
+	[[ $1 ]] && echo "ERROR: surplus arguments '$*'" && return 2
 
 	# default is the first element, random the last
 	p=(mercator peters rectangular random)
-	proj=$1
-	printf '%s\n' ${p[@]} |grep -q "^$proj$" || proj=$p
+	printf '%s\n' ${p[@]} |grep -q "^$proj$" || proj=$p  ## if not found: default
 	[[ $proj = random ]] && proj=${p[$((RANDOM%(${#p[@]-1)}))]}
 
 	dir=/tmp
@@ -57,6 +61,7 @@ Main(){
 
 	# available dimensions: 1600x770/887 1280x616 1024x493
 	width=1600
+	((pause)) && sleep 10
 	wget -qpO "$pic" -w 10 --connect-timeout=20 \
 			"https://static.die.net/earth/$proj/$width.jpg"
 	sleep 1
