@@ -1,0 +1,51 @@
+#!/bin/bash
+set +vx
+# a5toa4 - Print an A5 size document on A4 for booklet folding
+# USAGE: a5toa4 <a5.pdf> [<a4.pdf>]
+#  Print the resulting A4 document on a single-sided printer by printing
+#   page 1..n/2, turn the batch over, then print pages n/2+1..n
+# Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf14) psutils(psnup)
+
+in="out$RANDOM-A4.pdf"
+[[ $1 ]] && in=$1
+[[ ! -f $in ]] && echo "ERROR: filename of A5 sized pdf required" &&
+	echo "USAGE: a5toa4 <a5.pdf> [<a4.pdf>]" && exit 1
+
+tmp=$(mktemp -d)
+pdf2ps -dLanguageLevel=3 "$in" "$tmp/a5.ps" 2>/dev/null
+cd "$tmp"
+p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
+((!p)) && echo "No pages found" && rm -r "$tmp" && exit 2
+out=$(basename "$in")
+[[ ${in: -6:6} = "A5.pdf" ]] && out="${out%A5.pdf}A4.pdf" || out="${out%.pdf}A4.pdf"
+[[ $2 ]] && out=$2
+
+((n=p,r=p%4)) && ((r=4-r,n+=r))
+s=$((n/4))
+# s=n/4 (s: number of sheets; n: full number of A5 pages, multiple of 4)
+# range: s+s+2,s+s-1 +2,-2... s+s,s+s+1 -2,+2...
+a=$((s+s+2)) b=$((s+s-1))
+((a>p)) && range="_,$b" || range="$a,$b"
+while ((b>1))
+do
+	((a+=2,b-=2))
+	((a>p)) && c="_" || c=$a
+	((b>p)) && d="_" || d=$b
+	range+=",$c,$d"
+done
+a=$((s+s)) b=$((s+s+1))
+while ((a>0))
+do
+	((a>p)) && c="_" || c=$a
+	((b>p)) && d="_" || d=$b
+	range+=",$c,$d"
+	((a-=2,b+=2))
+done
+
+psselect -p $range a5.ps a5c.ps
+PAPERSIZE=a4 psnup -2 -r -Pa5 -pa4 a5c.ps a4.ps
+cd -
+ps2pdf14 "$tmp/a4.ps" "$out"
+rm -r -- "$tmp"
+
+exit 0

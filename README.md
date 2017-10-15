@@ -5,20 +5,19 @@
 **Show the differences between 2 Thai language input files 
 and either produce a html file, or output result to the terminal**
 
-Packages required: swath dwdiff
-
-Usage:  `difth <file1> <file2> [<html-out>]`
-
-file1 and file2 mandatory, file html-out optional (otherwise to stdout)
+* Required: swath dwdiff
+```
+Usage: difth <file1> <file2> [<html-out>]
+    file1 and file2 mandatory, file html-out optional (otherwise to stdout)
+```
 
 ## count
 **Count character occurrences in file**
 
-Packages required: uni2ascii
+Required: uni2ascii
 
 Usage: `count <file> [-s]`
-
--s means sort by code point instead of frequency
+    `-s means sort by code point instead of frequency`
 
 ## rmkernels
 **Remove old kernels from Debian/Ubuntu**
@@ -39,8 +38,8 @@ Usage: `duckdns [date]`
 **Merge 2 subtitle files into one**
 
 Usage: `merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]`
- or: `merge2ass --detect <movie> [-p | --play-movie]`
- or: `merge2ass [-h | --help]`
+    or: `merge2ass --detect <movie> [-p | --play-movie]`
+    or: `merge2ass [-h | --help]`
 
 ## pair.c
 **Utility to pair Logitech USB unifying or nano receivers with wireless input devices**
@@ -55,9 +54,8 @@ Usage: `subs <search terms>`
 ## qemu-create-os-img
 **Create a fresh Debian/Ubuntu qemu image**
 
-Usage:
 ```
-qemu-create-os-img [-h] [-r <release>] [-h <hostname>] [-i <img_file>]
+Usage: qemu-create-os-img [-h] [-r <release>] [-h <hostname>] [-i <img_file>]
                            [-s <disk_size>] [-b <boot_size>] [<debootstrap>]
   -h:              This help text
   -r <release>:    A supported Debian or Ubuntu release name
@@ -81,24 +79,21 @@ Usage:
 ```
 earthwallpaperlive [<projection>]
   <projection> is one of: mercator (default), peters, rectangular, random
-Required: wget, convert (imagemagick) [for peters projection]
+Required: wget imagemagick(convert) [for peters projection]
 ```
 
 ## mountgcfs
 **Mount gocryptfs encrypted directory**
 
-Required: zenity fuse gocryptfs tar grep procps coreutils (and <command>)
-
-Set <mount>, <dir> and <name> in this script (and optionally <command>)
-
-Setup: `gocryptfs -init [-plaintextnames] <dir>/<name>`
-
-Usage: `mountgcfs`
+* Required: zenity fuse gocryptfs tar grep procps coreutils (and <command>)
+* Set <mount>, <dir> and <name> in this script (and optionally <command>)
+* Setup: `gocryptfs -init [-plaintextnames] <dir>/<name>`
+* Usage: `mountgcfs`
 
 ## healbitrot
 **Automatic check and self-healing for bitrot**
 
- Required: bitrot, par2, grep, find, libc-bin(getconf), coreutils(rm,mv,cp,mkdir,cd,du)
+* Required: bitrot par2 grep find libc-bin(getconf) coreutils(rm mv cp mkdir cd du)
 ```
 Usage: healbitrot [<dir>]...
    <dir> are the directories to check
@@ -113,11 +108,9 @@ Usage: healbitrot [<dir>]...
 * Original: Copyright Han Boetes <hboetes@gmail.com>
 * Modified by TerrorBite //github.com/TerrorBite
 * Licence: public domain
-
-Requires: any POSIX shell, netcat (nc), coreutils (cat, od), date (if /dev/urandom not present)
-
+* Required: POSIX shell netcat(nc) coreutils(cat od) date [if /dev/urandom not present]
 ```
-Usage examples:
+Usage:
     spr <file
     spr <<<$string
     spr  # end the input with Ctrl-D on a new line
@@ -127,3 +120,26 @@ Usage examples:
 **Utility to set the screen "temperature" to adjust the red-blue balance**
 
 See the file for instructions to compile and use.
+
+## tf
+**Transfer files via transfer.sh**
+* Required: curl
+* Optional: gpg tar qrencode
+```
+Usage: tf [-q|--qr] [-z|--zip] [-c|--crypt] [-h|--help | <link> | <path>...
+    -q|--qr:     Also give QR code for resulting link
+    -z|--zip:    Use zip instead of tar for the uploaded archive
+    -c|--crypt:  Use gpg for en/decryption of file/archive to be up/downloaded
+    -h|--help:   Display this help text
+  <link> is a transfer.sh link starting with https://
+  <path> is the path to a file or directory; there can be multiple
+```
+
+## a5toa4
+**Print an A5 size document on A4 for booklet folding**
+```
+Usage: a5toa4 <a5.pdf> [<a4.pdf>]
+    Print the resulting A4 document on a single-sided printer by printing
+    page 1..n/2, turn the batch over, then print pages n/2+1..n
+```
+* Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf14) psutils(psnup)
