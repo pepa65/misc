@@ -50,7 +50,7 @@ Main(){
 	while read -r
 	do
 		[[ $REPLY ]] || continue
-echo "-> $REPLY"; continue
+#echo "-> $REPLY"; continue
 		curl -s "$REPLY" >"$dl"
 		((crypt)) && gpg --passphrase-fd 0 -o "$dc" "$dl" || mv "$dl" "$dc"
 		local sig=$(hexdump -n 2 -e '/1 "%02x"' "$dc")
@@ -71,7 +71,7 @@ echo "Not sure: $sig $dc"
 	while read -r
 	do
 		[[ $REPLY ]] || continue
-echo "-> $REPLY"; continue
+#echo "-> $REPLY"; continue
 		local f=$(basename "$REPLY" |sed -e 's/[^a-zA-Z0-9._-]/-/g')
 		((!crypt)) && q=$(curl -X PUT -T \"-\" \"https://transfer.sh/$f\") ||
 			q=$(gpg -ac -o- |curl -X PUT -T \"-\" \"https://transfer.sh/$f\")

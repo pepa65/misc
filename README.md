@@ -143,3 +143,9 @@ Usage: a5toa4 <a5.pdf> [<a4.pdf>]
     page 1..n/2, turn the batch over, then print pages n/2+1..n
 ```
 * Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf14) psutils(psnup)
+
+## pdfslice
+**pdfslice - Return page ranges from a source document**
+
+`USAGE: pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
+* Required: pdfseparate pdfunite coreutils(mktemp cd)
