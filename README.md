@@ -140,7 +140,7 @@ Usage: tf [-q|--qr] [-z|--zip] [-c|--crypt] [-h|--help | <link> | <path>...
 ```
 Usage: a5toa4 <a5.pdf> [<a4.pdf>]
     Print the resulting A4 document on a single-sided printer by printing
-    page 1..n/2, turn the batch over, then print pages n/2+1..n
+    page 1..n/2, flip the bundle of sheets over, then print pages n/2+1..n
 ```
 * Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf14) psutils(psnup)
 

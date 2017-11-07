@@ -1,0 +1,26 @@
+#!/bin/bash
+set +vx
+# pdfslice - Return page ranges from a source document
+# USAGE: pdfslice <from> <to> <source.pdf> [<destination.pdf>]
+# Required: pdfseparate pdfunite coreutils(mktemp cd)
+
+(($#!=3 && $#!=4)) && echo "ERROR: $0 must have 3 or 4 arguments" &&
+	echo "USAGE: $0  <from> <to> <source.pdf> [<destination.pdf>]" &&
+	echo "    where <from> and <to> are the integer page range" && exit 1
+from=$1 to=$2 src=$3
+((from<=0)) && echo "ERROR: First page not positive: $from" && exit 2
+((to<=0)) && echo "ERROR: Last page not positive: $to" && exit 3
+((from>to)) && echo "ERROR: First page $from larger than last page $to" && exit 4
+[[ ! -f $src ]] && echo "ERROR: pdf file '$src' not found" && exit 5
+[[ $4 ]] && dest=$4 || dest="$(basename "$src" .pdf)_$from-$to.pdf"
+
+tmp=$(mktemp -d)
+pdfseparate -f "$from" -l "$to" "$src" "$tmp/p%d"
+[[ -z $(ls -LF) ]] && echo "ERROR: No pages $from-$to found in $src" && exit 6
+
+shopt -s nullglob
+pdfunite "$tmp"/p? "$tmp"/p?? "$tmp"/p??? "$tmp"/p???? "$tmp"/p????? "$dest"
+shopt -u nullglob
+rm -r -- "$tmp"
+
+exit 0
