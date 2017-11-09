@@ -1,32 +1,40 @@
 #!/bin/bash
 set +vx
 # a5toa4 - Print an A5 size document on A4 for booklet folding
-# USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
-#  Print the resulting A4 document on a single-sided printer by:
-#  - printing the even pages
-#  - flipping the whole bundle of sheets over
-#  - printing the odd pages
-#  Or print it on a full-duplex printer.
-#  If -h or --half is given, the printing can be done by:
-#  - printing pages 1..n/2
-#  - flipping the whole bundle of sheets over
-#  - printing pages n/2+1..n
 # Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
 
+Usage(){ # $1: code for exit
+	cat <<-EOS
+		a5toa4 - Print an A5 size document on A4 for booklet folding
+		USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
+		  Print the resulting A4 document on a single-sided printer by:
+		  - printing the even pages
+		  - flipping the whole bundle of sheets over
+		  - printing the odd pages
+		  Or print it on a full-duplex printer.
+		  If -h or --half is given, the printing can be done by:
+		  - printing pages 1..n/2
+		  - flipping the whole bundle of sheets over
+		  - printing pages n/2+1..n
+	EOS
+	[[ $1 ]] && exit $1
+}		
+
 # process commandline
+(($#)) || Usage 1
 in=
 half=0
 [[ $1 = -h || $1 = --half ]] && half=1 && shift
 [[ $1 ]] && in=$1 && shift
 [[ $1 = -h || $1 = --half ]] && half=1 && shift
 [[ ! -f $in ]] && echo "ABORT: filename of A5 sized pdf required, no file: '$in'" &&
-  echo "USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]" && exit 1
+	Usage 2
 out=$(basename "$in")
 [[ ${in: -6:6} = "A5.pdf" ]] && out="${out%A5.pdf}A4.pdf" || out="${out%.pdf}A4.pdf"
 [[ $1 ]] && out=$1 && shift
 [[ $1 = -h || $1 = --half ]] && half=1 && shift
 [[ $1 ]] && echo "ABORT: unrecognized option: '$1'" &&
-  echo "USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]" && exit 2
+	Usage 3
 
 echo "Convert to A5 pdf to ps..."
 tmp=$(mktemp -d)
