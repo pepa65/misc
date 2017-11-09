@@ -1,55 +1,96 @@
 #!/bin/bash
 set +vx
 # a5toa4 - Print an A5 size document on A4 for booklet folding
-# USAGE: a5toa4 <a5.pdf> [<a4.pdf>]
-#  Print the resulting A4 document on a single-sided printer by printing
-#  pages 1..n/2, flipping the bundle of sheets over, then printing pages n/2+1..n
-# Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf14) psutils(psnup)
+# USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
+#  Print the resulting A4 document on a single-sided printer by:
+#  - printing even pages
+#  - flipping the whole bundle of sheets over
+#  - printing the uneven pages
+#  Or print it on a full-duplex printer.
+#  If -h or --half is given, the printing can be done by:
+#  - printing pages 1..n/2
+#  - flipping the whole bundle of sheets over
+#  - printing pages n/2+1..n
+# Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
 
+# process commandline
 in=
-[[ $1 ]] && in=$1
-[[ ! -f $in ]] && echo "ABORT: filename of A5 sized pdf required" &&
-  echo "USAGE: a5toa4 <a5.pdf> [<a4.pdf>]" && exit 1
-
-tmp=$(mktemp -d)
-
-echo "Convert to A5 pdf to ps..."
-pdf2ps -dLanguageLevel=3 "$in" "$tmp/a5.ps" 2>/dev/null
-
-cd "$tmp"
-p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
-((!p)) && echo "ABORT: no pages found" && rm -r "$tmp" && exit 2
+half=0
+[[ $1 = -h || $1 = --half ]] && half=1 && shift
+[[ $1 ]] && in=$1 && shift
+[[ $1 = -h || $1 = --half ]] && half=1 && shift
+[[ ! -f $in ]] && echo "ABORT: filename of A5 sized pdf required, no file: '$in'" &&
+  echo "USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]" && exit 1
 out=$(basename "$in")
 [[ ${in: -6:6} = "A5.pdf" ]] && out="${out%A5.pdf}A4.pdf" || out="${out%.pdf}A4.pdf"
-[[ $2 ]] && out=$2
+[[ $1 ]] && out=$1 && shift
+[[ $1 = -h || $1 = --half ]] && half=1 && shift
+[[ $1 ]] && echo "ABORT: unrecognized option: '$1'" &&
+  echo "USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]" && exit 2
 
-# p: # A5-pages; n: full [multiple of 4] # A5-pages; s: # A4-sheets (=n/4)
+echo "Convert to A5 pdf to ps..."
+tmp=$(mktemp -d)
+pdf2ps "$in" "$tmp/a5.ps" 2>/dev/null
+
+echo -e "\nConvert A5 ps to A4..."
+cd "$tmp"
+# Get number of pages
+p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
+((!p)) && echo "ABORT: no pages found" && rm -r "$tmp" && exit 3
+
+# p: # of A5-pages; n: full [multiple of 4] # of A5-pages; s: # of A4-sheets
 ((n=p,r=p%4)) && ((r=4-r,n+=r))
-((s=n/4))
-# range: n,1 n/2,n/2+1 (-2,+2) [pairs reversed for psnup...]
-range=
-((a=n,b=1,c=a/2,d=c+1))
-while ((d<n))
-do
-	[[ $range ]] && range+=","
-	range+="$b,"
-	((a>p)) && range+="_," || range+="$a,"
-	((d>p)) && range+="_," || range+="$d,"
-	((c>p)) && range+="_" || range+="$c"
-	((a-=2,b+=2,c-=2,d+=2))
-done
+((s=n/4,m=n/2))
 
-echo "Convert A5 ps to A4..."
-psselect -p $range a5.ps a5c.ps
-PAPERSIZE=a4 psnup -2 -r -Pa5 -pa4 a5c.ps a4.ps
+# Make normal duplex range: n,1 2,n-1 (-2,+2 +2,-2)
+range=()
+((a=n,b=1,c=2,d=n-1))
+while ((b<m))
+do
+	((a>p)) && range+=(_) || range+=($a)
+	((b>p)) && range+=(_) || range+=($b)
+	((c>p)) && range+=(_) || range+=($c)
+	((d>p)) && range+=(_) || range+=($d)
+	((a-=2,b+=2,c+=2,d-=2))
+done
+r=${range[@]} r=${r// /,}
+echo "Duplex range:     $r"
+
+if ((half && s>1))
+then # Half requested and more than 1 sheet
+	# Make half-flip range: reverse uneven pairs + reverse even pairs:
+	#  [p>4 i=n..-4..0] i-3,i-2 ... i-1,i ...
+	i=n uneven= even=
+	while ((i>3))
+	do # lower all indexes by 1 for zero-based array
+		uneven+="${range[i-4]} ${range[i-3]} "
+		even+="${range[i-2]} ${range[i-1]} "
+		((i-=4))
+	done
+	r=$uneven${even%?} r=${r// /,}
+	echo "Half-flip range:  $r"
+fi
+
+# Put the A5 pages on A4
+psselect -p $r a5.ps a5c.ps
+PAPERSIZE=a4 psnup -2 -Pa5 -pa4 a5c.ps a4.ps
 cd -
 
-echo "Convert A4 ps to pdf..."
-ps2pdf14 "$tmp/a4.ps" "$out"
+echo -e "\nConvert A4 ps to pdf..."
+ps2pdf "$tmp/a4.ps" "$out"
 rm -r -- "$tmp"
 
-echo -e "\nAll done! Now print the booklet by:\n- printing pages 1-$s"
-echo "- flipping the whole bundle of sheets over"
-echo "- printing pages $((s+1))-$((s+s))"
+echo -e "\nAll done! Now print the booklet '$out' by:"
+if ((half))
+then
+	echo "- printing pages 1-$s"
+	echo "- flipping the whole bundle of sheets over"
+	echo "- printing pages $((s+1))-$((s+s))"
+else
+	echo "- printing the even pages"
+	echo "- flipping the whole bundle of sheets over"
+	echo "- printing the uneven pages"
+	echo "Or by printing the document with a full-duplex printer."
+fi
 
 exit 0
