@@ -138,11 +138,11 @@ Usage: tf [-q|--qr] [-z|--zip] [-c|--crypt] [-h|--help | <link> | <path>...
 ## a5toa4
 **Print an A5 size document on A4 for booklet folding**
 ```
-Usage: a5toa4 <a5.pdf> [<a4.pdf>]
-    Print the resulting A4 document on a single-sided printer by printing
-    page 1..n/2, flip the bundle of sheets over, then print pages n/2+1..n
+Usage: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
+    Print the resulting A4 document on a single-sided printer by printing the
+    even pages, flipping the bundle of sheets over, then printing the uneven pages
 ```
-* Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf14) psutils(psnup)
+* Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
 
 ## pdfslice
 **pdfslice - Return page ranges from a source document**
