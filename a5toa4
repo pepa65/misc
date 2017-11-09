@@ -3,9 +3,9 @@ set +vx
 # a5toa4 - Print an A5 size document on A4 for booklet folding
 # USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
 #  Print the resulting A4 document on a single-sided printer by:
-#  - printing even pages
+#  - printing the even pages
 #  - flipping the whole bundle of sheets over
-#  - printing the uneven pages
+#  - printing the odd pages
 #  Or print it on a full-duplex printer.
 #  If -h or --half is given, the printing can be done by:
 #  - printing pages 1..n/2
@@ -58,16 +58,16 @@ echo "Duplex range:     $r"
 
 if ((half && s>1))
 then # Half requested and more than 1 sheet
-	# Make half-flip range: reverse uneven pairs + reverse even pairs:
+	# Make half-flip range: reverse odd pairs + reverse even pairs:
 	#  [p>4 i=n..-4..0] i-3,i-2 ... i-1,i ...
-	i=n uneven= even=
+	i=n odd= even=
 	while ((i>3))
 	do # lower all indexes by 1 for zero-based array
-		uneven+="${range[i-4]} ${range[i-3]} "
+		odd+="${range[i-4]} ${range[i-3]} "
 		even+="${range[i-2]} ${range[i-1]} "
 		((i-=4))
 	done
-	r=$uneven${even%?} r=${r// /,}
+	r=$odd${even%?} r=${r// /,}
 	echo "Half-flip range:  $r"
 fi
 
@@ -89,7 +89,7 @@ then
 else
 	echo "- printing the even pages"
 	echo "- flipping the whole bundle of sheets over"
-	echo "- printing the uneven pages"
+	echo "- printing the odd pages"
 	echo "Or by printing the document with a full-duplex printer."
 fi
 
