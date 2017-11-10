@@ -40,7 +40,7 @@ echo "Convert to A5 pdf to ps..."
 tmp=$(mktemp -d)
 pdf2ps "$in" "$tmp/a5.ps" 2>/dev/null
 
-echo -e "\nConvert A5 ps to A4..."
+echo "Convert A5 ps to A4..."
 cd "$tmp"
 # Get number of pages
 p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
@@ -62,7 +62,6 @@ do
 	((a-=2,b+=2,c+=2,d-=2))
 done
 r=${range[@]} r=${r// /,}
-echo "Duplex range:     $r"
 
 if ((half && s>1))
 then # Half requested and more than 1 sheet
@@ -76,7 +75,6 @@ then # Half requested and more than 1 sheet
 		((i-=4))
 	done
 	r=$odd${even%?} r=${r// /,}
-	echo "Half-flip range:  $r"
 fi
 
 # Put the A5 pages on A4
@@ -84,11 +82,11 @@ psselect -p $r a5.ps a5c.ps
 PAPERSIZE=a4 psnup -2 -Pa5 -pa4 a5c.ps a4.ps
 cd -
 
-echo -e "\nConvert A4 ps to pdf..."
+echo "Convert A4 ps to pdf..."
 ps2pdf "$tmp/a4.ps" "$out"
 rm -r -- "$tmp"
 
-echo -e "\nAll done! Now print the booklet '$out' by:"
+echo "All done! Now print the booklet '$out' by:"
 if ((half))
 then
 	echo "- printing pages 1-$s"
