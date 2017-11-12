@@ -1,18 +1,15 @@
 #!/bin/bash
 set +vx
 # difth - show the difference between 2 Thai language files in html or terminal
-# Usage: difth <file1> <file2> [<html-out>]
-## Required packages: swath dwdiff
+## Required: swath dwdiff
 
 Help(){
 	cat <<-EOF
-		
-		 Show the differences between 2 Thai language input files
+		 $(basename $0) - Show the differences between 2 Thai language input files
 		  and either produce a html file, or output result to the terminal
-		
-		 Usage:  $0 <file1> <file2> [<html-out>]
-		  file1 and file2 mandatory, file html-out optional (otherwise to stdout)
-		
+		 USAGE:  $0 <file1> <file2> [<html-out>]
+		   file1 and file2 are mandatory, html-out is optional (otherwise to stdout)
+		   While viewing the html: click to cycle through the display modes.
 	EOF
 }
 
@@ -28,23 +25,23 @@ st=$(tempfile)
 #mapfile -t ia <"$1"
 #mapfile -t ib <"$2"
 	
-## separators that doesn't occur in the input files already..?
-s="|$RANDOM|"
-w="{$RANDOM:"
-x="|$RANDOM}"
-y="{$RANDOM="
+## separators that don't occur in the input files already..?
+s="{s$RANDOM}"
+w="{w$RANDOM}"
+x="{x$RANDOM}"
+y="{y$RANDOM}"
 z=$x
-grep -e "$s" -e "$w" -e "$x" -e "$y" "$1" || grep -e "$s" -e "$w" -e "$x" -e "$y" "$2" \
-		&& echo "ABORT: separator present in input files: $s $w $x $y" && exit 7
+grep -e "$s" -e "$w" -e "$x" -e "$y" "$1" || grep -e "$s" -e "$w" -e "$x" -e "$y" "$2" &&
+	echo "ABORT: separator present in input files: $s $w $x $y" && exit 7
 
 swath -b "$s" -u u,u <"$ai" >"$at"
 swath -b "$s" -u u,u <"$bi" >"$bt"
 
 if [[ $3 ]]
 then
-ci=$(dwdiff -s -A best -d "$s" -w "$w" -x "$x" -y "$y" -z "$z" "$at" "$bt" 2>"$st" |\
-		sed -e "s@$s@@g" -e 's@^@<br />@g'\
-		-e "s@$y@<span class=\"v\">@g" -e "s@$w@<span class=\"x\">@g" -e "s@$x@</span>@g")
+ci=$(dwdiff -s -A best -d "$s" -w "$w" -x "$x" -y "$y" -z "$z" "$at" "$bt" 2>"$st" |
+		sed -e "s@$s@@g" -e 's@^@<br />@g' -e "s@$y@<span class=\"v\">@g"\
+				-e "s@$w@<span class=\"x\">@g" -e "s@$x@</span>@g")
 
 cat <<EOF >"$3"
 <html lang="th">
@@ -84,18 +81,20 @@ window.onclick = function (){
 //-->]]>
 </script>
 <style type="text/css">
-body {font-size:200%;}
-span.x {background:pink; text-decoration:line-through;}
-span.v {background:lightblue; text-decoration:underline;}
-div.b {background:darkgray; color:black;}
-h1 {text-align:center;}
-pre {margin-left:1em; font-weight:bold;}
-div {background:white; padding:0.2em;}
+body {font-size:200%; font-family:Arundina,serif}
+span.x {background:pink; text-decoration:line-through}
+span.v {background:lightblue; text-decoration:underline}
+span.i {font-size:90%; font-weight:normal}
+div.b {background:darkgray; color:black}
+h1 {text-align:center; font-size: 80%}
+pre {margin-left:1em; font-weight:bold}
+div {background:white; padding:0.2em}
 </style>
 </head>
 <body>
 <div class="b"><h1><span class="x">$ai</span> <span class="v">$bi</span></h1>
-<pre>$(cat "$st")</pre></div>
+<pre>$(cat "$st")
+<span class="i">Click to cycle through the display modes: differences (pink+blue) / original (pink) / corrected (blue).</span></pre></div>
 <div>
 $ci
 </div>
