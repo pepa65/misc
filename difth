@@ -3,6 +3,9 @@ set +vx
 # difth - show the difference between 2 Thai language files in html or terminal
 ## Required: swath dwdiff sed coreutils(cat type mktemp rm)
 
+## Color scheme
+old="pink" new="lightgreen" def="#ccc" pap="#fff" sta="#999" fon="#000"
+
 Help(){
 	cat <<-EOF
 		 $(basename $0) - Show the differences between 2 Thai language input files
@@ -17,78 +20,78 @@ Help(){
 ! type -p dwdiff &>/dev/null && echo "ABORT: package dwdiff not installed" && exit 2
 [[ -z $2 ]] && Help && echo "ABORT: At least 2 filenames necessary" && exit 3
 [[ $4 ]] && Help && echo "ABORT: More than 3 arguments" && exit 4
-#! ai=$(readlink -e "$1") && Help && echo "ABORT: First argument no file: $1" && exit 5
-#! bi=$(readlink -e "$2") && Help && echo "ABORT: Second argument no file: $2" && exit 6
 [[ ! -f $1 ]] && Help && echo "ABORT: First argument no file: $1" && exit 
 [[ ! -f $2 ]] && Help && echo "ABORT: Second argument no file: $2" && exit 6
 [[ $1 = $2 ]] && ai=$(readlink -e	"$1") bi=$(readlink -e "$2") || ai=$1 bi=$2
 tmp=$(mktemp -d) at="$tmp/at" bt="$tmp/bt" st="$tmp/st"
 
-## unique separators
-s="{s$RANDOM}" w="{w$RANDOM}" x="{x$RANDOM}" y="{y$RANDOM}" z=$x
-grep -e "$s" -e "$w" -e "$x" -e "$y" "$1" || grep -e "$s" -e "$w" -e "$x" -e "$y" "$2" &&
-	echo "ABORT: separator present in input files: $s $w $x $y" && exit 7
+## unique separators: $d:delimiter $o:old-begin $e:end $n:new-begin
+d="{d$RANDOM}" o="{o$RANDOM}" e="{e$RANDOM}" n="{n$RANDOM}"
+grep -e $d -e $o -e $e -e $n "$1" || grep -e $d -e $o -e $e -e $n "$2" &&
+	echo "ABORT: separator $d, $o, $e or $n present in input files" && exit 7
 
-swath -b "$s" -u u,u <"$ai" >"$at"
-swath -b "$s" -u u,u <"$bi" >"$bt"
+swath -b "$d" -u u,u <"$ai" >"$at"
+swath -b "$d" -u u,u <"$bi" >"$bt"
 
 if [[ $3 ]]
-then
-ci=$(dwdiff -s -A best -d "$s" -w "$w" -x "$x" -y "$y" -z "$z" "$at" "$bt" 2>"$st" |
-		sed -e "s@$s@@g" -e 's@^@<br />@g' -e "s@$y@<span class=\"v\">@g"\
-				-e "s@$w@<span class=\"x\">@g" -e "s@$x@</span>@g")
-cat <<EOF >"$3"
+then  ## html
+	ci=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$at" "$bt" 2>"$st" |\
+		sed -e "s@$d@@g" -e 's@^@<br />@g' -e "s@$e@</span>@g"\
+				-e "s@$n@<span class=\"n\">@g" -e "s@$o@<span class=\"o\">@g")
+	cat <<EOF >"$3"
 <html lang="th">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>$1 / $2</title>
 <script type="application/javascript">
 //<![CDATA[<!--
-oldnewboth=3;
+view=0;
 window.onclick = function (){
-	var xs, vs, i;
-	if(oldnewboth==1){ // do new
-		oldnewboth=2; // hide old, show new, lightblue edge
-		document.body.style.background="lightblue";
-		xs=document.getElementsByClassName("x");
-		for(i=0; i<xs.length; i++) xs[i].style.display="none";
-		vs=document.getElementsByClassName("v");
-		for(i=0; i<vs.length; i++){
-			vs[i].style.display="inline";
-			vs[i].style.background="white";}}
-	else if(oldnewboth==2){ // do both
-		oldnewboth=3; // show old too, white edge
-		document.body.style.background="white";
-		xs=document.getElementsByClassName("x");
-		for(i=0; i<xs.length; i++){
-			xs[i].style.display="inline";
-			xs[i].style.background="pink";}
-		vs=document.getElementsByClassName("v");
-		for(i=0; i<vs.length; i++) vs[i].style.background="lightblue";}
-	else { // do old
-		oldnewboth=1; //hide new, keep showing old, pink edge
-		document.body.style.background="pink";
-		vs=document.getElementsByClassName("v");
-		for(i=0; i<vs.length; i++) vs[i].style.display="none";
-		xs=document.getElementsByClassName("x");
-		for(i=0; i<xs.length; i++) xs[i].style.background="white";}}
+	view=(++view%3);
+	var s, i;
+	if(view==0){ // both
+		document.body.style.background="$bac";
+		s=document.getElementsByClassName("o");
+		for(i=0; i<s.length; i++){
+			s[i].style.display="inline";
+			s[i].style.background="$old";}
+		s=document.getElementsByClassName("n");
+		for(i=0; i<s.length; i++) s[i].style.background="$new";}
+	else if(view==1){ // old
+		document.body.style.background="$old";
+		s=document.getElementsByClassName("n");
+		for(i=0; i<s.length; i++) s[i].style.display="none";
+		s=document.getElementsByClassName("o");
+		for(i=0; i<s.length; i++) s[i].style.background="transparent";}
+	else { // new
+		document.body.style.background="$new";
+		s=document.getElementsByClassName("o");
+		for(i=0; i<s.length; i++) s[i].style.display="none";
+		s=document.getElementsByClassName("n");
+		for(i=0; i<s.length; i++){
+			s[i].style.display="inline";
+			s[i].style.background="transparent";}}}
 //-->]]>
 </script>
 <style type="text/css">
-body {font-size:200%; font-family:Arundina,serif}
-span.x {background:pink; text-decoration:line-through}
-span.v {background:lightblue; text-decoration:underline}
-div.b {background:darkgray; color:black}
+body {background:$def; color:$fon; font-size:150%; font-family:Arundina Serif,serif}
 h1 {text-align:center; font-size: 80%}
+span.o {background:$old; text-decoration:line-through}
+span.n {background:$new; text-decoration:underline}
+h1 span.o {background:$old !important}
+h1 span.n {background:$new !important}
+div.s {background:$sta}
 pre {margin-left:1em; font-weight:bold}
-div {background:white; padding:0.2em}
+div {background:$pap; padding:0.2em}
 </style>
 </head>
-<body title="Click to see: differences (pink+blue) / original (pink) / corrected (blue)">
-<div class="b">
-<h1><span class="x">$ai</span> <span class="v">$bi</span></h1>
+<body title="Click to see: differences ($old+$new) / original ($old) / corrected ($new)">
+<div class="s">
+<h1><span class="o">$ai</span> <span class="n">$bi</span></h1>
 <pre>
-$(cat "$st")
+$(cat "$st" |sed  -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
+		-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ   @g' -e 's@inserted@แทรก@g'\
+		-e 's@changed@เปลี่ยน@g')
 </pre>
 </div>
 <div>
@@ -98,12 +101,15 @@ $ci
 </html>
 EOF
 
-else
-	ci=$(dwdiff -s -A best -d "$s" -w "$w" -x "$x" -y "$y" -z "$z" "$at" "$bt" 2>"$st" |sed -e "s@$s@@g" \
-			-e "s@$y@$(echo $'\o33\[7;4;31m')@g" -e "s@$w@$(echo $'\o33\[7;4;34m')@g" -e "s@$x@$(echo $'\o33\[0m')@g")
+else  ## terminal
+	ci=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$at" "$bt" 2>"$st" |\
+		sed -e "s@$d@@g" -e "s@$n@$(echo $'\o33\[7;4;32m')@g"\
+				-e "s@$o@$(echo $'\o33\[7;4;31m')@g" -e "s@$e@$(echo $'\o33\[0m')@g")
 	echo -e "$ci"
 	echo '--------------------------------------------------------------------------------'
-	cat "$st"
+	cat "$st" |sed -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
+			-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ   @g' -e 's@inserted@แทรก@g'\
+			-e 's@changed@เปลี่ยน@g'
 fi
 
 rm -r -- "$tmp"
