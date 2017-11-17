@@ -30,11 +30,13 @@ d="{d$RANDOM}" o="{o$RANDOM}" e="{e$RANDOM}" n="{n$RANDOM}"
 grep -e $d -e $o -e $e -e $n "$1" || grep -e $d -e $o -e $e -e $n "$2" &&
 	echo "ABORT: separator $d, $o, $e or $n present in input files" && exit 7
 
-swath -b "$d" -u u,u <"$ai" >"$at"
-swath -b "$d" -u u,u <"$bi" >"$bt"
+as=$(swath -b "$d" -u u,u <"$ai")
+bs=$(swath -b "$d" -u u,u <"$bi")
 
 if [[ $3 ]]
 then  ## html
+	sed -e 's@  @\&nbsp; @g' -e 's@\t@\&emsp; \&emsp; \&emsp; @g' <<<"$as" >"$at"
+	sed -e 's@  @\&nbsp; @g' -e 's@\t@\&emsp; \&emsp; \&emsp; @g' <<<"$bs" >"$bt"
 	ci=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$at" "$bt" 2>"$st" |\
 		sed -e "s@$d@@g" -e 's@^@<br />@g' -e "s@$e@</span>@g"\
 				-e "s@$n@<span class=\"n\">@g" -e "s@$o@<span class=\"o\">@g")
@@ -102,13 +104,15 @@ $ci
 EOF
 
 else  ## terminal
+	echo "$as" >"$at"
+	echo "$bs" >"$bt"
 	ci=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$at" "$bt" 2>"$st" |\
 		sed -e "s@$d@@g" -e "s@$n@$(echo $'\o33\[7;4;32m')@g"\
 				-e "s@$o@$(echo $'\o33\[7;4;31m')@g" -e "s@$e@$(echo $'\o33\[0m')@g")
 	echo -e "$ci"
 	echo '--------------------------------------------------------------------------------'
 	cat "$st" |sed -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
-			-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ   @g' -e 's@inserted@แทรก@g'\
+			-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ  @g' -e 's@inserted@แทรก@g'\
 			-e 's@changed@เปลี่ยน@g'
 fi
 
