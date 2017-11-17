@@ -4,7 +4,9 @@ set +vx
 ## Required: swath dwdiff sed coreutils(cat type mktemp rm)
 
 ## Color scheme
-old="pink" new="lightgreen" def="#ccc" pap="#fff" sta="#999" fon="#000"
+font="black" paper="white" back="#bbb" header="#888" hfont="black"
+oldf="black" oldp="#fcc" oldb=$oldp newf="black" newp="#cfc" newb=$newp
+#oldf="red" oldp=$paper oldb="pink" newf="darkgreen" newp=$paper newb="lightgreen"
 
 Help(){
 	cat <<-EOF
@@ -35,8 +37,8 @@ bs=$(swath -b "$d" -u u,u <"$bi")
 
 if [[ $3 ]]
 then  ## html
-	sed -e 's@  @\&nbsp; @g' -e 's@\t@\&emsp; \&emsp; \&emsp; @g' <<<"$as" >"$at"
-	sed -e 's@  @\&nbsp; @g' -e 's@\t@\&emsp; \&emsp; \&emsp; @g' <<<"$bs" >"$bt"
+	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$as" >"$at"
+	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$bs" >"$bt"
 	ci=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$at" "$bt" 2>"$st" |\
 		sed -e "s@$d@@g" -e 's@^@<br />@g' -e "s@$e@</span>@g"\
 				-e "s@$n@<span class=\"n\">@g" -e "s@$o@<span class=\"o\">@g")
@@ -52,43 +54,38 @@ window.onclick = function (){
 	view=(++view%3);
 	var s, i;
 	if(view==0){ // both
-		document.body.style.background="$bac";
+		document.body.style.background="$back";
 		s=document.getElementsByClassName("o");
-		for(i=0; i<s.length; i++){
-			s[i].style.display="inline";
-			s[i].style.background="$old";}
-		s=document.getElementsByClassName("n");
-		for(i=0; i<s.length; i++) s[i].style.background="$new";}
+		for(i=0; i<s.length; i++) s[i].style.display="inline";} // was hidden
 	else if(view==1){ // old
-		document.body.style.background="$old";
+		document.body.style.background="$oldb";
 		s=document.getElementsByClassName("n");
 		for(i=0; i<s.length; i++) s[i].style.display="none";
 		s=document.getElementsByClassName("o");
-		for(i=0; i<s.length; i++) s[i].style.background="transparent";}
+		for(i=0; i<s.length; i++) s[i].style.background="oldp";}
 	else { // new
-		document.body.style.background="$new";
+		document.body.style.background="$newb";
 		s=document.getElementsByClassName("o");
 		for(i=0; i<s.length; i++) s[i].style.display="none";
 		s=document.getElementsByClassName("n");
-		for(i=0; i<s.length; i++){
-			s[i].style.display="inline";
-			s[i].style.background="transparent";}}}
+		for(i=0; i<s.length; i++) s[i].style.display="inline";}}
 //-->]]>
 </script>
 <style type="text/css">
-body {background:$def; color:$fon; font-size:150%; font-family:Arundina Serif,serif}
-h1 {text-align:center; font-size: 80%}
-span.o {background:$old; text-decoration:line-through}
-span.n {background:$new; text-decoration:underline}
-h1 span.o {background:$old !important}
-h1 span.n {background:$new !important}
-div.s {background:$sta}
-pre {margin-left:1em; font-weight:bold}
-div {background:$pap; padding:0.2em}
+body {background:$back; color:$font; font-size:150%; font-family:Arundina Serif,serif}
+h1 {text-align:center; font-size:80%}
+span.t {display:inline-block; width:3em}
+span.o {color:$oldf; background:$oldp; text-decoration:line-through}
+span.n {color:$newf; background:$newp; text-decoration:underline}
+h1 span.o {padding:0 0.2em}
+h1 span.n {padding:0 0.2em}
+div.h {color:$hfont; background:$header; padding:0.2}
+pre {margin-left:0.5em}
+div {background:$paper; padding:0.5em}
 </style>
 </head>
-<body title="Click to see: differences ($old+$new) / original ($old) / corrected ($new)">
-<div class="s">
+<body title="Click to show: comparison / original / corrected&#013;คลิกเพื่อแสดง การเปรียบเทียบ / ต้นฉบับ / ฉบับแก้ไข">
+<div class="h">
 <h1><span class="o">$ai</span> <span class="n">$bi</span></h1>
 <pre>
 $(cat "$st" |sed  -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
