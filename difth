@@ -42,20 +42,19 @@ then  ## html
 	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$as" >"$at"
 	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$bs" >"$bt"
 	ci=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$at" "$bt" 2>"$st" |\
-		sed -e "s@$d@@g" -e 's@^@<br />@g' -e "s@$e@</span>@g"\
+		sed -e "s@$d@@g" -e 's@^@<br>@g' -e "s@$e@</span>@g"\
 				-e "s@$n@<span class=\"n\">@g" -e "s@$o@<span class=\"o\">@g")
 	sed -i -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
 		-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ   @g' -e 's@inserted@แทรก@g'\
 		-e 's@changed@เปลี่ยน@g' "$st"
 	cat <<EOF >"$3"
+<!DOCTYPE html>
 <html lang="th">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta charset="utf-8">
 <title>$1 / $2</title>
 EOF
 	((nojs)) || cat <<EOF >>"$3"
-<script type="application/javascript">
-//<![CDATA[<!--
+<script>
 view=0;
 window.onclick = function (){
 	view=(++view%3);
@@ -76,36 +75,33 @@ window.onclick = function (){
 		for(i=0; i<s.length; i++) s[i].style.display="none";
 		s=document.getElementsByClassName("n");
 		for(i=0; i<s.length; i++) s[i].style.display="inline";}}
-//-->]]>
 </script>
 EOF
 	cat <<EOF >>"$3"
-<style type="text/css">
+<style>
 body {background:$back; color:$font; font-size:150%; font-family:Arundina Serif,serif}
+div.h {color:$hfont; background:$header; padding:.2; margin:0 0 .2 0}
+pre {background:$back; margin:0 .5em; padding:0}
 h1 {text-align:center; font-size:80%}
+h1 span.o {padding:0 .2em}
+h1 span.n {padding:0 .2em}
+p.i {background:$header; font-size:70%; margin:0 .7em}
+div {background:$paper; padding:.5em}
+div.no span.o {display:none !important}
+div.nn span.n {display:none !important}
 span.t {display:inline-block; width:3em}
 span.o {color:$oldf; background:$oldp; text-decoration:line-through}
 span.n {color:$newf; background:$newp; text-decoration:underline}
-h1 span.o {padding:0 0.2em}
-h1 span.n {padding:0 0.2em}
-div.h {color:$hfont; background:$header; padding:0.2}
-div.no span.o {display:none !important}
-div.nn span.n {display:none !important}
-pre {margin-left:0.5em}
-div {background:$paper; padding:0.5em}
 </style>
-</head>
 EOF
-	((nojs)) && echo '<body>' >>"$3" ||
-		echo '<body title="Click to show: comparison / original / corrected&#013;คลิกเพื่อแสดง การเปรียบเทียบ / ต้นฉบับ / ฉบับแก้ไข">' >>"$3"
-	echo -e "<div class=\"h\">\n<h1><span class=\"o\">$ai</span> <span class=\"n\">$bi</span></h1>\n<pre>\n$(cat "$st")\n</pre>\n</div>" >>"$3"
-	echo -e "<div>\n$ci\n</div>" >>"$3"
+	echo -e "<body><div class=\"h\">\n<h1><span class=\"o\">$ai</span> <span class=\"n\">$bi</span></h1>\n<pre>\n$(cat "$st")</pre>\n" >>"$3"
+	((nojs)) || echo "<p class="i">คลิกเพื่อเปลี่ยนโหมดแสดง - Click to change the view mode" >>"$3"
+	echo -e "</div><div>\n$ci\n</div>" >>"$3"
 	((nojs)) &&
-		echo -e "<hr /><div class=\"h nn\">\n<h1><span class=\"o\">$ai</span> <span class=\"n\">$bi</span></h1>\n<pre>\n$(head -1 "$st")\n</pre>\n</div>" >>"$3"
+		echo -e "<hr><div class=\"h nn\">\n<h1><span class=\"o\">$ai</span> <span class=\"n\">$bi</span></h1>\n<pre>\n$(head -1 "$st")\n</pre>\n</div>" >>"$3" &&
 		echo -e "<div class=\"nn\">\n$ci\n</div>" >>"$3" &&
-		echo -e "<hr /><div class=\"h no\">\n<h1><span class=\"o\">$ai</span> <span class=\"n\">$bi</span></h1>\n<pre>\n$(tail -1 "$st")\n</pre>\n</div>" >>"$3"
+		echo -e "<hr><div class=\"h no\">\n<h1><span class=\"o\">$ai</span> <span class=\"n\">$bi</span></h1>\n<pre>\n$(tail -1 "$st")\n</pre>\n</div>" >>"$3" &&
 		echo -e "<div class=\"no\">\n$ci\n</div>" >>"$3"
-	echo -e "</body>\n</html>" >>"$3"
 
 else  ## terminal
 	echo "$as" >"$at"
