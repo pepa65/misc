@@ -64,8 +64,9 @@ Main(){
 	((pause)) && sleep 10
 	wget -qpO "$pic" -w 10 --connect-timeout=20 \
 			"https://static.die.net/earth/$proj/$width.jpg"
-	sleep 1
+	sleep 3
 	sync
+	sleep 1
 
 	# For peters cut 26 pixels from top and bottom
 	[[ $proj = peters ]] && type -p convert >/dev/null &&
