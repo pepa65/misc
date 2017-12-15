@@ -10,11 +10,13 @@ oldf="black" oldp="#fcc" oldb=$oldp newf="black" newp="#cfc" newb=$newp
 
 Abort(){ # $1: abort message
 	cat <<-EOF
-		 $self - Show the differences between 2 Thai language input files
+		 $self - Show the differences between 2 Thai language input sources
 		  and either produce a html file, or output result to the terminal
-		 USAGE: $self [-n|--nojs] [-c|--canonicalize] <file1> <file2> [<html-out>|-]
-		   file1 and file2 are mandatory, html-out is optional, if - is given, then
-		    html will be output to stdout (otherwise the colored diff to terminal)
+		 USAGE: $self [-n|--nojs] [-s|--strings] <in1> <in2> [<html-out>|-]
+		   Arguments <in1> and <in2> are mandatory and must be existing filenames,
+		    unless -s or --strings is given, then they must be strings.
+		   Argument html-out is optional; if - is given, then html will be output
+		    to stdout (otherwise the colored diff will be displayed onto terminal).
 		   When -n or --nojs is given, no javascript is used for html, otherwise
 		    while viewing the html: click to cycle through the display modes.
 	EOF
@@ -22,37 +24,46 @@ Abort(){ # $1: abort message
 	exit 1
 }
 
+nojs=0 strings=0 i1= i2= of= self=$(basename $0)
 ! type -p swath &>/dev/null && Abort "Package 'swath' not installed"
 ! type -p dwdiff &>/dev/null && Abort "Package 'dwdiff' not installed"
-nojs=0 if1= if2= of= self=$(basename $0)
 while (($#))
 do
 	[[ $1 = -n || $1 = --nojs ]] && nojs=1 && shift && continue
-	[[ $if1 && $if2 && $of ]] && Abort "More than 3 file arguments"
-	if [[ $if1 && $if2 ]]
+	[[ $1 = -s || $1 = --strings ]] && strings=1 && shift && continue
+	[[ $i1 && $i2 && $of ]] && Abort "Extraneous argument: $1"
+	if [[ $i1 && $i2 ]]
 	then
 		[[ $1 = - ]] && of=/dev/stdout || of=$1
-	elif [[ -f $1 ]]
-	then
-		[[ $if1 ]] && if2=$1 || if1=$1
 	else
-		Abort "Not a file: $1"
+		[[ $i1 ]] && i2=$1 || i1=$1
 	fi
 	shift
 done
-[[ -z $if1 || -z $if2 ]] && Abort "At least 2 filenames are necessary"
-((nojs)) && [[ -z $of ]] && echo -e "INFO: option -n / --nojs ignored\n"
+
+[[ -z $i1 || -z $i2 ]] && Abort "At least 2 input sources are necessary"
 tmp=$(mktemp -d) t1="$tmp/t1" t2="$tmp/t2" stat="$tmp/stat"
-n1=$(basename "$if1") n2=$(basename "$if2")
-[[ $n1 = $n2 ]] && n1=$if1 n2=$if2
+n1='Old' n2='New'
+if ((!strings))
+then
+	[[ -f $i1 ]] || Abort "Not a filename: $i1"
+	[[ -f $i2 ]] || Abort "Not a filename: $i2"
+	n1=$(basename "$i1") n2=$(basename "$i2")
+	[[ $n1 = $n2 ]] && n1=$i1 n2=$i2
+else
+	echo "$i1" >"$tmp/$n1"
+	echo "$i2" >"$tmp/$n2"
+	i1="$tmp/$n1" i2="$tmp/$n2"
+fi
+((nojs)) && [[ -z $of ]] && echo -e "INFO: option -n / --nojs ignored\n"
 
 ## unique separators: $d:delimiter $o:old-begin $e:end $n:new-begin
 d="{d$RANDOM}" o="{o$RANDOM}" e="{e$RANDOM}" n="{n$RANDOM}"
-grep -e $d -e $o -e $e -e $n "$if1" || grep -e $d -e $o -e $e -e $n "$if2" &&
+grep -e $d -e $o -e $e -e $n "$i1" || grep -e $d -e $o -e $e -e $n "$i2" &&
 	echo "ABORT: separator $d, $o, $e or $n present in input files" && exit 4
 
-s1=$(swath -b "$d" -u u,u <"$if1")
-s2=$(swath -b "$d" -u u,u <"$if2")
+s1=$(swath -b "$d" -u u,u <"$i1")
+s2=$(swath -b "$d" -u u,u <"$i2")
 
 if [[ $of ]]
 then  ## html
