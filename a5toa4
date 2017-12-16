@@ -1,7 +1,8 @@
 #!/bin/bash
 set +vx
 # a5toa4 - Print an A5 size document on A4 for booklet folding
-# Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
+# Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf)
+#           psutils(psnup)
 
 Usage(){ # $1: code for exit
 	cat <<-EOS
@@ -16,6 +17,7 @@ Usage(){ # $1: code for exit
 		  - printing pages 1..n/2
 		  - flipping the whole bundle of sheets over
 		  - printing pages n/2+1..n
+		  (For more than 1 copy, select 'Collate' before printing.)
 	EOS
 	[[ $1 ]] && exit $1
 }		
@@ -98,5 +100,6 @@ else
 	echo "- printing the odd pages"
 	echo "Or by printing the document with a full-duplex printer."
 fi
+echo "(For more than 1 copy, select 'Collate' before printing.)"
 
 exit 0
