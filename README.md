@@ -88,7 +88,8 @@ Required: wget imagemagick(convert) [for peters projection]
 * Required: zenity fuse gocryptfs tar grep procps coreutils (and <command>)
 * Set <mount>, <dir> and <name> in this script (and optionally <command>)
 * Setup: `gocryptfs -init [-plaintextnames] <dir>/<name>`
-* Usage: `mountgcfs`
+* Usage: `mountgcfs [-c|--console]` When `-c`/`--console` is given, `zenity`
+is not used and <command> not launched
 
 ## healbitrot
 **Automatic check and self-healing for bitrot**

@@ -5,7 +5,8 @@ set +vx
 ##
 ## Set <mount>, <dir> and <name> in this script (and optionally <command>)
 ## Setup: gocryptfs -init [-plaintextnames] <dir>/<name>
-## Usage: mountgcfs
+## USAGE: mountgcfs [-c|--console]
+##   When -c/--console is given, zenity is not used and <command> not launched
 
 mount=$HOME/Private  ## Must start with slash, has to exist
 dir=/data/MyDocuments/SECURE
@@ -47,6 +48,7 @@ Password(){  ## $1: boolean-Failed
 }
 
 type -p zenity >/dev/null && zenity=1 || zenity=0
+[[ $1 = -c || $1 = --console ]] && zenity=0 command=
 
 title="Decrypt $name"
 ! [[ -s $dir/$name/gocryptfs.conf ]] && Abend "$dir/$name is not a gocryptfs directory"
