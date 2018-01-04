@@ -1,66 +1,93 @@
 #!/bin/bash
-set +vx
-# difth - show the difference between 2 Thai language files in html or terminal
-## Required: swath dwdiff sed coreutils(cat type mktemp rm)
 
-## Color scheme
-font="black" paper="white" back="#bbb" header="#888" hfont="black"
-oldf="black" oldp="#fcc" oldb=$oldp newf="black" newp="#cfc" newb=$newp
-#oldf="red" oldp=$paper oldb="pink" newf="darkgreen" newp=$paper newb="lightgreen"
+## difth - Show differences between 2 Thai language sources in html or terminal
+## Required: swath dwdiff sed coreutils(cat type mkdir chmod mktemp rm)
 
-Abort(){ # $1: abort message
+Abort(){ ## $1: abort message
 	cat <<-EOF
-		 $self - Show the differences between 2 Thai language input sources
-		  and either produce a html file, or output result to the terminal
-		 USAGE: $self [-n|--nojs] [-s|--strings] <in1> <in2> [<html-out>|-]
-		   Arguments <in1> and <in2> are mandatory and must be existing filenames,
-		    unless -s or --strings is given, then they must be strings.
-		   Argument html-out is optional; if - is given, then html will be output
-		    to stdout (otherwise the colored diff will be displayed onto terminal).
-		   When -n or --nojs is given, no javascript is used for html, otherwise
-		    while viewing the html: click to cycle through the display modes.
+		 $self - Show the differences between 2 Thai language input sources and
+		         either produce html, or output the result to the terminal.
+		 USAGE: $self [-n|--nojs] [-s|--strings] <in1> <in2> [<htmlout>|-|/]
+		   Arguments <in1> and <in2> must be existing filenames,
+		    or strings (if -s or --strings is given).
+		   Argument htmlout is optional: if '-' then the html goes to stdout,
+		    if '/' then the html will be output to a file in $dl and displayed,
+		    if not present then the colored diff will be displayed onto terminal,
+		    otherwise the html will be output to the given filename <htmlout>.
+		   When -n or --nojs is given, the html will use no javascript (used for
+		    cycling through viewing modes).
 	EOF
 	echo -e "\nABORT: $1"
 	exit 1
 }
 
-nojs=0 strings=0 i1= i2= of= self=$(basename $0)
-! type -p swath &>/dev/null && Abort "Package 'swath' not installed"
-! type -p dwdiff &>/dev/null && Abort "Package 'dwdiff' not installed"
+## Color scheme
+font="black" pap="white" bg="#bbb"
+hfont="black" hpap="#666"
+bfont="black" bpap="#888"
+ofont="black" opap="#fcc" obg=$opap
+nfont="black" npap="#cfc" nbg=$npap
+#ofont="red" opap=$pap obg="pink"
+#nfont="darkgreen" npap=$pap nbg="lightgreen"
+
+## Messages
+back="&#11013;"
+backc="กลับ"
+download="&#11141;"
+downloadc="เดาน์โหลด"
+cycle="&#8634;"
+cyclec="เปลี่ยนโหมดแสดง"
+n1='ต้นฉบับ' n2='แก้ไข'
+dl=files
+
+self=$(basename $0)
+for f in sed swath dwdiff
+do
+	! type -p "$f" &>/dev/null && Abort "Package '$f' not installed"
+done
+
+mkdir -p "$dl"
+chmod a+w "$dl"
+tmp=$(mktemp -dp "$dl") t1="$tmp/t1" t2="$tmp/t2" stat="$tmp/stat"
+
+nojs=0 strings=0 i1= i2= of= cat=1
 while (($#))
 do
+	[[ $i1 && $i2 && $of ]] && Abort "Extraneous argument: $1"
 	[[ $1 = -n || $1 = --nojs ]] && nojs=1 && shift && continue
 	[[ $1 = -s || $1 = --strings ]] && strings=1 && shift && continue
-	[[ $i1 && $i2 && $of ]] && Abort "Extraneous argument: $1"
 	if [[ $i1 && $i2 ]]
 	then
-		[[ $1 = - ]] && of=/dev/stdout || of=$1
+		case $1 in
+		-) of="$tmp/of" ;;
+		/) of=$(md5sum <<<"$1$2") of="$dl/${of%% *}.html" ;;
+		*) of=$1 cat=0 ;;
+		esac
 	else
 		[[ $i1 ]] && i2=$1 || i1=$1
 	fi
 	shift
 done
-
+#echo "nojs:$nojs strings:$strings cat:$cat" #PP
 [[ -z $i1 || -z $i2 ]] && Abort "At least 2 input sources are necessary"
-tmp=$(mktemp -d) t1="$tmp/t1" t2="$tmp/t2" stat="$tmp/stat"
-n1='Old' n2='New'
-if ((!strings))
+
+if ((strings))
 then
-	[[ -f $i1 ]] || Abort "Not a filename: $i1"
-	[[ -f $i2 ]] || Abort "Not a filename: $i2"
-	n1=$(basename "$i1") n2=$(basename "$i2")
-	[[ $n1 = $n2 ]] && n1=$i1 n2=$i2
+  echo "$i1" >"$tmp/n1"
+  echo "$i2" >"$tmp/n2"
+  i1="$tmp/n1" i2="$tmp/n2"
 else
-	echo "$i1" >"$tmp/$n1"
-	echo "$i2" >"$tmp/$n2"
-	i1="$tmp/$n1" i2="$tmp/$n2"
+  [[ -f $i1 ]] || Abort "Not a filename: $i1"
+  [[ -f $i2 ]] || Abort "Not a filename: $i2"
+  n1=$(basename "$i1") n2=$(basename "$i2")
+  [[ $n1 = $n2 ]] && n1=$i1 n2=$i2
 fi
 ((nojs)) && [[ -z $of ]] && echo -e "INFO: option -n / --nojs ignored\n"
 
 ## unique separators: $d:delimiter $o:old-begin $e:end $n:new-begin
 d="{d$RANDOM}" o="{o$RANDOM}" e="{e$RANDOM}" n="{n$RANDOM}"
 grep -e $d -e $o -e $e -e $n "$i1" || grep -e $d -e $o -e $e -e $n "$i2" &&
-	echo "ABORT: separator $d, $o, $e or $n present in input files" && exit 4
+	echo "ABORT: separator $d, $o, $e or $n present in input files" && exit 1
 
 s1=$(swath -b "$d" -u u,u <"$i1")
 s2=$(swath -b "$d" -u u,u <"$i2")
@@ -69,84 +96,96 @@ if [[ $of ]]
 then  ## html
 	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$s1" >"$t1"
 	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$s2" >"$t2"
-	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e -I "$t1" "$t2" 2>"$stat" |\
+	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$t1" "$t2" 2>"$stat" |\
 		sed -e "s@$d@@g" -e 's@^@<br>@g' -e "s@$e@</span>@g"\
 				-e "s@$n@<span class=\"n\">@g" -e "s@$o@<span class=\"o\">@g")
 	sed -i -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
 		-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ   @g' -e 's@inserted@แทรก@g'\
 		-e 's@changed@เปลี่ยน@g' "$stat"
-	cat <<-EOF >"$of"
+#rm -- "$of" #PP
+	cat <<-EOS >"$of"
 		<!DOCTYPE html>
 		<html lang="th">
 		<meta charset="utf-8">
 		<title>$n1 / $n2</title>
-	EOF
-	((nojs)) || cat <<-EOF >>"$of"
+	EOS
+	((nojs)) || cat <<-EOS >>"$of"
 		<script>
 		view=0;
 		window.onclick = function(){
-		 view=(++view%3);
+	 	view=(++view%3);
 		 var s, i;
 		 if(view==0){ // both
-		  document.body.style.background="$back";
+		  document.body.style.background="$bg";
 		  s=document.getElementsByClassName("o");
 		  for(i=0; i<s.length; i++) s[i].style.display="inline";} // was hidden
 		 else if(view==1){ // old
-		  document.body.style.background="$oldb";
+		  document.body.style.background="$obg";
 		  s=document.getElementsByClassName("n");
 		  for(i=0; i<s.length; i++) s[i].style.display="none";
 		  s=document.getElementsByClassName("o");
-		  for(i=0; i<s.length; i++) s[i].style.background="oldp";}
+		  for(i=0; i<s.length; i++) s[i].style.background="opap";}
 		 else { // new
-		  document.body.style.background="$newb";
+		  document.body.style.background="$nbg";
 		  s=document.getElementsByClassName("o");
 		  for(i=0; i<s.length; i++) s[i].style.display="none";
 		  s=document.getElementsByClassName("n");
 		  for(i=0; i<s.length; i++) s[i].style.display="inline";}}
 		</script>
-	EOF
-	cat <<-EOF >>"$of"
+	EOS
+	cat <<-EOS >>"$of"
 		<style>
-		body {background:$back; color:$font; font-size:150%; font-family:Arundina Serif,serif}
-		div.h {color:$hfont; background:$header; padding:.2; margin:0 0 .2 0}
-		pre {background:$back; margin:0 .5em; padding:0}
+		body {background:$bg; color:$font; font-size:120%; font-family:Arundina Serif,serif}
+		div.h {color:$hfont; background:$hpap; padding:.2em 0; margin:0}
+		pre {background:$bg; margin:0 .5em; padding:0 .5em}
 		h1 {text-align:center; font-size:80%}
 		h1 span.o {padding:0 .2em}
 		h1 span.n {padding:0 .2em}
-		p.i {background:$header; font-size:70%; margin:0 .7em}
-		div {background:$paper; padding:.5em}
+		p {margin:0 .2em; float:left}
+		.i {color:$bfont; background:$bpap; margin:0 .2em; padding:0 .2em}
+		a {color:$bfont; text-decoration:none}
+		a:hover {background:$bg}
+		div {background:$pap; padding:.5em}
 		div.no span.o {display:none !important}
 		div.nn span.n {display:none !important}
 		span.t {display:inline-block; width:3em}
-		span.o {color:$oldf; background:$oldp; text-decoration:line-through}
-		span.n {color:$newf; background:$newp; text-decoration:underline}
+		span.o {color:$ofont; background:$opap; text-decoration:line-through}
+		span.n {color:$nfont; background:$npap; text-decoration:underline}
 		</style>
-		<body><div class="h">
-		<h1><span class="o">$n1</span> <span class="n">$n2</span></h1>
-		<pre>
-		$(cat "$stat")
-		</pre>
-	EOF
-	((nojs)) || echo "<p class="i">คลิกเพื่อเปลี่ยนโหมดแสดง - Click to change the view mode" >>"$of"
-	echo -e "</div><div>\n$out\n</div>" >>"$of"
-	((nojs)) && cat <<-EOF >>"$of"
-		<hr><div class="h nn">
-		<h1><span class="o">$n1</span> <span class="n">$n2</span></h1>
-		<pre>
-		$(head -1 "$stat")
-		</pre></div>
+		<body>
+		<div class="h">
+		 <p><a class="i" href="#" onclick="history.back();" title="$backc">$back</a>
+		  <a class="i" href="$of" download title="$downloadc">$download</a>
+	EOS
+	((nojs)) || echo "  <a class="i" title="$cyclec">$cycle</a>" >>"$of"
+	cat <<-EOS >>"$of"
+		 </p>
+		 <h1><span class="o">$n1</span> <span class="n">$n2</span></h1>
+		 <pre>$(cat "$stat")</pre>
+		</div>
+		<div>
+		$out
+		</div>
+	EOS
+	((nojs)) && cat <<-EOS >>"$of"
+		<hr>
+		<div class="h nn">
+		 <h1><span class="o">$n1</span> <span class="n">$n2</span></h1>
+		 <pre>$(head -1 "$stat")</pre>
+		</div>
 		<div class="nn">
 		$out
 		</div>
-		<hr><div class="h no">
-		<h1><span class="o">$n1</span> <span class="n">$n2</span></h1>
-		<pre>
-		$(tail -1 "$stat")
-		</pre></div>
+		<hr>
+		<div class="h no">
+		 <h1><span class="o">$n1</span> <span class="n">$n2</span></h1>
+		 <pre>$(tail -1 "$stat")</pre>
+		</div>
 		<div class="no">
 		$out
 		</div>
-	EOF
+	EOS
+	((cat)) && cat "$of"
 else  ## terminal
 	echo "$s1" >"$t1"
 	echo "$s2" >"$t2"
@@ -155,11 +194,11 @@ else  ## terminal
 				-e "s@$o@$(echo $'\o33\[7;4;31m')@g" -e "s@$e@$(echo $'\o33\[0m')@g")
 	echo -e "$out"
 	echo '--------------------------------------------------------------------------------'
-	cat "$stat" |sed -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
-			-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ  @g' -e 's@inserted@แทรก@g'\
-			-e 's@changed@เปลี่ยน@g'
+	cat "$stat" |sed -e 's@old@เก?า@g'  -e 's@new@ใหม?@g' -e 's@words@คำ@g'\
+			-e 's@common@ตรงก?น@g' -e 's@deleted@ลบ  @g' -e 's@inserted@แทรก@g'\
+			-e 's@changed@เปล??ยน@g'
 fi
 
-rm -r -- "$tmp"
+#rm -r -- "$tmp"
 
 exit 0

@@ -2,19 +2,28 @@
 *miscellaneous utilities and programs*
 
 ## difth
-**Show the differences between 2 Thai language input files 
-and either produce a html file, or output result to the terminal**
+**Show differences between 2 Thai language sources in html or terminal**
 
-* Required: swath dwdiff
+* Required: swath dwdiff sed coreutils(cat type mkdir chmod mktemp rm)
+Usage:
 ```
-Usage: difth <file1> <file2> [<html-out>]
-    file1 and file2 mandatory, file html-out optional (otherwise to stdout)
+difth [-n|--nojs] [-s|--strings] <in1> <in2> [<htmlout>|-|/]
+    Arguments <in1> and <in2> must be existing filenames,
+     or strings (if -s or --strings is given).
+    Argument htmlout is optional: if '-' then the html goes to stdout,
+     if '/' then the html will be output to a file in $dl and displayed,
+     if not present then the colored diff will be displayed onto terminal,
+     otherwise the html will be output to the given filename <htmlout>.
+    When -n or --nojs is given, the html will use no javascript (used for
+     cycling through viewing modes).
 ```
+Includes the files `difth.php` and `index.html-difth` (rename to `index.html`)
+for hosting an online Thai text comparison service.
 
 ## count
 **Count character occurrences in file**
 
-Required: uni2ascii
+* Required: uni2ascii
 
 Usage: `count <file> [-s]`
     `-s means sort by code point instead of frequency`
@@ -27,7 +36,7 @@ Usage: `rmkernels`
 ## backup
 **A utility to back up a list of files and directories**
 
-Usage: `$self [-h|--help] [<backup-list> [<backup-file>]]`
+Usage: `backup [-h|--help] [<backup-list> [<backup-file>]]`
 
 ## duckdns
 **Update duckdns.org DDNS service**
@@ -37,9 +46,12 @@ Usage: `duckdns [date]`
 ## merge2ass
 **Merge 2 subtitle files into one**
 
-Usage: `merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]`
-    or: `merge2ass --detect <movie> [-p | --play-movie]`
-    or: `merge2ass [-h | --help]`
+Usage:
+```
+merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]
+    or: `merge2ass --detect <movie> [-p | --play-movie]
+    or: `merge2ass [-h | --help]
+```
 
 ## pair.c
 **Utility to pair Logitech USB unifying or nano receivers with wireless input devices**
@@ -53,9 +65,9 @@ Usage: `subs <search terms>`
 
 ## qemu-create-os-img
 **Create a fresh Debian/Ubuntu qemu image**
-
+Usage:
 ```
-Usage: qemu-create-os-img [-h] [-r <release>] [-h <hostname>] [-i <img_file>]
+qemu-create-os-img [-h] [-r <release>] [-h <hostname>] [-i <img_file>]
                            [-s <disk_size>] [-b <boot_size>] [<debootstrap>]
   -h:              This help text
   -r <release>:    A supported Debian or Ubuntu release name
@@ -88,15 +100,16 @@ Required: wget imagemagick(convert) [for peters projection]
 * Required: zenity fuse gocryptfs tar grep procps coreutils (and <command>)
 * Set <mount>, <dir> and <name> in this script (and optionally <command>)
 * Setup: `gocryptfs -init [-plaintextnames] <dir>/<name>`
-* Usage: `mountgcfs [-c|--console]` When `-c`/`--console` is given, `zenity`
-is not used and <command> not launched
+Usage: `mountgcfs [-c|--console]`
+When `-c`/`--console` is given, `zenity` is not used and <command> not launched
 
 ## healbitrot
 **Automatic check and self-healing for bitrot**
 
 * Required: bitrot par2 grep find libc-bin(getconf) coreutils(rm mv cp mkdir cd du)
+Usage:
 ```
-Usage: healbitrot [<dir>]...
+healbitrot [<dir>]...
    <dir> are the directories to check
    if no directories specified, the file in $BITROT_BACKUPS_DEST is read
 ```
@@ -110,8 +123,8 @@ Usage: healbitrot [<dir>]...
 * Modified by TerrorBite //github.com/TerrorBite
 * Licence: public domain
 * Required: POSIX shell netcat(nc) coreutils(cat od) date [if /dev/urandom not present]
-```
 Usage:
+```
     spr <file
     spr <<<$string
     spr  # end the input with Ctrl-D on a new line
@@ -120,14 +133,15 @@ Usage:
 ## sct.c
 **Utility to set the screen "temperature" to adjust the red-blue balance**
 
-See the file for instructions to compile and use.
+See the file for instructions on how to compile and use.
 
 ## tf
 **Transfer files via transfer.sh**
 * Required: curl
 * Optional: gpg tar qrencode
+Usage:
 ```
-Usage: tf [-q|--qr] [-z|--zip] [-c|--crypt] [-h|--help | <link> | <path>...
+tf [-q|--qr] [-z|--zip] [-c|--crypt] [-h|--help | <link> | <path>...
     -q|--qr:     Also give QR code for resulting link
     -z|--zip:    Use zip instead of tar for the uploaded archive
     -c|--crypt:  Use gpg for en/decryption of file/archive to be up/downloaded
@@ -138,8 +152,9 @@ Usage: tf [-q|--qr] [-z|--zip] [-c|--crypt] [-h|--help | <link> | <path>...
 
 ## a5toa4
 **Print an A5 size document on A4 for booklet folding**
+Usage:
 ```
-Usage: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
+a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
     Print the resulting A4 document on a single-sided printer by printing the
     even pages, flipping the bundle of sheets over, then printing the uneven pages
 ```
@@ -148,5 +163,5 @@ Usage: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
 ## pdfslice
 **pdfslice - Return page ranges from a source document**
 
-`USAGE: pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
+Usage: `pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
 * Required: pdfseparate pdfunite coreutils(mktemp cd)
