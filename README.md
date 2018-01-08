@@ -94,14 +94,23 @@ earthwallpaperlive [<projection>]
 Required: wget imagemagick(convert) [for peters projection]
 ```
 
-## mountgcfs
-**Mount gocryptfs encrypted directory**
+## mgfs
+**Manage access to gocryptfs encrypted directory**
 
-* Required: zenity fuse gocryptfs tar grep procps coreutils (and <command>)
-* Set <mount>, <dir> and <name> in this script (and optionally <command>)
-* Setup: `gocryptfs -init [-plaintextnames] <dir>/<name>`
-Usage: `mountgcfs [-c|--console]`
-When `-c`/`--console` is given, `zenity` is not used and <command> not launched
+* Required: fuse gocryptfs(github) tar grep procps coreutils (and <command>)
+* Optional: zenity (otherwise: whiptail)
+Usage:
+```
+mgfs | [-c|--console] | [-i|--init [<dir> [<name>]] | [-h|--help]
+    -c/--console: whiptail is forced instead of zenity
+    -i/--init: setting up, <dir> must exist and <name> must not!
+    -h/--help: display this help text
+  Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
+   (and optionally <command>), or set the corresponding environment variables
+   MGFS_MOUNT MGFS_DIR MGFS_NAME (and optionally MGFS_COMMAND).
+  When during 'init' MGFS_PLAIN is 1, filenames will not be encrypted. On
+   init, the commandline needs to be used for password entry!
+```
 
 ## healbitrot
 **Automatic check and self-healing for bitrot**
