@@ -14,27 +14,35 @@ command="/usr/bin/caja $mount/"
 Help(){
 	cat <<-EOS
 		mgcfs - Manage access to gocryptfs encrypted directory
-		USAGE: mgcfs | [-c|--console] | [-i|--init [<dir> [<name>]] | [-h|--help]
-		  -c/--console: whiptail is forced instead of zenity
-		  -i/--init: setting up, <dir> must exist and <name> must not!
-		  -h/--help: display this help text
+		USAGE: mgcfs [-c|--console] [-u|--unmount <sleeplength>[<unit>]] |
+		             [-i|--init [<dir> [<name>]] | [-h|--help]
+		  -c/--console:  display through whiptail is forced instead of zenity
+		  -i/--init:     setting up, <dir> must exist and <name> must not!
+		  -u/--unmount:  auto-unmount after <sleeplength>[<unit>]
+		  -h/--help:     display this help text
 		Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
 		  (and optionally <command>), or set the corresponding environment variables
 		  MGCFS_MOUNT MGCFS_DIR MGCFS_NAME (and optionally MGCFS_COMMAND).
 		When during 'init' MGCFS_PLAIN is 1, filenames will not be encrypted. On
 		  init, the commandline needs to be used for password entry!
+		<sleeplength> is in minutes by default, but if <unit> can be: s (seconds),
+		  m (minutes), h (hours), d (days).
 	EOS
 	exit 0
 }
 
-Info(){  ## $1: Info message
+Info(){  ## $1: Info message, Using: $sleep
 	((zenity)) &&
-		zenity --info --title="$title" --text="<b>$1</b>" 2>/dev/null ||
-		whiptail --title="$title" --msgbox "$1" 11 78
+		zenity --info --title="$title" --text="<b>$1</b>" 2>/dev/null || {
+			[[ $sleep ]] && echo -e "=== $title ===\n$1" ||
+				whiptail --title="$title" --msgbox "$1" 11 78
+		}
 }
 
-Unmount(){  ## $1: Mount directory
-	fusermount -qu "$mount" && Info "Now unmounted $name from:\n\n$mount" ||
+Unmount(){  ## $1: Mount directory, Using: $sleep
+	local z
+	[[ $sleep ]] && z=-z
+	fusermount $z -qu "$mount" && Info "Now unmounted $name from:\n\n$mount" ||
 		Info "Unable to unmount $name:\n\n$mount"
 	exit 0
 }
@@ -44,9 +52,11 @@ Abort(){  ## $1: Error message
 	exit 2
 }
 
-Password(){  ## $1: boolean-Failed
+Password(){  ## $1: boolean-Failed, Using: $sleep
+	[[ $sleep ]] && unmount="Will auto-unmount $name after $sleep." ||
+		unmount="Run again to manually unmount $name!"
 	(($1)) && failed="Decryption failed, try a different password!\n\n" || failed=
-	text="$failed(Run again to manually unmount $name)\n\nMounting $name on $mount\n\nPassword:"
+	text="$failed($unmount)\n\nMounting $name on $mount\n\nPassword:"
 	if ((zenity))
 	then
 		zenity --entry --hide-text --title="$title" --text="$text" 2>/dev/null ||
@@ -65,7 +75,7 @@ dir=${MGCFS_DIR:-$dir}
 name=${MGCFS_NAME:-$name}
 command=${MGCFS_COMMAND:-$command}
 title="Manage encryption of $name"
-zenity=1 init=0
+zenity=1 init=0 sleep=
 type -p zenity >/dev/null || zenity=0
 xterm -iconic -e echo test || zenity=0
 
@@ -74,6 +84,13 @@ do
 	case $1 in
 	-c|--console) zenity=0 ;;
 	-h|--help) Help ;;
+	-u|--unmount) [[ $2 ]] && sleep=$2 ||
+		Abort "Must have a sleeplength after '$1'"
+		len='^[0-9]*([.][0-9]*)?[smhd]?$' dot='^[.][smhd]?$' unit='[smhd]'
+		[[ $sleep =~ $len && ! $sleep =~ $dot ]] ||
+			Abort "Bad number after -u/--unmount: '$sleep'"
+		[[ ${sleep: -1:1} =~ $unit ]] || sleep=${sleep}m
+		shift ;;
 	-i|--init) init=1
 		if [[ $2 ]]
 		then
@@ -90,9 +107,11 @@ done
 
 if ((init))
 then
-	[[ $dir ]] || Abort "Either set $MGCFS_DIR or $dir, or put a directory after '-i'"
+	[[ $dir ]] ||
+		Abort "Either set $MGCFS_DIR or $dir, or put a directory after '-i/--init'"
 	[[ -d $dir ]] || Abort "Not a directory: '$dir'"
-	[[ $name ]] || Abort "Either set $MGCFS_NAME or $name, or put a name after '-i <dir>'"
+	[[ $name ]] ||
+		Abort "Either set $MGCFS_NAME or $name, or put a name after '-i/--init <dir>'"
 	[[ -e $dir/$name ]] && Abort "Here '$name' already exists: $dir/$name"
 	[[ $MGCFS_PLAIN = 1 ]] && plain="-plaintextnames " || plain=
 	mkdir "$dir/$name"
@@ -128,6 +147,7 @@ else  ## Directory not FUSE-mounted
 	[[ $command ]] && $command &
 	## Tar up the encrypted directory for backup
 	tar cfC "$dir/$name.tar" "$dir" "$name"
+	[[ $sleep ]] && sleep $sleep && Unmount "$mount" &
 	sync
 fi
 
