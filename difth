@@ -10,7 +10,7 @@ Abort(){ ## $1: abort message
 		 USAGE: $self [-n|--nojs] [-s|--strings] <in1> <in2> [<htmlout>|-|/]
 		   Arguments <in1> and <in2> must be existing filenames,
 		    or strings (if -s or --strings is given).
-		   Argument htmlout is optional: if '-' then the html goes to stdout,
+		   Argument <htmlout> is optional: if '-' then the html goes to stdout,
 		    if '/' then the html will be output to a file in $dl and displayed,
 		    if not present then the colored diff will be displayed onto terminal,
 		    otherwise the html will be output to the given filename <htmlout>.
@@ -194,11 +194,11 @@ else  ## terminal
 				-e "s@$o@$(echo $'\o33\[7;4;31m')@g" -e "s@$e@$(echo $'\o33\[0m')@g")
 	echo -e "$out"
 	echo '--------------------------------------------------------------------------------'
-	cat "$stat" |sed -e 's@old@เก?า@g'  -e 's@new@ใหม?@g' -e 's@words@คำ@g'\
-			-e 's@common@ตรงก?น@g' -e 's@deleted@ลบ  @g' -e 's@inserted@แทรก@g'\
-			-e 's@changed@เปล??ยน@g'
+	cat "$stat" |sed -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
+			-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ  @g' -e 's@inserted@แทรก@g'\
+			-e 's@changed@เปลี่ยน@g'
 fi
 
-#rm -r -- "$tmp"
+rm -r -- "$tmp"
 
 exit 0
