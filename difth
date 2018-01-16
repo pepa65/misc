@@ -37,6 +37,8 @@ download="&#11141;"
 downloadc="เดาน์โหลด"
 cycle="&#8634;"
 cyclec="เปลี่ยนโหมดแสดง"
+new="҉"
+newc="เริ่มใหม่"
 n1='ต้นฉบับ' n2='แก้ไข'
 dl=files
 name=compare.html
@@ -107,6 +109,7 @@ then  ## html
 		<!DOCTYPE html>
 		<html lang="th">
 		<meta charset="utf-8">
+		<link rel="icon" href="favicon.ico">
 		<title>$n1 / $n2</title>
 	EOS
 	((nojs)) || cat <<-EOS >>"$of"
@@ -159,6 +162,7 @@ then  ## html
 	EOS
 	((nojs)) || echo "  <a class="i" title="$cyclec">$cycle</a>" >>"$of"
 	cat <<-EOS >>"$of"
+		  <a class="i" href="index.html" title="$newc" target="_blank">$new</a>
 		 </p>
 		 <h1><span class="o">$n1</span> <span class="n">$n2</span></h1>
 		 <pre>$(cat "$stat")</pre>
