@@ -47,7 +47,6 @@ do
 done
 
 mkdir -p "$dl"
-chmod a+w "$dl"
 tmp=$(mktemp -dp "$dl") t1="$tmp/t1" t2="$tmp/t2" stat="$tmp/stat"
 
 nojs=0 strings=0 i1= i2= of= cat=1
@@ -68,7 +67,7 @@ do
 	fi
 	shift
 done
-#echo "nojs:$nojs strings:$strings cat:$cat" #PP
+
 [[ -z $i1 || -z $i2 ]] && Abort "At least 2 input sources are necessary"
 
 if ((strings))
@@ -102,7 +101,7 @@ then  ## html
 	sed -i -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
 		-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ   @g' -e 's@inserted@แทรก@g'\
 		-e 's@changed@เปลี่ยน@g' "$stat"
-#rm -- "$of" #PP
+
 	cat <<-EOS >"$of"
 		<!DOCTYPE html>
 		<html lang="th">
