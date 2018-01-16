@@ -39,6 +39,7 @@ cycle="&#8634;"
 cyclec="เปลี่ยนโหมดแสดง"
 n1='ต้นฉบับ' n2='แก้ไข'
 dl=files
+name=compare.html
 
 self=$(basename $0)
 for f in sed swath dwdiff
@@ -154,7 +155,7 @@ then  ## html
 		<body>
 		<div class="h">
 		 <p><a class="i" href="#" onclick="history.back();" title="$backc">$back</a>
-		  <a class="i" href="$of" download title="$downloadc">$download</a>
+		  <a class="i" href="$of" download="$name" title="$downloadc">$download</a>
 	EOS
 	((nojs)) || echo "  <a class="i" title="$cyclec">$cycle</a>" >>"$of"
 	cat <<-EOS >>"$of"
