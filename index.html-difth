@@ -13,11 +13,11 @@ textarea {font-size:120%; maxlength:9999999; width:49%; height:99%; font-family:
 </style>
 <title>อัพโหลด</title>
 <h1>เปรีนบเทียบบทความ 2 ฉบับ</h1>
-<form method="post" action="/difth.php">
+<form method="post" action="difth.php">
 <div>
-<textarea name="old" placeholder="บทความต้นฉบับ" wrap>
+<textarea name="old" placeholder="บทความต้นฉบับ" wrap autofocus required maxlength="9999999">
 </textarea>
-<textarea name="new" placeholder="บทความแก้ไข" wrap>
+<textarea name="new" placeholder="บทความแก้ไข" wrap required maxlength="9999999">
 </textarea>
 </div>
 <input type="submit" name="send" value="&#11176;" title="แสดงแบบสามในหนึ่ง">
