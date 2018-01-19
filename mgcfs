@@ -40,11 +40,10 @@ Info(){  ## $1: Info message, Using: $sleep
 }
 
 Unmount(){  ## $1: Mount directory, Using: $sleep
-	local z
-	[[ $sleep ]] && z=-z
-	fusermount $z -qu "$mount" && Info "Now unmounted $name from:\n\n$mount" ||
-		Info "Unable to unmount $name:\n\n$mount"
-	exit 0
+	fusermount -zqu "$mount" &&
+		Info "Now unmounted $name from:\n\n$mount" && exit 0
+	Info "Unable to unmount $name:\n\n$mount\n\nTrying again in a minute."
+	exit 1
 }
 
 Abort(){  ## $1: Error message
@@ -114,7 +113,7 @@ then
 		Abort "Either set $MGCFS_NAME or $name, or put a name after '-i/--init <dir>'"
 	[[ -e $dir/$name ]] && Abort "Here '$name' already exists: $dir/$name"
 	[[ $MGCFS_PLAIN = 1 ]] && plain="-plaintextnames " || plain=
-	mkdir "$dir/$name"
+	mkdir "$dir/$name" || Abort "Unable to create '$name' in '$dir'"
 	gocryptfs -init $plain "$dir/$name" &&
 		Info "Directory '$dir/$name' initialized as gocryptfs directory" &&
 		exit 0 ||
@@ -147,7 +146,7 @@ else  ## Directory not FUSE-mounted
 	[[ $command ]] && $command &
 	## Tar up the encrypted directory for backup
 	tar cfC "$dir/$name.tar" "$dir" "$name"
-	[[ $sleep ]] && sleep $sleep && Unmount "$mount" &
+	[[ $sleep ]] && sleep $sleep && while Unmount "$mount"; do sleep 1m; done &
 	sync
 fi
 
