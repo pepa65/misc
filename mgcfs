@@ -39,11 +39,18 @@ Info(){  ## $1: Info message, Using: $sleep
 		}
 }
 
-Unmount(){  ## $1: Mount directory, Using: $sleep
-	fusermount -zqu "$mount" &&
-		Info "Now unmounted $name from:\n\n$mount" && exit 0
-	Info "Unable to unmount $name:\n\n$mount\n\nTrying again in a minute."
-	exit 1
+Unmount(){  ## Using: $mount, $name
+	## When mounted: keep trying to unmount
+	if grep "$mount" <<<"$(mount)" |grep -q ' fuse\.gocryptfs '
+	then
+		while ! fusermount -zqu "$mount"
+		do
+			Info "Unable to unmount $name:\n\n$mount\n\nTrying again in a minute."
+			sleep 1m
+		done
+		Info "Now unmounted $name from:\n\n$mount"
+		exit 0
+	fi
 }
 
 Abort(){  ## $1: Error message
@@ -123,31 +130,29 @@ fi
 [[ -s $dir/$name/gocryptfs.conf ]] ||
 	Abort "$dir/$name is not a gocryptfs directory"
 
-if grep "$mount" <<<"$(mount)" |grep -q ' fuse\.gocryptfs '
-then  ## Directory is FUSE-mounted: unmount, done
-	Unmount "$mount"
-else  ## Directory not FUSE-mounted
-	if mkdir -p "$mount" 2>/dev/null
-	then  ## Directory now exists
-		chmod 700 "$mount"  ## Force access restriction
-	else  ## $mount could not be created: abort
-		Abort "Mount point $mount could not be created or\nalready exists and isn't a directory"
-	fi
-	pass=$(mktemp)
-	Password 0 >"$pass"
-	## Allow mounting over non-empty mountpoint with -nonempty
-	while ! gocryptfs -q -nonempty -passfile "$pass" "$dir/$name" "$mount" 2>/dev/null
-	do
-		shred -u "$pass"
-		Password 1 >"$pass"
-	done
-	shred -u "$pass"
-	sync
-	[[ $command ]] && $command &
-	## Tar up the encrypted directory for backup
-	tar cfC "$dir/$name.tar" "$dir" "$name"
-	[[ $sleep ]] && sleep $sleep && while Unmount "$mount"; do sleep 1m; done &
-	sync
+## When mounted: unmount + exit
+Unmount
+## Directory not FUSE-mounted
+if mkdir -p "$mount" 2>/dev/null
+then  ## Directory now exists
+	chmod 700 "$mount"  ## Force access restriction
+else  ## $mount could not be created: abort
+	Abort "Mount point $mount could not be created or\nalready exists and isn't a directory"
 fi
+pass=$(mktemp)
+Password 0 >"$pass"
+## Allow mounting over non-empty mountpoint with -nonempty
+while ! gocryptfs -q -nonempty -passfile "$pass" "$dir/$name" "$mount" 2>/dev/null
+do
+	shred -u "$pass"
+	Password 1 >"$pass"
+done
+shred -u "$pass"
+sync
+[[ $command ]] && $command &
+## Tar up the encrypted directory for backup
+tar cfC "$dir/$name.tar" "$dir" "$name"
+[[ $sleep ]] && sleep $sleep && Unmount &
+sync
 
 exit 0
