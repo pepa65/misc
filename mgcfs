@@ -1,8 +1,8 @@
 #!/bin/bash
 set +vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
-## Required: gocryptfs(github) fuse tar grep procps coreutils (and <command>)
-## Optional: zenity/xterm (otherwise: whiptail)
+## Required: gocryptfs(GH/rfjakob/gocryptfs) fuse tar grep procps coreutils
+## Optional: zenity/xterm (otherwise: whiptail), <command>
 ## Optional environment variables: $MGCFS_MOUNT/DIR/NAME/COMMAND/PLAIN
 
 ## Mountpoint: set here or in $MGCFS_MOUNT, must start with '/'
