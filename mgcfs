@@ -2,14 +2,19 @@
 set +vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
 ## Required: gocryptfs(github) fuse tar grep procps coreutils (and <command>)
-## Optional: zenity (otherwise: whiptail)
+## Optional: zenity/xterm (otherwise: whiptail)
+## Optional environment variables: $MGCFS_MOUNT/DIR/NAME/COMMAND/PLAIN
 
-## Variable mount must start with / and has to exist
+## Mountpoint: set here or in $MGCFS_MOUNT, must start with '/'
 mount="$HOME/Private"
+## Main containing directory: set here or in $MGCFS_DIR
 dir="/data/MyDocuments/SECURE"
+## Name of encrypted directory: set here or in $MGCFS_NAME
 name="SECRET"
-## <command> to run after successful mounting
+## <command> to run after mounting: set here or in $MGCFS_COMMAND
 command="/usr/bin/caja $mount/"
+## Init with plain (1) or encrypted (0) filenames: set here or in $MGCFS_PLAIN
+plain=0
 
 Help(){
 	cat <<-EOS
@@ -80,10 +85,13 @@ mount=${MGCFS_MOUNT:-$mount}
 dir=${MGCFS_DIR:-$dir}
 name=${MGCFS_NAME:-$name}
 command=${MGCFS_COMMAND:-$command}
+plain=${$MGCFS_PLAIN:-$plain}
 title="Manage encryption of $name"
+dn="$dir/$name"
 zenity=1 init=0 sleep=
-type -p zenity >/dev/null || zenity=0
-xterm -iconic -e echo test || zenity=0
+## Validate zenity: in PATH? xterm in PATH? GUI going?
+type -p zenity >/dev/null && type -p xterm >/dev/null &&
+	xterm -iconic -e echo || zenity=0
 
 while (($#))
 do
@@ -109,7 +117,7 @@ do
 done
 
 ! type -p whiptail >/dev/null && ((!zenity)) &&
-	Abort "Either zenity or whiptail needs to be installed"
+	Abort "Either zenity or whiptail needs to be able to be used"
 
 if ((init))
 then
@@ -118,17 +126,14 @@ then
 	[[ -d $dir ]] || Abort "Not a directory: '$dir'"
 	[[ $name ]] ||
 		Abort "Either set $MGCFS_NAME or $name, or put a name after '-i/--init <dir>'"
-	[[ -e $dir/$name ]] && Abort "Here '$name' already exists: $dir/$name"
-	[[ $MGCFS_PLAIN = 1 ]] && plain="-plaintextnames " || plain=
-	mkdir "$dir/$name" || Abort "Unable to create '$name' in '$dir'"
-	gocryptfs -init $plain "$dir/$name" &&
-		Info "Directory '$dir/$name' initialized as gocryptfs directory" &&
+	[[ -e $dn ]] && Abort "Here '$name' already exists: $dn"
+	[[ $MGCFS_PLAIN = 1 ]] && ptn="-plaintextnames " || ptn=
+	mkdir "$dn" || Abort "Unable to create '$name' in '$dir'"
+	gocryptfs -init $ptn "$dn" &&
+		Info "Directory '$dn' initialized as gocryptfs directory" &&
 		exit 0 ||
-		Abort "Initializing '$dir/$name' as gocryptfs directory failed"
+		Abort "Initializing '$dn' as gocryptfs directory failed"
 fi
-
-[[ -s $dir/$name/gocryptfs.conf ]] ||
-	Abort "$dir/$name is not a gocryptfs directory"
 
 ## When mounted: unmount + exit
 Unmount
@@ -139,10 +144,19 @@ then  ## Directory now exists
 else  ## $mount could not be created: abort
 	Abort "Mount point $mount could not be created or\nalready exists and isn't a directory"
 fi
+
+## If $name doesn't exist or is empty, but $name.tar does: unpack
+if [[ ! -d $dn || -z $(ls -A "$dn") ]]
+then
+	[[ -f $dn.tar ]] && Info "No files in $dn\n,unpacking $dn.tar" &&
+		tar xf "$dn.tar" -C "$dir"
+fi
+[[ -s $dn/gocryptfs.conf ]] || Abort "$dn is not a gocryptfs directory"
+
 pass=$(mktemp)
 Password 0 >"$pass"
 ## Allow mounting over non-empty mountpoint with -nonempty
-while ! gocryptfs -q -nonempty -passfile "$pass" "$dir/$name" "$mount" 2>/dev/null
+while ! gocryptfs -q -nonempty -passfile "$pass" "$dn" "$mount" 2>/dev/null
 do
 	shred -u "$pass"
 	Password 1 >"$pass"
@@ -151,7 +165,7 @@ shred -u "$pass"
 sync
 [[ $command ]] && $command &
 ## Tar up the encrypted directory for backup
-tar cfC "$dir/$name.tar" "$dir" "$name"
+tar cfC "$dn.tar" "$dir" "$name"
 [[ $sleep ]] && sleep $sleep && Unmount &
 sync
 
