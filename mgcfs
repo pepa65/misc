@@ -81,11 +81,11 @@ Password(){  ## $1: boolean-Failed, Using: $sleep
 ## Main
 
 self=$(basename $0)
-mount=${MGCFS_MOUNT:-$mount}
-dir=${MGCFS_DIR:-$dir}
-name=${MGCFS_NAME:-$name}
-command=${MGCFS_COMMAND:-$command}
-plain=${$MGCFS_PLAIN:-$plain}
+: ${mount:=$MGCFS_MOUNT}
+: ${dir:=$MGCFS_DIR}
+: ${name:=$MGCFS_NAME}
+: ${command:=$MGCFS_COMMAND}
+: ${plain:=$MGCFS_PLAIN}
 title="Manage encryption of $name"
 dn="$dir/$name"
 zenity=1 init=0 sleep=
