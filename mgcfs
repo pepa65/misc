@@ -91,7 +91,7 @@ self=$(basename $0)
 
 title="Manage encryption of $name"
 zenity=1 init=0 sleep=
-type -p zenity >/dev/null && xhost &>/dev/null || zenity=0
+type -p zenity >/dev/null && xrandr &>/dev/null || zenity=0
 
 while (($#))
 do
