@@ -91,7 +91,7 @@ self=$(basename $0)
 
 title="Manage encryption of $name"
 zenity=1 init=0 sleep=
-type -p zenity >/dev/null && [[ $DISPLAY ]] || zenity=0
+type -p zenity >/dev/null && xhost &>/dev/null || zenity=0
 
 while (($#))
 do
@@ -99,18 +99,18 @@ do
 	-c|--console) zenity=0 ;;
 	-h|--help) Help ;;
 	-u|--unmount) [[ $2 ]] && sleep=$2 ||
-		Abort "Must have a sleeplength after '$1'"
+			Abort "Must have a sleeplength after '$1'"
 		len='^[0-9]*([.][0-9]*)?[smhd]?$' dot='^[.][smhd]?$' unit='[smhd]'
 		[[ $sleep =~ $len && ! $sleep =~ $dot ]] ||
-			Abort "Bad number after -u/--unmount: '$sleep'"
+			Abort "Bad sleeplength after -u/--unmount: '$sleep'"
 		[[ ${sleep: -1:1} =~ $unit ]] || sleep=${sleep}m
 		shift ;;
 	-i|--init) init=1
-		if [[ $2 ]]
+		if [[ $2 && ! ${2:0:1} = - ]]
 		then
 			dir=$2
 			shift
-			[[ $2 ]] && name=$2 && shift
+			[[ $2 && ! ${2:0:1} = - ]] && name=$2 && shift
 		fi ;;
 	esac
 	shift
