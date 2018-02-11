@@ -38,7 +38,7 @@ Help(){
 
 Info(){  ## $1: Info message, Using: $sleep
 	((zenity)) &&
-		zenity --info --title="$title" --text="<b>$1</b>" 2>/dev/null || {
+		zenity --info --width=360 --title="$title" --text="<b>$1</b>" 2>/dev/null || {
 			[[ $sleep ]] && echo -e "=== $title ===\n$1" ||
 				whiptail --title="$title" --msgbox "$1" 11 78
 		}
@@ -66,7 +66,7 @@ Abort(){  ## $1: Error message
 Pw(){  ## $1: text; Using: $title
 	if ((zenity))
 	then
-		zenity --entry --hide-text --title="$title" --text="$1" 2>/dev/null ||
+		zenity --entry --hide-text --width=360 --title="$title" --text="$1" 2>/dev/null |head -c -1 ||
 			exit 1
 	else
 		whiptail --clear --title "$title" --passwordbox "$1" 16 78 3>&1 1>&2 2>&3 ||
@@ -74,7 +74,7 @@ Pw(){  ## $1: text; Using: $title
 	fi
 }
 
-Password(){  ## $1:failed-text; Using: $sleep
+Password(){  ## $1:failtext; Using: $sleep
 	[[ $sleep ]] && unmount="Will auto-unmount $name after $sleep." ||
 		unmount="Run again to manually unmount $name!"
 	Pw "$1($unmount)\n\nMounting $name on $mount\n\nPassword:"
@@ -118,7 +118,7 @@ done
 dn="$dir/$name"
 
 ! type -p whiptail >/dev/null && ((!zenity)) &&
-	Abort "Either zenity or whiptail needs to be able to be used"
+	Abort "Either zenity or whiptail needs to be usable"
 type -p gocryptfs >/dev/null ||
 	Abort "Install gocryptfs from http://github.com/rfjakob/gocryptfs first!"
 
@@ -128,7 +128,7 @@ then
 		Abort "Either set $MGCFS_DIR or $dir, or put a directory after '-i/--init'"
 	[[ $name ]] ||
 		Abort "Either set $MGCFS_NAME or $name, or put a name after '-i/--init <dir>'"
-	[[ -d $dn ]] || mkdir "$dn" ||
+	[[ -d $dn ]] || mkdir -p "$dn" ||
 		Abort "Initialize failed, unable to create directory '$dn'"
 	[[ $(ls -A "$dn") ]] && Abort "Initialize failed, directory '$dn' not empty"
 	[[ $MGCFS_PLAIN = 1 ]] && ptn="-plaintextnames " || ptn=
@@ -136,7 +136,7 @@ then
 	cue=
 	while Pw "${cue}Enter password:" >"$pass"
 	do
-		(($(wc -c <"$pass")==1)) && cue="Password cannot be empty.\n" && continue
+		[[ -z $(head -c 1 "$pass") ]] && cue="Password cannot be empty.\n" && continue
 		[[ $(cat "$pass") = $(Pw "Confirm password:") ]] && break
 		cue="Passwords not the same.\n"
 	done
@@ -177,7 +177,8 @@ shred -fu "$pass"
 sync
 [[ $run ]] && $run &
 ## Tar up the encrypted directory for backup
-tar cfC "$dn.tar" "$dir" "$name"
+tar cfC "$dn.tar" "$dir" "$name" ||
+	Info "Unable to create backup archive\n'$dn.tar'!"
 [[ $sleep ]] && sleep $sleep && Unmount &
 sync
 
