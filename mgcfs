@@ -1,18 +1,18 @@
 #!/bin/bash
 set +vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
-## Required: gocryptfs(GH/rfjakob/gocryptfs) fuse tar grep procps coreutils
-## Optional: zenity/xterm (otherwise: whiptail), <command>
-## Optional environment variables: $MGCFS_MOUNT/DIR/NAME/COMMAND/PLAIN
+## Required: gocryptfs(http://rfjakob/gocryptfs) fuse tar grep procps coreutils
+## Optional: zenity (otherwise: whiptail), <run>
+## Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
 
 ## Mountpoint: set here or in $MGCFS_MOUNT, must start with '/'
 mount="$HOME/Private"
-## Main containing directory: set here or in $MGCFS_DIR
-dir="/data/MyDocuments/SECURE"
+## Containing directory: set here or in $MGCFS_DIR
+dir="$HOME/SECURE"
 ## Name of encrypted directory: set here or in $MGCFS_NAME
 name="SECRET"
-## <command> to run after mounting: set here or in $MGCFS_COMMAND
-command="/usr/bin/caja $mount/"
+## <run> is the command to run after mounting: set here or in $MGCFS_RUN
+run=
 ## Init with plain (1) or encrypted (0) filenames: set here or in $MGCFS_PLAIN
 plain=0
 
@@ -22,16 +22,16 @@ Help(){
 		USAGE: mgcfs [-c|--console] [-u|--unmount <sleeplength>[<unit>]] |
 		             [-i|--init [<dir> [<name>]] | [-h|--help]
 		  -c/--console:  display through whiptail is forced instead of zenity
-		  -i/--init:     setting up, <dir> must exist and <name> must not!
+		  -i/--init:     setting up, <dir> must exist and <name> not or be empty
 		  -u/--unmount:  auto-unmount after <sleeplength>[<unit>]
 		  -h/--help:     display this help text
 		Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
-		  (and optionally <command>), or set the corresponding environment variables
-		  MGCFS_MOUNT MGCFS_DIR MGCFS_NAME (and optionally MGCFS_COMMAND).
-		When during 'init' MGCFS_PLAIN is 1, filenames will not be encrypted. On
-		  init, the commandline needs to be used for password entry!
-		<sleeplength> is in minutes by default, but if <unit> can be: s (seconds),
-		  m (minutes), h (hours), d (days).
+		  (and optionally <run>), or set the corresponding environment variables
+		  MGCFS_MOUNT, MGCFS_DIR, MGCFS_NAME (and optionally MGCFS_RUN).
+		As a run-by-run backup, <dir>/<name>.tar will be used.
+		When during 'init' MGCFS_PLAIN is 1, filenames will not be encrypted.
+		<sleeplength> is in minutes if no unit given, but <unit> can be:
+		  s (seconds), m (minutes), h (hours), d (days).
 	EOS
 	exit 0
 }
@@ -63,19 +63,21 @@ Abort(){  ## $1: Error message
 	exit 2
 }
 
-Password(){  ## $1: boolean-Failed, Using: $sleep
-	[[ $sleep ]] && unmount="Will auto-unmount $name after $sleep." ||
-		unmount="Run again to manually unmount $name!"
-	(($1)) && failed="Decryption failed, try a different password!\n\n" || failed=
-	text="$failed($unmount)\n\nMounting $name on $mount\n\nPassword:"
+Pw(){  ## $1: text; Using: $title
 	if ((zenity))
 	then
-		zenity --entry --hide-text --title="$title" --text="$text" 2>/dev/null ||
+		zenity --entry --hide-text --title="$title" --text="$1" 2>/dev/null ||
 			exit 1
 	else
-		whiptail --title "$title" --passwordbox "$text" 16 78 3>&1 1>&2 2>&3 ||
+		whiptail --clear --title "$title" --passwordbox "$1" 16 78 3>&1 1>&2 2>&3 ||
 			exit 1
 	fi
+}
+
+Password(){  ## $1:failed-text; Using: $sleep
+	[[ $sleep ]] && unmount="Will auto-unmount $name after $sleep." ||
+		unmount="Run again to manually unmount $name!"
+	Pw "$1($unmount)\n\nMounting $name on $mount\n\nPassword:"
 }
 
 ## Main
@@ -84,14 +86,12 @@ self=$(basename $0)
 : ${mount:=$MGCFS_MOUNT}
 : ${dir:=$MGCFS_DIR}
 : ${name:=$MGCFS_NAME}
-: ${command:=$MGCFS_COMMAND}
+: ${run:=$MGCFS_RUN}
 : ${plain:=$MGCFS_PLAIN}
+
 title="Manage encryption of $name"
-dn="$dir/$name"
 zenity=1 init=0 sleep=
-## Validate zenity: in PATH? xterm in PATH? GUI going?
-type -p zenity >/dev/null && type -p xterm >/dev/null &&
-	xterm -iconic -e echo || zenity=0
+type -p zenity >/dev/null && [[ $DISPLAY ]] || zenity=0
 
 while (($#))
 do
@@ -115,21 +115,33 @@ do
 	esac
 	shift
 done
+dn="$dir/$name"
 
 ! type -p whiptail >/dev/null && ((!zenity)) &&
 	Abort "Either zenity or whiptail needs to be able to be used"
+type -p gocryptfs >/dev/null ||
+	Abort "Install gocryptfs from http://github.com/rfjakob/gocryptfs first!"
 
 if ((init))
 then
 	[[ $dir ]] ||
 		Abort "Either set $MGCFS_DIR or $dir, or put a directory after '-i/--init'"
-	[[ -d $dir ]] || Abort "Not a directory: '$dir'"
 	[[ $name ]] ||
 		Abort "Either set $MGCFS_NAME or $name, or put a name after '-i/--init <dir>'"
-	[[ -e $dn ]] && Abort "Here '$name' already exists: $dn"
+	[[ -d $dn ]] || mkdir "$dn" ||
+		Abort "Initialize failed, unable to create directory '$dn'"
+	[[ $(ls -A "$dn") ]] && Abort "Initialize failed, directory '$dn' not empty"
 	[[ $MGCFS_PLAIN = 1 ]] && ptn="-plaintextnames " || ptn=
-	mkdir "$dn" || Abort "Unable to create '$name' in '$dir'"
-	gocryptfs -init $ptn "$dn" &&
+	pass=$(mktemp)
+	cue=
+	while Pw "${cue}Enter password:" >"$pass"
+	do
+		(($(wc -c <"$pass")==1)) && cue="Password cannot be empty.\n" && continue
+		[[ $(cat "$pass") = $(Pw "Confirm password:") ]] && break
+		cue="Passwords not the same.\n"
+	done
+	gocryptfs -passfile "$pass" -init $ptn "$dn" >/dev/null &&
+		shred -fu "$pass" &&
 		Info "Directory '$dn' initialized as gocryptfs directory" &&
 		exit 0 ||
 		Abort "Initializing '$dn' as gocryptfs directory failed"
@@ -146,24 +158,24 @@ else  ## $mount could not be created: abort
 fi
 
 ## If $name doesn't exist or is empty, but $name.tar does: unpack
-if [[ ! -d $dn || -z $(ls -A "$dn") ]]
+if [[ ! -d $dn || -z $(ls -A "$dn") ]] && [[ -f $dn.tar ]]
 then
-	[[ -f $dn.tar ]] && Info "No files in $dn\n,unpacking $dn.tar" &&
-		tar xf "$dn.tar" -C "$dir"
+	Info "No files in '$dn'\n,unpacking '$dn.tar'"
+	tar xf "$dn.tar" -C "$dir"
 fi
 [[ -s $dn/gocryptfs.conf ]] || Abort "$dn is not a gocryptfs directory"
 
 pass=$(mktemp)
-Password 0 >"$pass"
+Password >"$pass"
 ## Allow mounting over non-empty mountpoint with -nonempty
 while ! gocryptfs -q -nonempty -passfile "$pass" "$dn" "$mount" 2>/dev/null
 do
-	shred -u "$pass"
-	Password 1 >"$pass"
+	shred -fu "$pass"
+	Password "Decryption failed, try a different password!\n\n" >"$pass"
 done
-shred -u "$pass"
+shred -fu "$pass"
 sync
-[[ $command ]] && $command &
+[[ $run ]] && $run &
 ## Tar up the encrypted directory for backup
 tar cfC "$dn.tar" "$dir" "$name"
 [[ $sleep ]] && sleep $sleep && Unmount &
