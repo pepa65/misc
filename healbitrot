@@ -1,65 +1,58 @@
 #!/usr/bin/env bash
 set +vx
-# healbitrot
-# Automatic check and self-healing for bitrot
-# Required: bitrot, par2, grep, find, libc-bin(getconf),
-#           coreutils(rm,mv,cp,mkdir,cd,du,readlink)
-# bitrot: https://github.com/liloman/bitrot
-# heal-bitrots: https://github.com/liloman/heal-bitrots
-#
-# Usage: healbitrot [<dir>]...
-#   <dir> are the target paths to check
-#   if no directories specified, the file in $BITROT_BACKUPS_DEST is read
+# healbitrot - Automatic check and self-healing for bitrot
+# (adapted from heal-bitrots: https://github.com/liloman/heal-bitrots)
+# Required: bitrot(https://github.com/liloman/bitrot getconf(libc-bin)
+#   par2 grep find coreutils(rm mv cp mkdir cd du readlink)
+# Environment variables (optional): $BITROT_DATA $BITROT_DIRS
+Help(){
+	cat <<-EOS
+		USAGE: $self [<dir>...]
+		  <dir>: directory to check; only if none given, the file in \$BITROT_DIRS
+		  is read, one directory per line. Bitrot data is stored in \$BITROT_DATA.
+		\$BITROT_DIRS: $BITROT_DIRS
+		\$BITROT_DATA: $BITROT_DATA
+	EOS
+}
 
 # Location of recovery data (bitrot databases and par2 files)
-BITROT_BACKUPS=${BITROT_BACKUPS:-~/.bitrot_backups}
-BITROT_BACKUPS_DEST=${BITROT_BACKUPS_DEST:-$BITROT_BACKUPS/bitrot_dirs}
+BITROT_DATA=${BITROT_DATA:-~/.bitrot_backups}
+# File with directories to check
+BITROT_DIRS=${BITROT_DIRS:-$BITROT_DATA/bitrot_dirs}
 
-if ! type -p bitrot >/dev/null
-then
-	echo "Install bitrot to use, see: https://github.com/liloman/bitrot"
+self=$(basename "$0")
+(($#==0)) && [[ ! -f $BITROT_DIRS ]] && Help &&
+	echo "Either pass directories to check as commandline arguments, or in \$BITROT_DIRS" &&
 	exit 1
-fi
 
-if type -p par2 >/dev/null
-then
-	par2=$(par2 -V)
-	par2m=$(cut -d'.' -f2 <<<${par2%%* })
-	if ((par2m<6))
-	then
-		echo "Warning: $par2 might choke on some unicode filenames"
-		echo "Newer version available at: https://github.com/Parchive/par2cmdline"
-	fi
-else
-	echo "Install par2 to use"
-	exit 2
-fi
+! type -p bitrot >/dev/null &&
+	echo "Install bitrot first: https://github.com/liloman/bitrot" && exit 2
 
-if (($#==0)) && [[ ! -f $BITROT_BACKUPS_DEST ]]
-then
-	echo "Pass target paths as arguments, or set variable BITROT_BACKUPS_DEST"
-	echo "with filename of a file that has an absolute target path on each line"
-	exit 3
-fi
+! type -p par2 >/dev/null && echo "Install par2 package first" && exit 3
 
-files_par2=files.par2
-tmp=$(mktemp -d)
+[[ ! -d $BITROT_DATA ]] && mkdir -p "$BITROT_DATA"
+
+par2=$(par2 -V)
+par2b=$(cut -d'.' -f2 <<<${par2%%* })
+((par2b<6)) &&
+	echo "WARNING: Old version of $par2 might choke on unicode filenames" &&
+	echo "Install newer version: https://github.com/Parchive/par2cmdline"
+
+files_par2=files.par2 tmp=$(mktemp -d) pwd=$PWD default_options=
 createlog=$tmp/.generate_par2_create.log
 repairlog=$tmp/.generate_par2_repair.log
 bitrotlog=$tmp/.generate_bitrot_db.log
-default_options=
-declare -i max_files=32768
-declare -i max_block_count=2000
-declare -i redundancy=5
+max_files=32768 max_block_count=2000 redundancy=5
 
-Generate_par2files() {
+Generate_par2files(){ # $1:target_dir
+# Reading: files_par2 createlog repairlog max_files max_block_count redundancy
 	local -a target_files
 	local target_dir=$(readlink -e "$1")
-	local source_dir=$BITROT_BACKUPS/${target_dir:1}
+	local source_dir=$BITROT_DATA/${target_dir:1}
 	local par2_files=$source_dir/$files_par2
 	local local_options
 
-	Err() {
+	Err(){
 		echo -e "$@\nFor errors, see:"
 		[[ -f $createlog ]] && echo "$createlog"
 		[[ -f $repairlog ]] && echo "$repairlog"
@@ -70,11 +63,8 @@ Generate_par2files() {
 	echo "Generating par2 files for $target_dir"
 
 	# $target_dir could have been deleted/renamed, so no abort
-	[[ -d $target_dir ]] || {
-		echo "$target_dir not a dir or not found"
+	[[ ! -d $target_dir ]] && echo "$target_dir not a dir or not found" &&
 		return
-	}
-
 
 	mkdir -p $source_dir || Err "Couldn't create $source_dir"
 
@@ -92,10 +82,8 @@ Generate_par2files() {
 		local size=$(du -bs $target_dir |cut -f1)
 		# Block size for percentage of redundancy
 		local target_dir_tam=$((size*redundancy/100))
-		# Size in MB of $target_dir
-		local block_bytes=$((target_dir_tam/max_block_count))
-		# Final adjustment: multiples of 4
-		local block_size=$((block_bytes*4))
+		# Size in MB of $target_dir, in blocks of 4
+		local block_size=$((target_dir_tam*4/max_block_count))
 		echo "Increasing the default block size for $target_dir to $block_size bytes"
 		local_options+=" -s$block_size"
 	fi
@@ -110,7 +98,7 @@ Generate_par2files() {
 		echo "Launching par2create"
 		if ! par2create $default_options $local_options -v $files_par2 "${target_files[@]}" &>"$createlog"
 		then
-			#\rm -f -- *.par2
+			rm -f -- *.par2
 			Err "Couldn't generate par2 files for $target_dir"
 		fi
 
@@ -118,7 +106,7 @@ Generate_par2files() {
 		echo "Moving par2 files to $source_dir"
 		if ! mv *.par2 "$source_dir"
 		then
-			#\rm -f -- *.par2
+			rm -f -- *.par2
 			Err "Couldn't copy par2 files and bitrot database to $source_dir"
 		fi
 	fi
@@ -126,22 +114,18 @@ Generate_par2files() {
 	echo "Done!"
 }
 
-Split_dir() {
+Split_dir() { # $1:target_dir, Reading: pwd bitrotlog createlog repairlog
 	cd "$pwd"
-	local line temp_file par2_files
+	local line temp_file par2_files orig dest full_target
 	local target_dir=$(readlink -e "$1" 2>/dev/null)
-	local source_dir=$BITROT_BACKUPS/${target_dir:1}
+	local source_dir=$BITROT_DATA/${target_dir:1}
 	local regex_bitrot='error: SHA.* mismatch for (.*): expected .*'
 	local regex_changes='([[:digit:]]* entries in the database. )?([[:digit:]]*) entries (updated|new|missing):'
 	local regex_moved='([[:digit:]]* entries in the database. )?([[:digit:]]*) entries renamed:'
-	local regex_dir_changes='(.*)'
-	local regex_dir_moved='from (.*) to (.*)'
+	local regex_dir_changes='(.*)' regex_dir_moved='from (.*) to (.*)'
 	local com=(find . -type d)
-	local -A dirs_bitrot=()
-	local -A dirs_change=()
-	local -A dirs_moved=()
-	local -i count=0
-	local -i count_moved=0
+	local -A dirs_bitrot=() dirs_change=() dirs_moved=()
+	local count=0 count_moved=0
 
 	Err() {
 		echo -e "$@\nFor errors, see:"
@@ -154,16 +138,14 @@ Split_dir() {
 	echo "----------------------------------"
 	echo "Checking $target_dir for bitrot"
 
-	#check if exists after backups dir check
+	# Check if exists after backups dir check
 	[[ -d $target_dir ]] || Err "$target_dir not a dir or not found"
 
-	#check if target is just the backups dir
-	local full_target=$target_dir/
-	if [[ ${full_target::$((${#BITROT_BACKUPS}+1))} == $BITROT_BACKUPS/ ]]
-	then
-		echo "Not checking: $target_dir is a subdir of $BITROT_BACKUPS"
+	# Check if target is just the backups dir
+	full_target=$target_dir/
+	[[ ${full_target::$((${#BITROT_DATA}+1))} = $BITROT_DATA/ ]] &&
+		echo "Not checking: $target_dir is a subdir of $BITROT_DATA" &&
 		return
-	fi
 
 	cd "$target_dir" || Err "couldn't cd to $target_dir"
 
@@ -177,45 +159,35 @@ Split_dir() {
 	echo "Launching bitrot -v"
 	bitrot -v &>"$bitrotlog"
 
-	while read -r line
+	while read -r
 	do
-		if (($count == 0 && $count_moved == 0))
+		if ((count==0 && count_moved==0))
 		then # No change detected
 			# Check log for bitrot errors
-			if [[ $line =~ $regex_bitrot ]]
-			then
-				temp_file="$target_dir/${BASH_REMATCH[1]:2}"
-				echo "Bitrot detected in file:$temp_file"
+			[[ $REPLY =~ $regex_bitrot ]] &&
+				temp_file="$target_dir/${BASH_REMATCH[1]:2}" &&
+				echo "Bitrot detected in file:$temp_file" &&
 				# Add to unique index (associative array) and save file just in case
 				dirs_bitrot["${temp_file%/*}/"]="$temp_file"
-			fi
 
 			# Detect new/updated/missing files
-			[[ $line =~ $regex_changes ]] && count=${BASH_REMATCH[2]}
+			[[ $REPLY =~ $regex_changes ]] && count=${BASH_REMATCH[2]}
 
 			# Detect renamed files
-			[[ $line =~ $regex_moved ]] && count_moved=${BASH_REMATCH[2]}
+			[[ $REPLY =~ $regex_moved ]] && count_moved=${BASH_REMATCH[2]}
 		else # Change detected
 			if ((count))
 			then
-				if [[ $line =~ $regex_dir_changes ]]
-				then
-					file=${BASH_REMATCH[1]}
-					echo "Change detected in:$file"
-					dirs_change["${file%/*}/"]="$file"
-					((count--))
-				fi
+				[[ $REPLY =~ $regex_dir_changes ]] &&
+					file=${BASH_REMATCH[1]} dirs_change["${file%/*}/"]=$file &&
+					echo "Change detected in:$file" && ((count--))
 			elif ((count_moved))
 			then
-				if [[ $line =~ $regex_dir_moved ]]
-				then
-					orig=${BASH_REMATCH[1]}
-					dest=${BASH_REMATCH[2]}
-					echo "Move detected from:$orig to:$dest"
-					dirs_moved["${orig%/*}"]=1
-					dirs_moved["${dest%/*}"]=1
+				[[ $REPLY =~ $regex_dir_moved ]] &&
+					orig=${BASH_REMATCH[1]} dest=${BASH_REMATCH[2]} &&
+					echo "Move detected from:$orig to:$dest" &&
+					dirs_moved["${orig%/*}"]=1 dirs_moved["${dest%/*}"]=1 &&
 					((count_moved--))
-				fi
 			fi
 		fi
 	done <"$bitrotlog"
@@ -224,33 +196,27 @@ Split_dir() {
 	do
 		cd "$dir" || Err "Couldn't cd into $dir "
 		echo "Recovering from bitrot with par2 files in $dir"
-		par2_files=$BITROT_BACKUPS/${dir:1}/$files_par2
+		par2_files=$BITROT_DATA/${dir:1}/$files_par2
 		# If par2 files generated already: copy them
 		if [[ -f $par2_files ]]
 		then
 			echo "Copying $par2_files to $PWD"
-			if ! cp "${par2_files%/*}"/*.par2 .
-			then
-				#\rm -f -- *.par2
-				Err "Couldn't copy par2 files to $target_dir"
-			fi
+			! cp "${par2_files%/*}"/*.par2 . &&
+				rm -f -- *.par2 && Err "Couldn't copy par2 files to $target_dir"
 		fi
 
 		# Purge recovery par2 files if successful
 		echo "Repairing bitrot files with par2repair"
 		if ! par2repair -p $files_par2 &>"$repairlog"
 		then
-			#\rm -f -- *.par2
+			rm -f -- *.par2
 			cd "$target_dir" || Err "couldn't cd to $target_dir"
 			if [[ -e .bitrot.db ]]
 			then
 				[[ -d $source_dir ]] || mkdir -p "$source_dir"
 				echo "Moving bitrot db files to $source_dir"
-				if ! mv .bitrot.* "$source_dir"
-				then
-					#\rm -f -- .bitrot.*
+				! mv .bitrot.* "$source_dir" && rm -f -- .bitrot.* &&
 					Err "Couldn't move bitrot files to $source_dir"
-				fi
 			fi
 			Err "Couldn't repair $dir with par2 files"
 		else # Update the db for the new changes
@@ -288,40 +254,36 @@ Split_dir() {
 	then
 		[[ -d $source_dir ]] || mkdir -p "$source_dir"
 		echo "Moving bitrot db files to $source_dir"
-		if ! mv .bitrot.* "$source_dir"
-		then
-			#\rm -f -- .bitrot.*
+		! mv .bitrot.* "$source_dir" && rm -f -- .bitrot.* &&
 			Err "Couldn't move bitrot files to $source_dir"
-		fi
 	fi
 
 	echo "Done!"
 }
 
-Main(){
-	# par2 option: use half free memory (in MB)
-	local mem=$(grep -e '^MemAvailable:' -e '^MemTotal:' /proc/meminfo |grep -o '[0-9]*')
+Main(){ # Reading: par2 par2b, Changing: default_options
+	# par2 option: use half free memory (in MB not kB)
+	local mem=$(grep -e '^MemAvailable:' /proc/meminfo |grep -o '[0-9]*')
 	default_options+=" -m$((mem/2048))"
-	if ((par2m>6))
+	if ((par2b>6))
 	then
 		# par2 option: set number of threads (more than 2 processors: leave 2)
-		local cpus=$(getconf _NPROCESSORS_ONLN)
+		local cpus=$(getconf _NPROCESSORS_ONLN) path
 		((cpus==2)) && default_options+=" -t1"
 		((cpus>2)) && default_options+=" -t$((cpus-2))"
 	fi
 
-	pwd=$PWD
 	if (($#))
 	then # At least one argument: for each path
 		for path
 		do
 			Split_dir "$path"
 		done
-	else # file in $BITROT_BACKUPS_DEST
-		while IFS= read -r path
+	else # File(s) in $BITROT_DIRS
+		while IFS= read -r
 		do
-			Split_dir "$path"
-		done <"$BITROT_BACKUPS_DEST"
+			Split_dir "$REPLY"
+		done <"$BITROT_DIRS"
 	fi
 }
 

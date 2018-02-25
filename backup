@@ -1,5 +1,6 @@
 #!/bin/bash
-#set -x
+set +vx
+# Required: coreutils(cat readlink) tar less xz gpg
 
 help(){
 cat <<-END
@@ -10,13 +11,14 @@ cat <<-END
 	     multiple file/dir(s) possible with bash globbing (with * ? and [...])
 	   backup-file: output file name (.txz will be appended)
 	     backup-file can also be specified in the first line of backup-list, like:
-	     @<backup-file>
+	     @<backup-file> but will be overridden by the command-line if set
 	   backup-log: log file
-	 Lines in backup-list are taken to be filenames, except when the first character is:
-	   '@' (at):     line specifying <backup-file> (only in the very first line)
-	   ' ' (space):  skipped line
-	   '#' (pound):  comment line
-	   '$' (dollar): command line
+	 Lines in backup-list are file/dirnames, except when the first character is:
+	   '@' (at):       <backup-file> (only in the very first line)
+	   ' ' (space):    skipped line
+	   '#' (pound):    comment line
+	   '$' (dollar):   command line
+	   '%' (percent):  gpg-password
 
 END
 }
@@ -27,6 +29,7 @@ list="$root/backup.lst"
 txz="$root/backup.txz"
 tar="$txz-$RANDOM.tar"
 log="$root/backup.log"
+pw=$(mktemp)
 
 [[ $1 ]] && list="$1"
 [[ $2 ]] && txz="$2"
@@ -34,7 +37,7 @@ log="$root/backup.log"
 
 [[ ! -f "$list" ]] && help && echo "ABORT: no backup list file $list present" && exit 1
 ! >"$txz" && help && echo "ABORT: can't write to backup file $txz" && exit 2
-! >"$log" && help && echo "ABORT: can't write to log file $tar" && exit 3
+! >"$log" && help && echo "ABORT: can't write to log file $log" && exit 3
 
 list=$(readlink -e "$list")
 readarray -t files <"$list"
@@ -44,17 +47,19 @@ trap "rm $tar" EXIT
 n_files=${#files[@]}
 n=0
 ((n_files)) && line=${files[n++]} && [[ ${line:0:1} = '@' ]] && txz=${line:1}
-out=$(echo -e "LIST $list\nBACKUP $txz\nLOG $log\n"
+out=$(
+	echo -e "LIST $list\nBACKUP $txz\nLOG $log\n"
 	while ((n<n_files))
 	do
 		line=${files[$((n++))]}
 		! [[ $line ]] && echo && continue  ## empty line
 		[[ ${line:0:1} = ' ' ]] && continue  ## start with space
 		[[ ${line:0:1} = '#' ]] && echo "    $line" && continue  ## comment
+		[[ ${line:0:1} = '%' ]] && echo "${line:1}">"$pw" && continue  ## password
 		if [[ ${line:0:1} = '$' ]]
 		then  ## command
 			eval "${line:1}"
-			echo "RUN ${line:1}"
+			echo " RUN ${line:1}"
 			continue
 		fi
 		## files/dirs for backup
@@ -77,10 +82,9 @@ out=$(echo -e "LIST $list\nBACKUP $txz\nLOG $log\n"
 					then
 						echo -n '-'
 					else
-						tar rPf "$tar" "$real"
 						echo -n '+'
+						tar rhPf "$tar" "$real"  ## tar link
 					fi
-					tar rhPf "$tar" "$real"  ## tar link
 					echo -e "LINK $file\n  TO $real"
 				fi
 			else  ## link doesn't exist
@@ -88,13 +92,33 @@ out=$(echo -e "LIST $list\nBACKUP $txz\nLOG $log\n"
 				echo -e "DANGLING $file"
 			fi
 		done
-		((none)) && echo " NO  $line"  ## No file/dir
+		((none)) && echo "!!NO $line"  ## No file/dir
 	done
+	tar rPf "$tar" "$self"  ## This script
+	echo -e "SCRIPT $self"
 )
-! less -KPs"Ctrl-C to abort the backup" <<<"$out" && echo "Aborted" && exit 5
+! less -KPs"Press Q to make the backup, Ctrl-C to abort" <<<"$out" &&
+	echo "Aborted" && exit 5
 
 xz --stdout -f "$tar" >"$txz"
 echo "$out" >"$log"
-echo -e "Backup of list $list successful, log at $log, backup file:\n$(ls -AFl $txz)"
+less -Ps"Backup is finished, press Q to end" <<-EOS
+	Backup of list $list successful!
+	Log at $log
+	Files backed up:
+	$(tar tf "$txz" 2>&-)
+EOS
+enc=
+if [[ -s $pw ]]
+then
+	txzg="$txz.gpg"
+	rm -- "$txzg"
+	gpg --batch --passphrase-file "$pw" -c "$txz"
+	rm -- "$txz" "$pw"
+	txz=$txzg
+	echo "The archive is gpg-encrypted with a password"
+fi
+
+echo "Backup file ready: $(ls -AFl $txz)"
 
 exit 0
