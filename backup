@@ -114,13 +114,14 @@ less -Ps"Backup is finished, press Q to end" <<-EOS
 	Log at $log
 	$enc
 	Files backed up:
+
 	$(tar tf "$txz" 2>&-)
 EOS
 if [[ -s $pw ]]
 then
 	txzg="$txz.gpg"
 	rm -f -- "$txzg"
-	gpg --batch --passphrase-file "$pw" -c "$txz"
+	gpg --batch --no-use-agent --passphrase-file "$pw" -c "$txz"
 	rm -- "$txz" "$pw"
 	txz=$txzg
 fi
