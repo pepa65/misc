@@ -35,20 +35,23 @@ pw=$(mktemp)
 [[ $2 ]] && txz="$2"
 [[ $3 ]] && log="$3"
 
-[[ ! -f "$list" ]] && help && echo "ABORT: no backup list file $list present" && exit 1
+[[ ! -f "$list" ]] && help &&
+	echo "ABORT: no backup list file $list present" && exit 1
 ! >"$txz" && help && echo "ABORT: can't write to backup file $txz" && exit 2
 ! >"$log" && help && echo "ABORT: can't write to log file $log" && exit 3
 
 list=$(readlink -e "$list")
 readarray -t files <"$list"
-! tar cPf "$tar" "$list" && help && echo "ABORT: can't write to temporary file $tar" && exit 4
+! tar cPf "$tar" "$list" && help &&
+	echo "ABORT: can't write to temporary file $tar" && exit 4
 trap "rm $tar" EXIT
+tar rPf "$tar" "$self"  ## This script
 
 n_files=${#files[@]}
 n=0
 ((n_files)) && line=${files[n++]} && [[ ${line:0:1} = '@' ]] && txz=${line:1}
 out=$(
-	echo -e "LIST $list\nBACKUP $txz\nLOG $log\n"
+	echo -e "LIST $list\nBACKUP $txz\nLOG $log\nSCRIPT $self\n"
 	while ((n<n_files))
 	do
 		line=${files[$((n++))]}
@@ -87,36 +90,39 @@ out=$(
 					fi
 					echo -e "LINK $file\n  TO $real"
 				fi
-			else  ## link doesn't exist
-				tar rhPf "$tar" "$file"  ## tar dangling link
-				echo -e "DANGLING $file"
+			else  ## link/file doesn't exist
+				if [[ -L "$file" ]]
+				then
+					tar rhPf "$tar" "$file"  ## tar dangling link
+					echo -e "DANGLING $file"
+				else
+					echo -e "!!NO $file"
+				fi
 			fi
 		done
-		((none)) && echo "!!NO $line"  ## No file/dir
+		((none)) && echo "!!NONE $line"  ## No files/dirs
 	done
-	tar rPf "$tar" "$self"  ## This script
-	echo -e "SCRIPT $self"
 )
 ! less -KPs"Press Q to make the backup, Ctrl-C to abort" <<<"$out" &&
 	echo "Aborted" && exit 5
 
 xz --stdout -f "$tar" >"$txz"
 echo "$out" >"$log"
+[[ -s $pw ]] && enc="The archive is gpg-encrypted with a password"
 less -Ps"Backup is finished, press Q to end" <<-EOS
 	Backup of list $list successful!
 	Log at $log
+	$enc
 	Files backed up:
 	$(tar tf "$txz" 2>&-)
 EOS
-enc=
 if [[ -s $pw ]]
 then
 	txzg="$txz.gpg"
-	rm -- "$txzg"
+	rm -f -- "$txzg"
 	gpg --batch --passphrase-file "$pw" -c "$txz"
 	rm -- "$txz" "$pw"
 	txz=$txzg
-	echo "The archive is gpg-encrypted with a password"
 fi
 
 echo "Backup file ready: $(ls -AFl $txz)"
