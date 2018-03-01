@@ -14,8 +14,8 @@ Abort(){ ## $1: abort message
 		    if '/' then the html will be output to a file in $dl and displayed,
 		    if not present then the colored diff will be displayed onto terminal,
 		    otherwise the html will be output to the given filename <htmlout>.
-		   When -n or --nojs is given, the html will use no javascript (used for
-		    cycling through viewing modes).
+		   When -n or --nojs is given, no javascript will be used (for cycling
+		    through viewing modes) in the html.
 	EOF
 	echo -e "\nABORT: $1"
 	exit 1
@@ -51,6 +51,8 @@ do
 done
 
 mkdir -p "$dl"
+chmod 2770 "$dl"
+chown www-data "$dl"
 tmp=$(mktemp -dp "$dl") t1="$tmp/t1" t2="$tmp/t2" stat="$tmp/stat"
 
 nojs=0 strings=0 i1= i2= of= cat=1
@@ -63,7 +65,7 @@ do
 	then
 		case $1 in
 		-) of="$tmp/of" ;;
-		/) of=$(md5sum <<<"$1$2") of="$dl/${of%% *}.html" ;;
+		/) of=$(md5sum <<<"$i1-$i2") of="$dl/${of%% *}.html" ;;
 		*) of=$1 cat=0 ;;
 		esac
 	else
@@ -117,7 +119,7 @@ then  ## html
 		<script>
 		view=0;
 		window.onclick = function(){
-	 	view=(++view%3);
+		view=(++view%3);
 		 var s, i;
 		 if(view==0){ // both
 		  document.body.style.background="$bg";
