@@ -180,7 +180,7 @@ sync
 [[ $run ]] && $run &
 ## Tar up the encrypted directory for backup
 tar cfC "$dn.tar" "$dir" "$name" ||
-	Info "Unable to create backup archive\n'$dn.tar'!"
+	Info "Return code on creating backup archive\n'$dn.tar': $?"
 [[ $sleep ]] && sleep $sleep && Unmount &
 sync
 
