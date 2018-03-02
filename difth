@@ -10,10 +10,12 @@ Abort(){ ## $1: abort message
 		 USAGE: $self [-n|--nojs] [-s|--strings] <in1> <in2> [<htmlout>|-|/]
 		   Arguments <in1> and <in2> must be existing filenames,
 		    or strings (if -s or --strings is given).
-		   Argument <htmlout> is optional: if '-' then the html goes to stdout,
-		    if '/' then the html will be output to a file in $dl and displayed,
-		    if not present then the colored diff will be displayed onto terminal,
-		    otherwise the html will be output to the given filename <htmlout>.
+		   Argument <htmlout> is optional, if it is:
+		    '-':        html goes to stdout
+		    '/':        html goes to stdout and to a file in '$dl' (recommended
+		                that '$dl' has 2770 permissions and is owned by www-data)
+		    <htmlout>:  html will be output to the file with this name
+		    '':         the colored diff will be displayed onto terminal
 		   When -n or --nojs is given, no javascript will be used (for cycling
 		    through viewing modes) in the html.
 	EOF
@@ -31,16 +33,16 @@ nfont="black" npap="#cfc" nbg=$npap
 #nfont="darkgreen" npap=$pap nbg="lightgreen"
 
 ## Messages
-back="&#11013;"
-backc="กลับ"
-download="&#11141;"
-downloadc="เดาน์โหลด"
-cycle="&#8634;"
-cyclec="เปลี่ยนโหมดแสดง"
-new="҉"
-newc="เริ่มใหม่"
-newl="https://compare.4e4.win"
-n1='ต้นฉบับ' n2='แก้ไข'
+back="&#11013;" # Backarrow
+backc="กลับ" # Back
+download="&#11141;" # Downarrow
+downloadc="เดาน์โหลด" # Download
+cycle="&#8634;" # Cyclicarrow
+cyclec="เปลี่ยนโหมดแสดง" # Change the display mode
+new="҉" # Newsymbol
+newc="เริ่มใหม่" # Start afresh
+newl="/"
+n1='ต้นฉบับ' n2='แก้ไข' # Original, corrected
 dl=files
 name=compare.html
 
@@ -50,10 +52,7 @@ do
 	! type -p "$f" &>/dev/null && Abort "Package '$f' not installed"
 done
 
-mkdir -p "$dl"
-chmod 2770 "$dl"
-chown www-data "$dl"
-tmp=$(mktemp -dp "$dl") t1="$tmp/t1" t2="$tmp/t2" stat="$tmp/stat"
+tmp=$(mktemp -d "/tmp/$self-XXXX") t1="$tmp/t1" t2="$tmp/t2" stat="$tmp/stat"
 
 nojs=0 strings=0 i1= i2= of= cat=1
 while (($#))
@@ -65,7 +64,8 @@ do
 	then
 		case $1 in
 		-) of="$tmp/of" ;;
-		/) of=$(md5sum <<<"$i1-$i2") of="$dl/${of%% *}.html" ;;
+		/) mkdir -p "$dl" || Abort "Directory '$dl' must exist!"
+			of=$(md5sum <<<"$i1-$i2") of="$dl/${of%% *}.html" ;;
 		*) of=$1 cat=0 ;;
 		esac
 	else
@@ -99,6 +99,7 @@ s2=$(swath -b "$d" -u u,u <"$i2")
 
 if [[ $of ]]
 then  ## html
+	>"$of" || Abort "Output file '$of' unwritable"
 	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$s1" >"$t1"
 	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$s2" >"$t2"
 	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$t1" "$t2" 2>"$stat" |\
