@@ -11,11 +11,11 @@ Abort(){ ## $1: abort message
 		   Arguments <in1> and <in2> must be existing filenames,
 		    or strings (if -s or --strings is given).
 		   Argument <htmlout> is optional, if it is:
-		    '-':        html goes to stdout
-		    '/':        html goes to stdout and to a file in '$dl' (recommended
+		    - (dash):   html goes to stdout
+		    / (slash):  html goes to stdout and to a file in '$dl' (recommended
 		                that '$dl' has 2770 permissions and is owned by www-data)
-		    <htmlout>:  html will be output to the file with this name
-		    '':         the colored diff will be displayed onto terminal
+		    <htmlout>:  html will be output to the file called <htmlout>
+		    not there:  the colored diff will be displayed onto terminal
 		   When -n or --nojs is given, no javascript will be used (for cycling
 		    through viewing modes) in the html.
 	EOF
@@ -65,7 +65,7 @@ do
 		case $1 in
 		-) of="$tmp/of" ;;
 		/) mkdir -p "$dl" || Abort "Directory '$dl' must exist!"
-			of=$(md5sum <<<"$i1-$i2") of="$dl/${of%% *}.html" ;;
+			of=$(md5sum <<<"$i1/$i2$nojs") of="$dl/${of%% *}.html" ;;
 		*) of=$1 cat=0 ;;
 		esac
 	else
