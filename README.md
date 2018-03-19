@@ -97,19 +97,25 @@ Required: wget imagemagick(convert) [for peters projection]
 ## mgcfs
 **Manage access to gocryptfs encrypted directory**
 
-* Required: fuse gocryptfs(github) tar grep procps coreutils (and <command>)
-* Optional: zenity (otherwise: whiptail)
+* Required: gocryptfs(http://rfjakob/gocryptfs) fuse tar grep procps coreutils
+* Optional: zenity/whiptail/cryptsetup(askpass) <run>
+* Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
 Usage:
 ```
-mgcfs | [-c|--console] | [-i|--init [<dir> [<name>]] | [-h|--help]
-    -c/--console: whiptail is forced instead of zenity
-    -i/--init: setting up, <dir> must exist and <name> must not!
-    -h/--help: display this help text
+mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
+      [-u|--unmount <sleeplength>[<unit>]] | [-h|--help]
+    -c/--console:  display through echo is forced instead of whiptail
+    -w/--whiptail: display through whiptail is forced instead of zenity
+    -i/--init:     setting up, <dir> must exist and <name> not or be empty
+    -u/--unmount:  auto-unmount after <sleeplength>[<unit>]
+    -h/--help:     display this help text
   Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
-   (and optionally <command>), or set the corresponding environment variables
-   MGCFS_MOUNT MGCFS_DIR MGCFS_NAME (and optionally MGCFS_COMMAND).
-  When during 'init' MGCFS_PLAIN is 1, filenames will not be encrypted. On
-   init, the commandline needs to be used for password entry!
+   (and optionally <run>), or set the corresponding environment variables
+   MGCFS_MOUNT, MGCFS_DIR, MGCFS_NAME (and optionally MGCFS_RUN).
+  As a run-by-run backup, <dir>/<name>.tar will be used.
+  When during 'init' MGCFS_PLAIN is 1, filenames will not be encrypted.
+  <sleeplength> is in minutes if no unit is given; <unit> can be:
+   s (seconds), m (minutes), h (hours), d (days).
 ```
 
 ## healbitrot

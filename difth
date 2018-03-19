@@ -39,7 +39,7 @@ download="&#11141;" # Downarrow
 downloadc="เดาน์โหลด" # Download
 cycle="&#8634;" # Cyclicarrow
 cyclec="เปลี่ยนโหมดแสดง" # Change the display mode
-new="҉" # Newsymbol
+new="&#128978;" # Newsymbol
 newc="เริ่มใหม่" # Start afresh
 newl="/"
 n1='ต้นฉบับ' n2='แก้ไข' # Original, corrected
