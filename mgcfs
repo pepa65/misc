@@ -1,5 +1,5 @@
 #!/bin/bash
-set +vx
+set -vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
 ## Required: gocryptfs(http://rfjakob/gocryptfs) fuse tar grep procps coreutils
 ## Optional: zenity/whiptail/cryptsetup(askpass) <run>
@@ -69,7 +69,7 @@ Unmount(){  ## Using: mount name
 }
 
 Password(){  ## $1: text, Using: zenity whiptail title pass
-	local cancel=0
+	local cancel=0 console=0
 	if ((zenity))
 	then
 		zenity --entry --hide-text --width=360 --title="$title" --text="$1" 2>/dev/null ||
@@ -79,14 +79,17 @@ Password(){  ## $1: text, Using: zenity whiptail title pass
 		whiptail --clear --title "$title" --passwordbox "$1" 16 78 3>&1 1>&2 2>&3 ||
 			cancel=1
 	else
+		console=1
 		echo -ne "=== $title ===\n$1" 1>&2
 		/lib/cryptsetup/askpass ""
 		echo
 	fi >"$pass"
 	## Cancel -c/--console mode with empty password
-	[[ $(echo $(hexdump -b "$pass")) = "0000000 012 0000001" ]] &&
-		rm -- "$pass" && echo "Exited: empty password" && exit 1
-	((cancel)) && rm -- "$pass" && exit 1 || return 0
+	((console)) && [[ $(echo $(hexdump -b "$pass")) = "0000000 012 0000001" ]] &&
+		echo "Exited: empty password" && cancel=1
+	((cancel)) || return 0
+	rm -- "$pass"
+	exit 1
 }
 
 ## Main
@@ -97,7 +100,6 @@ dir=${MGCFS_DIR:-$dir}
 name=${MGCFS_NAME:-$name}
 run=${MGCFS_RUN:-$run}
 plain=${MGCFS_PLAIN:-$plain}
-
 title="Manage encryption of $name"
 ## Try zenity unless -c or -w or not present or no GUI
 zenity=1 init=0 sleep=
