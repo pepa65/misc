@@ -97,7 +97,7 @@ Required: wget imagemagick(convert) [for peters projection]
 ## mgcfs
 **Manage access to gocryptfs encrypted directory**
 
-* Required: gocryptfs(http://rfjakob/gocryptfs) fuse tar grep procps coreutils
+* Required: gocryptfs(http://github.com/rfjakob/gocryptfs) fuse grep procps tar coreutils(cat rm type ls mktemp stat shred mkdir chmod sleep sync)
 * Optional: zenity/whiptail/cryptsetup(askpass) <run>
 * Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
 Usage:

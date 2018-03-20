@@ -1,7 +1,8 @@
 #!/bin/bash
-set -vx
+set +vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
-## Required: gocryptfs(http://rfjakob/gocryptfs) fuse tar grep procps coreutils
+## Required: gocryptfs(http://github/com/rfjakob/gocryptfs) fuse grep procps
+##   tar coreutils(cat rm type ls mktemp stat shred mkdir chmod sleep sync)
 ## Optional: zenity/whiptail/cryptsetup(askpass) <run>
 ## Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
 
@@ -130,9 +131,7 @@ do
 done
 dn="$dir/$name"
 
-## If asked for whiptail or zenity not available and echo not mandated
 ((whiptail)) && ! type -p whiptail >/dev/null && whiptail=0
-
 type -p gocryptfs >/dev/null ||
 	Abort "Install gocryptfs from http://github.com/rfjakob/gocryptfs first!"
 
