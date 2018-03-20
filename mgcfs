@@ -16,15 +16,18 @@ name="SECRET"
 run=""
 ## Init with plain (1) or encrypted (0) filenames: set here or in $MGCFS_PLAIN
 plain=0
+## Logfile for gocryptfs operations
+log=/tmp/gocryptfs.log
 
 Help(){
 	cat <<-EOS
 		mgcfs - Manage access to gocryptfs encrypted directory
 		USAGE: mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
-	           [-u|--unmount <sleeplength>[<unit>]] | [-h|--help]
+	           [-v|--verbose] [-u|--unmount <sleeplength>[<unit>]] | [-h|--help]
 		  -c/--console:  display through echo is forced instead of whiptail
 		  -w/--whiptail: display through whiptail is forced instead of zenity
 		  -i/--init:     setting up, <dir> must exist and <name> not or be empty
+		  -v/--verbose:  echoing the masterpassword to the terminal on mounting
 		  -u/--unmount:  auto-unmount after <sleeplength>[<unit>]
 		  -h/--help:     display this help text
 		Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
@@ -103,13 +106,14 @@ run=${MGCFS_RUN:-$run}
 plain=${MGCFS_PLAIN:-$plain}
 title="Manage encryption of $name"
 ## Try zenity unless -c or -w or not present or no GUI
-zenity=1 init=0 sleep=
+zenity=1 init=0 sleep= q='-q'
 type -p zenity >/dev/null && xrandr &>/dev/null || zenity=0
 
 while (($#))
 do
 	case $1 in
 	-h|--help) Help ;;
+	-v|--verbose) q= ;;
 	-c|--console) zenity=0 whiptail=0 ;;
 	-w|--whiptail) zenity=0 whiptail=1 ;;
 	-u|--unmount) [[ $2 ]] && sleep=$2 ||
@@ -155,7 +159,7 @@ then
 		Password "Confirm password:"
 		[[ "$(cat "$pass")" = "$first" ]] && break || cue="Passwords not the same!\n"
 	done
-	gocryptfs -passfile "$pass" -init $ptn "$dn" >/dev/null &&
+	gocryptfs -passfile "$pass" -init $ptn "$dn" >"$log" &&
 		shred -fu "$pass" &&
 		Info "Directory '$dn' initialized as gocryptfs directory" &&
 		exit 0 ||
@@ -186,7 +190,7 @@ pass=$(mktemp)
 cue="Mounting $name on $mount\n$cue\n\nPassword:"
 Password "$cue"
 ## Allow mounting over non-empty mountpoint with -nonempty
-while ! gocryptfs -q -nonempty -passfile "$pass" "$dn" "$mount" 2>/dev/null
+while ! gocryptfs $q -nonempty -passfile "$pass" "$dn" "$mount" 2>"$log"
 do
 	shred -fu "$pass"
 	Password "Decryption failed, try a different password!\n\n$cue"

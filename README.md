@@ -103,10 +103,11 @@ Required: wget imagemagick(convert) [for peters projection]
 Usage:
 ```
 mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
-      [-u|--unmount <sleeplength>[<unit>]] | [-h|--help]
+      [-v|--verbose] [-u|--unmount <sleeplength>[<unit>]] | [-h|--help]
     -c/--console:  display through echo is forced instead of whiptail
     -w/--whiptail: display through whiptail is forced instead of zenity
     -i/--init:     setting up, <dir> must exist and <name> not or be empty
+    -v/--verbose:  echoing the masterpassword to the terminal on mounting
     -u/--unmount:  auto-unmount after <sleeplength>[<unit>]
     -h/--help:     display this help text
   Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
