@@ -19,21 +19,20 @@ ip='' res=''
 url="https://www.duckdns.org/update?domains=$domain&token=$token&verbose=true"
 
 Long(){
-	res=$(wget -O - --quiet $url)
+	res=$(wget -qO - --quiet $url)
 	ip=$(grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' <<<$res)
-	! grep "$res" <<<$(tail -1 "$msg") && echo -e "$res" >>"$msg" && echo -n "[$ip]" >>"$log"
+	! grep "$ip" <<<$(tail -1 "$msg") && echo "$res" >>"$msg" && echo -ne "\n $ip" >>"$log"
 }
 
 [[ $1 = -d ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
 Long
 if [[ ${res:0:2} = OK ]]
 then
-	echo -n '.' >>"$log"
-	#! [[ ${res: -8:8} = NOCHANGE ]] && echo -n $ip >>"$log"
+	echo -n '~' >>"$log"
 else
-	echo -n '-' >>"$log"
+	echo -n 'X' >>"$log"
 	Long
-	! [[ ${res:0:2} = OK ]] && echo -n $res >>"$log"
+	[[ $res && ! ${res:0:2} = OK ]] && echo -e "\n#"$res >>"$log"
 fi
 
 exit 0
