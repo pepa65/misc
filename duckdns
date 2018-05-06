@@ -15,13 +15,14 @@ token=''
 duckdir="$HOME"
 log="$duckdir/duckdns.log"
 msg="$duckdir/duckdns.msg"
+[[ -f "$msg" ]] || touch "$msg"
 ip='' res=''
 url="https://www.duckdns.org/update?domains=$domain&token=$token&verbose=true"
 
 Long(){
-	res=$(wget -qO - --quiet $url)
+	res=$(wget -qO- $url)
 	ip=$(grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' <<<$res)
-	! grep "$ip" <<<$(tail -1 "$msg") && echo "$res" >>"$msg" && echo -ne "\n $ip" >>"$log"
+	! grep "$ip" <<<$(tail -1 "$msg") && echo $res >>"$msg" && echo -ne "\n $ip" >>"$log"
 }
 
 [[ $1 = -d ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
