@@ -198,10 +198,11 @@ done
 shred -fu "$pass"
 sync
 
-[[ $run ]] && $run &
+[[ $run ]] && DISPLAY=:0.0 $run &
 ## Tar up the encrypted directory for backup
 tar cfC "$dn.tar" "$dir" "$name" ||
 	Info "Return code on creating backup archive\n'$dn.tar': $?"
+
 [[ $sleep ]] && sleep $sleep && Unmount &
 sync
 
