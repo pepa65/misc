@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot
+#
+# Required: efivar util-linux(blkid) grep find systemd(bootctl)
+#           coreutils(readlink sort cut head tail mkdir cat cp) sudo
+
+ed='generic'
+efi='/EFI'
+ubuntu='/ubuntu'
+
+Help(){
+	cat <<-EOH
+		bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot
+		The installation requires root privileges.
+		
+		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-i|--install]
+		          -n/--nogo:     No writing to the system at all.
+		          -i/--install:  Also do the actual installation with bootctl.
+		          -q/--quiet:    Only fatal errors output to the terminal.
+	EOH
+}
+
+Echo(){ # $1: message, $2: errorcode (exit if present)
+	if [[ $2 ]]
+	then
+		echo -e "\nABORT: $1"
+		exit $2
+	fi
+	((quiet)) || echo -e "\n$1"
+}
+
+go=1 quiet=0 install=0
+while (($#))
+do
+	case $1 in
+	-n|--nogo) go=0 ;;
+	-q|--quiet) quiet=1 ;;
+	-i|--install) install=1 ;;
+	-h|--help) Help && exit 0 ;;
+	*) Help && Echo "Unrecognized commandline option '$1'" 1
+	esac
+	shift
+done
+
+# Check UEFI mode, efivars. ESP present & mounted, determine path
+! [[ -d /sys/module/efivars ]] &&
+	Echo 'Not in UEFI mode' 2
+! efivar=$(type -p efivar) &&
+	Echo "Package 'efivar' not installed" 3
+! "$efivar" -l &>/dev/null &&
+	Echo "EFI variables not accessible through '$efivar'" 4
+! p=$(blkid |grep 'EFI System') &&
+	Echo 'EFI System Partition not mounted' 5
+p=${p:0: -1} p=${p##*\"} p=$(readlink -e /dev/disk/by-partuuid/$p)
+esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
+entries="$esp/loader/entries"
+path="$efi$ubuntu"
+binaries="$esp$path"
+
+versions=$(find /boot -maxdepth 1 -name "vmlinuz-*-generic" |grep -Po "\d\.\d+\.\d+\-\d+" |sort -Vr)
+d=$(lsb_release -d)
+release=${d##*$'\t'}
+cmdline=$(cut -d' ' -f2- /proc/cmdline)
+if ((go))
+then
+	! sudo mkdir -p "$binaries" "$entries" &&
+		Echo "Problem making directory '$binaries' or '$entries'" 6
+fi
+
+latest=1 out="$entries/ubuntu.conf"
+for v in $versions
+do
+	((latest)) && latest=0 add="(latest: $v)" ||
+		add="($v)" out="$entries/ubuntu-$v.conf"
+	file="title $release $add\nlinux $path/vmlinuz-$v-$ed\ninitrd $path/initrd.img-$v-$ed\noptions $cmdline intel_iommu=on"
+	Echo "Copying $v-$ed to $binaries"
+	Echo "Writing '$out':"
+	if ((go))
+	then
+		sudo cp "/boot/vmlinuz-$v-$ed" "$binaries"
+		sudo cp "/boot/initrd.img-$v-$ed" "$binaries"
+		echo
+		echo "$file" |sudo tee "$out"
+	else
+		Echo "$file"
+	fi
+done
+
+out="$entries/loader.conf"
+if [[ -f "$out" ]]
+then
+	Echo "Notice: '$out' already present:\n"
+	((quiet)) || cat "$out"
+else
+	file="default ubuntu\ntimeout 30s\neditor yes"
+	Echo "Writing '$out':"
+	((go)) && echo && echo -e "$file" |sudo tee "$out" || Echo "$file"
+fi
+
+if ((go))
+then
+	if ((install))
+	then
+		Echo "Running 'bootctl install' on $esp"
+		sudo bootctl --path=$esp install && Echo "Installation successful"
+	else
+		Echo "(Not actually installing, no -i/--install option given)"
+	fi
+else
+	Echo "(Not actually installing, -n/--nogo option given)"
+fi
+
+exit 0
