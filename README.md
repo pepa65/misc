@@ -181,3 +181,15 @@ a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
 
 Usage: `pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
 * Required: pdfseparate pdfunite coreutils(mktemp cd)
+
+## bootctlu
+**bootctlu - Install systemd_boot on Ubuntu with kernels in `/boot`**
+    
+Usage:
+```
+bootctlUbuntu [-n|--nogo] [-q|--quiet] [-i|--install]
+            -n/--nogo:     No writing to the system at all.
+            -i/--install:  Also do the actual installation with bootctl.
+            -q/--quiet:    Only fatal errors output to the terminal.
+```
+**Required: efivar util-linux(blkid) grep find systemd(bootctl) coreutils(readlink sort cut head tail mkdir cat cp) sudo**
