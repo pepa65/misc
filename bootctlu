@@ -54,7 +54,7 @@ done
 	Echo 'EFI System Partition not mounted' 5
 p=${p:0: -1} p=${p##*\"} p=$(readlink -e /dev/disk/by-partuuid/$p)
 esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
-entries="$esp/loader/entries"
+entries="$esp$efi/loader/entries"
 path="$efi$ubuntu"
 binaries="$esp$path"
 
