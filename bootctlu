@@ -57,8 +57,8 @@ entries="$esp/loader/entries"
 id=$(</etc/machine-id)
 
 versions=$(find /boot -maxdepth 1 -name "vmlinuz-*-$edition" |grep -Po "\d\.\d+\.\d+\-\d+" |sort -Vr)
-d=$(lsb_release -d)
-release=${d##*$'\t'}
+d=$(grep PRETTY_NAME /etc/os-release) d=${d#*\"}
+release=${d:0: -1}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
 if ((go))
 then
@@ -77,7 +77,7 @@ do
 	((go)) && "$sudo" cp "/boot/vmlinuz-$entry" "$path/vmlinuz"
 	((go)) && "$sudo" cp "/boot/initrd.img-$entry" "$path/initrd.img"
 	Echo "Writing '$out':"
-	file="title $release ($entry)\nversion $entry\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$entry/vmlinuz\ninitrd /$id/$entry/initrd.img"
+	file="title $release ($entry)\nversion $version\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$entry/vmlinuz\ninitrd /$id/$entry/initrd.img"
 	((go)) && echo && echo -e "$file" |"$sudo" tee "$out" || Echo "$file"
 done
 
