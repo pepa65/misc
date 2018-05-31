@@ -72,17 +72,17 @@ do
 	entry="$version-$edition"
 	((latest)) && latest=0 add="(latest: $entry)" ||
 		add="($entry)" out="$entries/ubuntu-$entry.conf"
-	file="title $release $add\nversion $entry\nmachine-id $machine_id\noptions $cmdline intel_iommu=on\nlinux $path/$entry/vmlinuz\ninitrd $path/$entry/initrd.img"
+	file="title $release $add\nversion $entry\nmachine-id $machine_id\noptions $cmdline intel_iommu=on\nlinux /$machine_id/$entry/vmlinuz\ninitrd /$machine_id/$entry/initrd.img"
 	Echo "Copying $entry to $path"
 	Echo "Writing '$out':"
 	if ((go))
 	then
-		! sudo mkdir "$path/$entry" &&
+		! sudo mkdir -p "$path/$entry" &&
 			Echo "Problem making required directory" 7
 		sudo cp "/boot/vmlinuz-$entry" "$path/$entry/vmlinuz"
 		sudo cp "/boot/initrd.img-$entry" "$path/$entry/initrd.img"
 		echo
-		echo "$file" |sudo tee "$out"
+		echo -e "$file" |sudo tee "$out"
 	else
 		Echo "$file"
 	fi
