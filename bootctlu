@@ -2,15 +2,16 @@
 
 # bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot
 #
-# Required: efivar util-linux(blkid) grep find systemd(bootctl)
-#           coreutils(readlink sort cut head tail mkdir cat cp) sudo
+# Required: util-linux(blkid) grep find systemd(bootctl)
+#           coreutils(readlink sort cut head tail mkdir cat cp)
+#           sudo (unless run as root, or only invoked with -n/--nogo)
 
 edition='generic'
 
 Help(){
 	cat <<-EOH
-		bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot
-		The installation requires root privileges.
+		bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot.
+		Setup kernel, initrd and entries on ESP, optionally install systemd_boot.
 		
 		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-i|--install]
 		          -n/--nogo:     No writing to the system at all.
@@ -19,7 +20,7 @@ Help(){
 	EOH
 }
 
-Echo(){ # $1: message, $2: errorcode (exit if present)
+Echo(){ # $1: message, $2: errorcode (exit if present!)
 	if [[ $2 ]]
 	then
 		echo -e "\nABORT: $1"
@@ -41,15 +42,15 @@ do
 	shift
 done
 
-# Check UEFI mode, efivars. ESP present & mounted, determine path
-! [[ -d /sys/module/efivars ]] &&
-	Echo 'Not in UEFI mode' 2
-! efivar=$(type -p efivar) &&
-	Echo "Package 'efivar' not installed" 3
-! "$efivar" -l &>/dev/null &&
-	Echo "EFI variables not accessible through '$efivar'" 4
-! p=$(blkid |grep 'EFI System') &&
-	Echo 'EFI System Partition not mounted' 5
+sudo=
+((go && EUID)) && ! sudo=$(type -p sudo) &&
+	Echo "Need to escalate privilege, but sudo not present" 2
+((go)) || Echo "### Simulation, no actual copying/writing/installing"
+
+[[ -d /sys/firmware/efi/efivars ]] ||
+	Echo "Not in UEFI mode, EFI variables not accessible" 3
+p=$(blkid |grep 'EFI System') || Echo 'EFI System Partition not mounted' 4
+
 p=${p:0: -1} p=${p##*\"} p=$(readlink -e /dev/disk/by-partuuid/$p)
 esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
 entries="$esp/loader/entries"
@@ -61,53 +62,41 @@ release=${d##*$'\t'}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
 if ((go))
 then
-	! sudo mkdir -p "$esp/$id" "$entries" &&
-		Echo "Problem making required directories" 6
+	"$sudo" mkdir -p "$esp/$id" "$entries" ||
+		Echo "Problem making required directories" 5
 fi
 
 for version in $versions
 do
 	entry="$version-$edition"
 	path="$esp/$id/$entry"
-	add="($entry)" out="$entries/ubuntu-$entry.conf"
-	file="title $release $add\nversion $entry\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$entry/vmlinuz\ninitrd /$id/$entry/initrd.img"
+	out="$entries/$id-$entry.conf"
+	((go)) && ! "$sudo" mkdir -p "$path" &&
+		Echo "Problem making required directory" 6
 	Echo "Copying files to $path"
+	((go)) && "$sudo" cp "/boot/vmlinuz-$entry" "$path/vmlinuz"
+	((go)) && "$sudo" cp "/boot/initrd.img-$entry" "$path/initrd.img"
 	Echo "Writing '$out':"
-	if ((go))
-	then
-		! sudo mkdir -p "$path" &&
-			Echo "Problem making required directory" 7
-		sudo cp "/boot/vmlinuz-$entry" "$path/vmlinuz"
-		sudo cp "/boot/initrd.img-$entry" "$path/initrd.img"
-		echo
-		echo -e "$file" |sudo tee "$out"
-	else
-		Echo "$file"
-	fi
+	file="title $release ($entry)\nversion $entry\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$entry/vmlinuz\ninitrd /$id/$entry/initrd.img"
+	((go)) && echo && echo -e "$file" |"$sudo" tee "$out" || Echo "$file"
 done
 
 out="$esp/loader/loader.conf"
-if [[ -f "$out" ]]
-then
-	Echo "Notice: '$out' already present:\n"
-	((quiet)) || cat "$out"
-else
-	file="default ubuntu-*\ntimeout 30s\neditor yes"
-	Echo "Writing '$out':"
-	((go)) && echo && echo -e "$file" |sudo tee "$out" || Echo "$file"
-fi
+[[ -f "$out" ]] &&
+	mv "$out" "$out~" &&
+	Echo "WARNING: previous loader.conf renamed to '$out~'"
 
-if ((go))
-then
-	if ((install))
-	then
-		Echo "Running 'bootctl install' on $esp"
-		sudo bootctl --path=$esp install && Echo "Installation successful"
-	else
-		Echo "(Not actually installing, no -i/--install option given)"
-	fi
-else
-	Echo "(Not actually installing, -n/--nogo option given)"
-fi
+Echo "Writing '$out':"
+file="default $id-*\ntimeout 30s\neditor yes"
+((go)) && echo && echo -e "$file" |"$sudo" tee "$out" || Echo "$file"
+
+((!go || install)) && Echo "Running 'bootctl install' on $esp"
+((go && install)) && "$sudo" bootctl --path="$esp" install &&
+	Echo "Installation successful"
+((go && !install)) &&
+	Echo "Not actually installing, no -i/--install option given"
+
+((go)) ||
+	Echo "### End of simulation, nothing actually copied/written/installed"
 
 exit 0

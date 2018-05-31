@@ -187,9 +187,10 @@ Usage: `pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
     
 Usage:
 ```
-bootctlUbuntu [-n|--nogo] [-q|--quiet] [-i|--install]
-            -n/--nogo:     No writing to the system at all.
-            -i/--install:  Also do the actual installation with bootctl.
-            -q/--quiet:    Only fatal errors output to the terminal.
+bootctlu [-n|--nogo] [-q|--quiet] [-i|--install]
+Setup kernel, initrd and entries on ESP, optionally install systemd_boot.
+    -n/--nogo:     No writing to the system at all.
+    -i/--install:  Also do the actual installation with bootctl.
+    -q/--quiet:    Only fatal errors output to the terminal.
 ```
-**Required: efivar util-linux(blkid) grep find systemd(bootctl) coreutils(readlink sort cut head tail mkdir cat cp) sudo**
+**Required: util-linux(blkid) grep find systemd(bootctl) coreutils(readlink sort cut head tail mkdir cat cp) sudo (unless run as root, or only invoked with -n/--nogo)**
