@@ -6,7 +6,6 @@
 #           coreutils(readlink sort cut head tail mkdir cat cp) sudo
 
 edition='generic'
-machine_id='ubuntu'
 
 Help(){
 	cat <<-EOH
@@ -53,8 +52,8 @@ done
 	Echo 'EFI System Partition not mounted' 5
 p=${p:0: -1} p=${p##*\"} p=$(readlink -e /dev/disk/by-partuuid/$p)
 esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
-path="$esp/$machine_id"
 entries="$esp/loader/entries"
+id=$(</etc/machine-id)
 
 versions=$(find /boot -maxdepth 1 -name "vmlinuz-*-$edition" |grep -Po "\d\.\d+\.\d+\-\d+" |sort -Vr)
 d=$(lsb_release -d)
@@ -62,25 +61,24 @@ release=${d##*$'\t'}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
 if ((go))
 then
-	! sudo mkdir -p "$path" "$entries" &&
+	! sudo mkdir -p "$esp/$id" "$entries" &&
 		Echo "Problem making required directories" 6
 fi
 
-latest=1 out="$entries/ubuntu.conf"
 for version in $versions
 do
 	entry="$version-$edition"
-	((latest)) && latest=0 add="(latest: $entry)" ||
-		add="($entry)" out="$entries/ubuntu-$entry.conf"
-	file="title $release $add\nversion $entry\nmachine-id $machine_id\noptions $cmdline intel_iommu=on\nlinux /$machine_id/$entry/vmlinuz\ninitrd /$machine_id/$entry/initrd.img"
-	Echo "Copying $entry to $path"
+	path="$esp/$id/$entry"
+	add="($entry)" out="$entries/ubuntu-$entry.conf"
+	file="title $release $add\nversion $entry\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$entry/vmlinuz\ninitrd /$id/$entry/initrd.img"
+	Echo "Copying files to $path"
 	Echo "Writing '$out':"
 	if ((go))
 	then
-		! sudo mkdir -p "$path/$entry" &&
+		! sudo mkdir -p "$path" &&
 			Echo "Problem making required directory" 7
-		sudo cp "/boot/vmlinuz-$entry" "$path/$entry/vmlinuz"
-		sudo cp "/boot/initrd.img-$entry" "$path/$entry/initrd.img"
+		sudo cp "/boot/vmlinuz-$entry" "$path/vmlinuz"
+		sudo cp "/boot/initrd.img-$entry" "$path/initrd.img"
 		echo
 		echo -e "$file" |sudo tee "$out"
 	else
@@ -94,7 +92,7 @@ then
 	Echo "Notice: '$out' already present:\n"
 	((quiet)) || cat "$out"
 else
-	file="default ubuntu\ntimeout 30s\neditor yes"
+	file="default ubuntu-*\ntimeout 30s\neditor yes"
 	Echo "Writing '$out':"
 	((go)) && echo && echo -e "$file" |sudo tee "$out" || Echo "$file"
 fi
