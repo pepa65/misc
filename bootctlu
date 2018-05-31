@@ -5,9 +5,8 @@
 # Required: efivar util-linux(blkid) grep find systemd(bootctl)
 #           coreutils(readlink sort cut head tail mkdir cat cp) sudo
 
-ed='generic'
-efi='/EFI'
-ubuntu='/ubuntu'
+edition='generic'
+machine_id='ubuntu'
 
 Help(){
 	cat <<-EOH
@@ -54,32 +53,34 @@ done
 	Echo 'EFI System Partition not mounted' 5
 p=${p:0: -1} p=${p##*\"} p=$(readlink -e /dev/disk/by-partuuid/$p)
 esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
-entries="$esp$efi/loader/entries"
-path="$efi$ubuntu"
-binaries="$esp$path"
+path="$esp/$machine_id"
+entries="$esp/loader/entries"
 
-versions=$(find /boot -maxdepth 1 -name "vmlinuz-*-generic" |grep -Po "\d\.\d+\.\d+\-\d+" |sort -Vr)
+versions=$(find /boot -maxdepth 1 -name "vmlinuz-*-$edition" |grep -Po "\d\.\d+\.\d+\-\d+" |sort -Vr)
 d=$(lsb_release -d)
 release=${d##*$'\t'}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
 if ((go))
 then
-	! sudo mkdir -p "$binaries" "$entries" &&
-		Echo "Problem making directory '$binaries' or '$entries'" 6
+	! sudo mkdir -p "$path" "$entries" &&
+		Echo "Problem making required directories" 6
 fi
 
 latest=1 out="$entries/ubuntu.conf"
-for v in $versions
+for version in $versions
 do
-	((latest)) && latest=0 add="(latest: $v)" ||
-		add="($v)" out="$entries/ubuntu-$v.conf"
-	file="title $release $add\nlinux $path/vmlinuz-$v-$ed\ninitrd $path/initrd.img-$v-$ed\noptions $cmdline intel_iommu=on"
-	Echo "Copying $v-$ed to $binaries"
+	entry="$version-$edition"
+	((latest)) && latest=0 add="(latest: $entry)" ||
+		add="($entry)" out="$entries/ubuntu-$entry.conf"
+	file="title $release $add\nversion $entry\nmachine-id $machine_id\noptions $cmdline intel_iommu=on\nlinux $path/$entry/vmlinuz\ninitrd $path/$entry/initrd.img"
+	Echo "Copying $entry to $path"
 	Echo "Writing '$out':"
 	if ((go))
 	then
-		sudo cp "/boot/vmlinuz-$v-$ed" "$binaries"
-		sudo cp "/boot/initrd.img-$v-$ed" "$binaries"
+		! sudo mkdir "$path/$entry" &&
+			Echo "Problem making required directory" 7
+		sudo cp "/boot/vmlinuz-$entry" "$path/$entry/vmlinuz"
+		sudo cp "/boot/initrd.img-$entry" "$path/$entry/initrd.img"
 		echo
 		echo "$file" |sudo tee "$out"
 	else
@@ -87,7 +88,7 @@ do
 	fi
 done
 
-out="$entries/loader.conf"
+out="$esp/loader/loader.conf"
 if [[ -f "$out" ]]
 then
 	Echo "Notice: '$out' already present:\n"
