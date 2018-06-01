@@ -62,7 +62,7 @@ release=${d:0: -1}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
 if ((go))
 then
-	"$sudo" mkdir -p "$esp/$id" "$entries" ||
+	$sudo mkdir -p "$esp/$id" "$entries" ||
 		Echo "Problem making required directories" 5
 fi
 
@@ -71,14 +71,14 @@ do
 	entry="$version-$edition"
 	path="$esp/$id/$entry"
 	out="$entries/$id-$entry.conf"
-	((go)) && ! "$sudo" mkdir -p "$path" &&
+	((go)) && ! $sudo mkdir -p "$path" &&
 		Echo "Problem making required directory" 6
 	Echo "Copying files to $path"
-	((go)) && "$sudo" cp "/boot/vmlinuz-$entry" "$path/vmlinuz"
-	((go)) && "$sudo" cp "/boot/initrd.img-$entry" "$path/initrd.img"
+	((go)) && $sudo cp "/boot/vmlinuz-$entry" "$path/linux"
+	((go)) && $sudo cp "/boot/initrd.img-$entry" "$path/initrd"
 	Echo "Writing '$out':"
-	file="title $release ($entry)\nversion $version\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$entry/vmlinuz\ninitrd /$id/$entry/initrd.img"
-	((go)) && echo && echo -e "$file" |"$sudo" tee "$out" || Echo "$file"
+	file="title $release ($entry)\nversion $version\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$entry/linux\ninitrd /$id/$entry/initrd"
+	((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
 done
 
 out="$esp/loader/loader.conf"
@@ -88,10 +88,10 @@ out="$esp/loader/loader.conf"
 
 Echo "Writing '$out':"
 file="default $id-*\ntimeout 30s\neditor yes"
-((go)) && echo && echo -e "$file" |"$sudo" tee "$out" || Echo "$file"
+((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
 
 ((!go || install)) && Echo "Running 'bootctl install' on $esp"
-((go && install)) && "$sudo" bootctl --path="$esp" install &&
+((go && install)) && $sudo bootctl --path="$esp" install &&
 	Echo "Installation successful"
 ((go && !install)) &&
 	Echo "Not actually installing, no -i/--install option given"
