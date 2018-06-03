@@ -2,7 +2,7 @@
 
 # bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot
 #
-# Required: util-linux(blkid) grep systemd(bootctl)
+# Required: util-linux(blkid) grep systemd(bootctl) mount
 #           coreutils(readlink sort cut head tail mkdir cat cp)
 #           sudo (unless run as root, or only invoked with -n/--nogo)
 
@@ -57,9 +57,8 @@ entries="$esp/loader/entries"
 id=$(</etc/machine-id)
 p=$(mount |grep ' / ') part=${p%% *}
 
-#versions=$(find /boot -maxdepth 1 -name "vmlinuz-*-$edition" |grep -Po "\d\.\d+\.\d+\-\d+" |sort -Vr)
 versions=()
-for f in /boot/vmlinuz-*
+for f in $(printf "%s\n" /boot/vmlinuz-* |sort -Vr)
 do
 	[[ $(dpkg -S "$f") ]] && versions+=("${f#*-}")
 done
