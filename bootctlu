@@ -90,7 +90,6 @@ do
 		machine-id $id
 		options $cmdline intel_iommu=on
 		linux /$id/$version/linux
-		#initrd /intel-ucode.img
 		initrd /$id/$version/initrd
 	EOF
 	)
@@ -118,7 +117,7 @@ then
 	file=$(cat <<-EOF
 		title MemTest86
 		version $v
-		efi /EFI/MemTest86/BOOTX64.EFI
+		efi /EFI/memtest86/BOOTX64.EFI
 	EOF
 	)
 	((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
