@@ -2,7 +2,7 @@
 
 # bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot
 #
-# Required: util-linux(blkid) grep find systemd(bootctl)
+# Required: util-linux(blkid) grep systemd(bootctl)
 #           coreutils(readlink sort cut head tail mkdir cat cp)
 #           sudo (unless run as root, or only invoked with -n/--nogo)
 
@@ -55,8 +55,15 @@ p=${p:0: -1} p=${p##*\"} p=$(readlink -e /dev/disk/by-partuuid/$p)
 esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
 entries="$esp/loader/entries"
 id=$(</etc/machine-id)
+p=$(mount |grep ' / ') part=${p%% *}
 
-versions=$(find /boot -maxdepth 1 -name "vmlinuz-*-$edition" |grep -Po "\d\.\d+\.\d+\-\d+" |sort -Vr)
+#versions=$(find /boot -maxdepth 1 -name "vmlinuz-*-$edition" |grep -Po "\d\.\d+\.\d+\-\d+" |sort -Vr)
+versions=()
+for f in /boot/vmlinuz-*
+do
+	[[ $(dpkg -S "$f") ]] && versions+=("${f#*-}")
+done
+
 d=$(grep PRETTY_NAME /etc/os-release) d=${d#*\"}
 release=${d:0: -1}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
@@ -66,18 +73,17 @@ then
 		Echo "Problem making required directories" 5
 fi
 
-for version in $versions
+for version in "${versions[@]}"
 do
-	entry="$version-$edition"
-	path="$esp/$id/$entry"
-	out="$entries/$id-$entry.conf"
+	path="$esp/$id/$version"
+	out="$entries/$id-$version.conf"
 	((go)) && ! $sudo mkdir -p "$path" &&
 		Echo "Problem making required directory" 6
 	Echo "Copying files to $path"
-	((go)) && $sudo cp "/boot/vmlinuz-$entry" "$path/linux"
-	((go)) && $sudo cp "/boot/initrd.img-$entry" "$path/initrd"
+	((go)) && $sudo cp "/boot/vmlinuz-$version" "$path/linux"
+	((go)) && $sudo cp "/boot/initrd.img-$version" "$path/initrd"
 	Echo "Writing '$out':"
-	file="title $release ($entry)\nversion $version\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$entry/linux\ninitrd /$id/$entry/initrd"
+	file="title $release on $part ($version)\nversion $version\nmachine-id $id\noptions $cmdline intel_iommu=on\nlinux /$id/$version/linux\ninitrd /$id/$version/initrd"
 	((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
 done
 
