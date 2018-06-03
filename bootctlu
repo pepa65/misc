@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot
+# bootctlu - Parallel install of systemd_boot on Ubuntu
 #
 # Required: util-linux(blkid) grep systemd(bootctl) mount
 #           coreutils(readlink sort cut head tail mkdir cat cp)
@@ -11,8 +11,7 @@ edition='generic'
 
 Help(){
 	cat <<-EOH
-		bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot.
-		Setup kernel, initrd and entries on ESP, optionally install systemd_boot.
+		bootctlu - Parallel install of systemd_boot on Ubuntu
 		
 		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-i|--install]
 		          -n/--nogo:     No writing to the system at all.

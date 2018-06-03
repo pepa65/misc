@@ -187,10 +187,11 @@ Usage: `pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
     
 Usage:
 ```
-bootctlu [-n|--nogo] [-q|--quiet] [-i|--install]
+bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-i|--install]
 Setup kernel, initrd and entries on ESP, optionally install systemd_boot.
     -n/--nogo:     No writing to the system at all.
-    -i/--install:  Also do the actual installation with bootctl.
     -q/--quiet:    Only fatal errors output to the terminal.
+    -m/--memtest:  Also download and set up MemTest86.
+    -i/--install:  Also do the actual installation with bootctl.
 ```
-**Required: util-linux(blkid) grep find systemd(bootctl) coreutils(readlink sort cut head tail mkdir cat cp) sudo (unless run as root, or only invoked with -n/--nogo)**
+**Required: util-linux(blkid) grep find systemd(bootctl) coreutils(readlink sort cut head tail mkdir cat cp) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z)**
