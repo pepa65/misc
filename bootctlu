@@ -5,6 +5,7 @@
 # Required: util-linux(blkid) grep systemd(bootctl) mount
 #           coreutils(readlink sort cut head tail mkdir cat cp)
 #           sudo (unless run as root, or only invoked with -n/--nogo)
+#   For -m/--memtest: wget tar p7zip(7z)
 
 edition='generic'
 
@@ -13,10 +14,11 @@ Help(){
 		bootctlu - Installing systemd_boot on Ubuntu with kernels in /boot.
 		Setup kernel, initrd and entries on ESP, optionally install systemd_boot.
 		
-		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-i|--install]
+		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-i|--install]
 		          -n/--nogo:     No writing to the system at all.
-		          -i/--install:  Also do the actual installation with bootctl.
 		          -q/--quiet:    Only fatal errors output to the terminal.
+		          -i/--install:  Also do the actual installation with bootctl.
+		          -m/--memtest:  Also download and set up MemTest86.
 	EOH
 }
 
@@ -29,12 +31,13 @@ Echo(){ # $1: message, $2: errorcode (exit if present!)
 	((quiet)) || echo -e "\n$1"
 }
 
-go=1 quiet=0 install=0
+go=1 quiet=0 install=0 memtest=0
 while (($#))
 do
 	case $1 in
 	-n|--nogo) go=0 ;;
 	-q|--quiet) quiet=1 ;;
+	-m|--memtest) memtest=1 ;;
 	-i|--install) install=1 ;;
 	-h|--help) Help && exit 0 ;;
 	*) Help && Echo "Unrecognized commandline option '$1'" 1
@@ -75,12 +78,12 @@ fi
 for version in "${versions[@]}"
 do
 	path="$esp/$id/$version"
-	out="$entries/$id-$version.conf"
 	((go)) && ! $sudo mkdir -p "$path" &&
 		Echo "Problem making required directory" 6
 	Echo "Copying files to $path"
 	((go)) && $sudo cp "/boot/vmlinuz-$version" "$path/linux"
 	((go)) && $sudo cp "/boot/initrd.img-$version" "$path/initrd"
+	out="$entries/$id-$version.conf"
 	Echo "Writing '$out':"
 	file=$(cat <<-EOF
 		title $release on $part ($version)
@@ -88,11 +91,39 @@ do
 		machine-id $id
 		options $cmdline intel_iommu=on
 		linux /$id/$version/linux
+		#initrd /intel-ucode.img
 		initrd /$id/$version/initrd
 	EOF
 	)
 	((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
 done
+
+if ((memtest))
+then
+	Echo "Downloading and extracting MemTest86..."
+	tmp=$(mktemp -d)
+	cd "$tmp"
+	wget -q https://www.memtest86.com/downloads/memtest86-iso.tar.gz ||
+		Echo "Can't download MemTest86" 7
+	tar xf memtest86-iso.tar.gz
+	v=$(echo Memtest86-*.iso) v=${v#*-} v=${v//.iso}
+	7z x Memtest86-$v.iso EFI/BOOT >/dev/null
+	memtest="$esp/EFI/memtest86"
+	$sudo rm -rf -- "$memtest"
+	$sudo cp --no-preserve=mode,ownership -R EFI/BOOT "$memtest" ||
+		Echo "Can't setup the files for MemTest86" 8
+	cd -
+	rm -r -- "$tmp"
+	out="$entries/memtest86.conf"
+	Echo "Writing '$out':"
+	file=$(cat <<-EOF
+		title MemTest86
+		version $v
+		efi /EFI/MemTest86/BOOTX64.EFI
+	EOF
+	)
+	((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
+fi
 
 out="$esp/loader/loader.conf"
 file=$(cat <<-EOF
