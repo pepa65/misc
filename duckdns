@@ -15,7 +15,7 @@ token=''
 duckdir="$HOME"
 log="$duckdir/duckdns.log"
 msg="$duckdir/duckdns.msg"
-[[ -f "$log" ]] || echo -n "Log duckdns" >"$msg"
+[[ -f "$log" ]] || echo -n "Log duckdns" >"$log"
 [[ -f "$msg" ]] || touch "$msg"
 ip='' res=''
 url="https://www.duckdns.org/update?domains=$domain&token=$token&verbose=true"
