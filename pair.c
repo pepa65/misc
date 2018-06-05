@@ -1,7 +1,7 @@
 // pair.c
 // pair - Pair Logitech USB receivers with wireless input devices
 // Copyright 2011 Benjamin Tissoires <benjamin.tissoires@gmail.com> GNU GPL3+ license
-// pepa65 <solusos@passchier.net> http://github.com/pepa65/misc/blob/master/pair.c
+// pepa65 <solusos@passchier.net> http://gitlab.com/pepa65/misc/blob/master/pair.c
 // Compile:  gcc -o pair pair.c
 // Prepare:  chmod +x pair
 
