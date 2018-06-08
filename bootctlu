@@ -1,23 +1,25 @@
 #!/bin/bash
 
-# bootctlu - Parallel install of systemd_boot on Ubuntu
+# bootctlu - Setting up and registering systemd_boot on Ubuntu
 #
-# Required: util-linux(blkid) grep systemd(bootctl) mount
+# Required: util-linux(blkid) grep efibootmgr systemd[binaries] mount
 #           coreutils(readlink sort cut head tail mkdir cat cp)
 #           sudo (unless run as root, or only invoked with -n/--nogo)
 #   For -m/--memtest: wget tar p7zip(7z)
+#   For -r/--register: efibootmgr
 
 edition='generic'
+entryname='Ubuntu menu'
 
 Help(){
 	cat <<-EOH
-		bootctlu - Parallel install of systemd_boot on Ubuntu
-		
-		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-i|--install]
-		          -n/--nogo:     No writing to the system at all.
-		          -q/--quiet:    Only fatal errors output to the terminal.
-		          -i/--install:  Also do the actual installation with bootctl.
-		          -m/--memtest:  Also download and set up MemTest86.
+		bootctlu - Setting up and registering systemd_boot on Ubuntu
+
+		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-r|--register]
+		          -n/--nogo:      No writing to the system at all.
+		          -q/--quiet:     Only fatal errors output to the terminal.
+		          -m/--memtest:   Also download and set up a MemTest86 entry.
+		          -r/--register:  Also register the efi-loader with UEFI.
 	EOH
 }
 
@@ -30,14 +32,14 @@ Echo(){ # $1: message, $2: errorcode (exit if present!)
 	((quiet)) || echo -e "\n$1"
 }
 
-go=1 quiet=0 install=0 memtest=0
+go=1 quiet=0 register=0 memtest=0
 while (($#))
 do
 	case $1 in
 	-n|--nogo) go=0 ;;
 	-q|--quiet) quiet=1 ;;
 	-m|--memtest) memtest=1 ;;
-	-i|--install) install=1 ;;
+	-r|--register) register=1 ;;
 	-h|--help) Help && exit 0 ;;
 	*) Help && Echo "Unrecognized commandline option '$1'" 1
 	esac
@@ -47,7 +49,8 @@ done
 sudo=
 ((go && EUID)) && ! sudo=$(type -p sudo) &&
 	Echo "Need to escalate privilege, but sudo not present" 2
-((go)) || Echo "### Simulation, no actual copying/writing/installing"
+
+((go)) || Echo "### Simulation, no actual copying/writing/registering"
 
 [[ -d /sys/firmware/efi/efivars ]] ||
 	Echo "Not in UEFI mode, EFI variables not accessible" 3
@@ -58,23 +61,43 @@ esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
 entries="$esp/loader/entries"
 id=$(</etc/machine-id)
 p=$(mount |grep ' / ') part=${p%% *}
-
-versions=()
-for f in $(printf "%s\n" /boot/vmlinuz-* |sort -Vr)
-do
-	[[ $(dpkg -S "$f") ]] && versions+=("${f#*-}")
-done
-
-d=$(grep PRETTY_NAME /etc/os-release) d=${d#*\"}
-release=${d:0: -1}
+p=$(grep PRETTY_NAME /etc/os-release) p=${p#*\"}
+release=${p:0: -1}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
+
+out="$esp/loader/loader.conf"
+file=$(cat <<-EOF
+	#auto-entries 0
+	#auto-firmware 0
+	#console-mode auto
+	default $id-*
+	timeout 6
+	editor yes
+EOF
+)
 if ((go))
 then
-	$sudo mkdir -p "$esp/$id" "$entries" ||
+	$sudo mkdir -p "$esp/$id" "$entries" "$esp/EFI/systemd" "$esp/EFI/Boot" ||
 		Echo "Problem making required directories" 5
+	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] && mv "$out" "$out~" &&
+		Echo "WARNING: previous loader.conf renamed to '$out~'"
+	Echo "Writing '$out':\n"
+	echo -e "$file" |$sudo tee "$out"
+	efipath='/usr/lib/systemd/boot/efi'
+	cp "$efipath/systemd-bootx64.efi" "$esp/EFI/systemd"
+	cp "$efipath/systemd-bootx64.efi" "$esp/EFI/Boot/BOOTX64.EFI"
+else
+	Echo "Writing '$out':\n\n$file"
 fi
+Echo "Copying efi-loader"
 
-for version in "${versions[@]}"
+versions=
+for f in $(printf "%s\n" /boot/vmlinuz-* |sort -Vr)
+do
+	[[ $(dpkg -S "$f") ]] && versions+="${f#*-} "
+done
+
+for version in $versions
 do
 	path="$esp/$id/$version"
 	((go)) && ! $sudo mkdir -p "$path" &&
@@ -123,33 +146,24 @@ then
 	((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
 fi
 
-out="$esp/loader/loader.conf"
-file=$(cat <<-EOF
-	#auto-entries 0
-	#auto-firmware 0
-	#console-mode auto
-	default $id-*
-	timeout 6
-	editor yes
-EOF
-)
-if ((go))
+((!go || register)) && Echo "Registering the systemd loader with UEFI"
+if ((go && register))
 then
-	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] && mv "$out" "$out~" &&
-		Echo "WARNING: previous loader.conf renamed to '$out~'"
-	Echo "Writing '$out':\n"
-	echo -e "$file" |$sudo tee "$out"
-else
-	Echo "Writing '$out':\n\n$file"
+	ebm=$(type -p efibootmgr) ||
+		Echo "Can't register with UEFI, efibootmgr not available" 9
+	entries=$($ebm |grep " $entryname$" |grep -o 'Boot....')
+	for entry in $entries
+	do
+		$ebm -b ${entry:4:4} -B >/dev/null
+		Echo "UEFI entry '$entry $entryname' removed"
+	done
+	$ebm -c -l '\EFI\systemd\systemd-bootx64.efi' -L "$entryname" >/dev/null &&
+		Echo "Successfully registered $entryname"
 fi
-
-((!go || install)) && Echo "Running 'bootctl install' on $esp"
-((go && install)) && $sudo bootctl --path="$esp" install &&
-	Echo "Installation successful"
-((go && !install)) &&
-	Echo "Not actually installing, no -i/--install option given"
+((go && !register)) &&
+	Echo "Not registering with UEFI, no -r/--register option given"
 
 ((go)) ||
-	Echo "### End of simulation, nothing actually copied/written/installed"
+	Echo "### End of simulation, nothing actually copied/written/registered"
 
 exit 0

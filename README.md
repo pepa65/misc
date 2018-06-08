@@ -183,15 +183,15 @@ Usage: `pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
 * Required: pdfseparate pdfunite coreutils(mktemp cd)
 
 ## bootctlu
-**bootctlu - Install systemd_boot on Ubuntu with kernels in `/boot`**
+**bootctlu - Setting up and registering systemd_boot on Ubuntu**
     
 Usage:
 ```
-bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-i|--install]
-Setup kernel, initrd and entries on ESP, optionally install systemd_boot.
-    -n/--nogo:     No writing to the system at all.
-    -q/--quiet:    Only fatal errors output to the terminal.
-    -m/--memtest:  Also download and set up MemTest86.
-    -i/--install:  Also do the actual installation with bootctl.
+bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-r|--register]
+Setting up and registering systemd_boot on Ubuntu.
+    -n/--nogo:      No writing to the system at all.
+    -q/--quiet:     Only fatal errors output to the terminal.
+    -m/--memtest:   Also download and set up a MemTest86 entry.
+    -r/--register:  Also register the efi-loader with UEFI
 ```
-**Required: util-linux(blkid) grep find systemd(bootctl) coreutils(readlink sort cut head tail mkdir cat cp) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z)**
+**Required: util-linux(blkid) grep find systemd[efi loader binary] coreutils(readlink sort cut head tail mkdir cat cp) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z). For -r/--register: efibootmgr.**
