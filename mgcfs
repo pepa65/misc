@@ -159,7 +159,7 @@ then
 		Password "Confirm password:"
 		[[ "$(cat "$pass")" = "$first" ]] && break || cue="Passwords not the same!\n"
 	done
-	gocryptfs -passfile "$pass" -init $ptn "$dn" >"$log" &&
+	gocryptfs -passfile "$pass" -init $ptn -- "$dn" >"$log" &&
 		shred -fu "$pass" &&
 		Info "Directory '$dn' initialized as gocryptfs directory" &&
 		exit 0 ||
@@ -190,7 +190,7 @@ pass=$(mktemp)
 cue="Mounting $name on $mount\n$cue\n\nPassword:"
 Password "$cue"
 ## Allow mounting over non-empty mountpoint with -nonempty
-while ! gocryptfs $q -nonempty -passfile "$pass" "$dn" "$mount" 2>"$log"
+while ! gocryptfs $q -nonempty -passfile "$pass" -- "$dn" "$mount" 2>"$log"
 do
 	shred -fu "$pass"
 	Password "Decryption failed, try a different password!\n\n$cue"

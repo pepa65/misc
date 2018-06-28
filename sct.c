@@ -1,6 +1,6 @@
 // sct.c
 // Set Colour Temperature of screen
-// Requires: libx11-dev libxrandr-dev
+// Requires: libxrandr-dev (will pull in libx11-dev)
 // Compile:
 //     cc -o sct sct.c -lX11 -lXrandr
 //   Or:

@@ -54,7 +54,7 @@ sudo=
 
 [[ -d /sys/firmware/efi/efivars ]] ||
 	Echo "Not in UEFI mode, EFI variables not accessible" 3
-p=$(blkid |grep 'EFI System') || Echo 'EFI System Partition not mounted' 4
+p=$($sudo blkid |grep 'EFI System') || Echo 'EFI System Partition not mounted' 4
 
 p=${p:0: -1} p=${p##*\"} p=$(readlink -e /dev/disk/by-partuuid/$p)
 esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
@@ -157,7 +157,8 @@ then
 		$ebm -b ${entry:4:4} -B >/dev/null
 		Echo "UEFI entry '$entry $entryname' removed"
 	done
-	$ebm -c -l '\EFI\systemd\systemd-bootx64.efi' -L "$entryname" >/dev/null &&
+	echo
+	$ebm -c -l '\EFI\systemd\systemd-bootx64.efi' -L "$entryname" &&
 		Echo "Successfully registered $entryname"
 fi
 ((go && !register)) &&
