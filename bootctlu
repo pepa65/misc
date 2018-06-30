@@ -111,7 +111,7 @@ do
 		title $release on $part ($version)
 		version $version
 		machine-id $id
-		options $cmdline intel_iommu=on
+		options ${cmdline// intel_iommu=on/} intel_iommu=on
 		linux /$id/$version/linux
 		initrd /$id/$version/initrd
 	EOF
