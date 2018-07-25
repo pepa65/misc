@@ -3,7 +3,7 @@
 # bootctlu - Setting up and registering systemd_boot on Ubuntu
 #
 # Required: util-linux(blkid) grep efibootmgr systemd[binaries] mount
-#           coreutils(readlink sort cut head tail mkdir cat cp)
+#           coreutils(readlink sort cut head tail mkdir cat cp ls)
 #           sudo (unless run as root, or only invoked with -n/--nogo)
 #   For -m/--memtest: wget tar p7zip(7z)
 #   For -r/--register: efibootmgr
@@ -15,29 +15,36 @@ Help(){
 	cat <<-EOH
 		bootctlu - Setting up and registering systemd_boot on Ubuntu
 
-		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-r|--register]
+		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-v|--verbose]
+		                  [-c|--cleanup] [-m|--memtest] [-r|--register]
 		          -n/--nogo:      No writing to the system at all.
 		          -q/--quiet:     Only fatal errors output to the terminal.
+		          -v/--verbose:   Show more detail of the actions.
+		          -c/--cleanup:   Remove no longer installed versions.
 		          -m/--memtest:   Also download and set up a MemTest86 entry.
 		          -r/--register:  Also register the efi-loader with UEFI.
 	EOH
 }
 
-Echo(){ # $1: message, $2: errorcode (exit if present!)
+Echo(){ # $1: message, $2: errorcode (exit if non-zero!)
+	# If errorcode is zero, only display the message when verbose is set
+	local m=$1
 	if [[ $2 ]]
 	then
-		echo -e "\nABORT: $1"
-		exit $2
+		(($2)) && echo -e "\nABORT: $m" && exit $2
+		((verbose)) || m=
 	fi
-	((quiet)) || echo -e "\n$1"
+	((quiet)) || echo -ne "$m"
 }
 
-go=1 quiet=0 register=0 memtest=0
+go=1 quiet=0 rd=/dev/null verbose=0 cleanup=0 register=0 memtest=0
 while (($#))
 do
 	case $1 in
 	-n|--nogo) go=0 ;;
 	-q|--quiet) quiet=1 ;;
+	-v|--verbose) verbose=1 rd=/dev/stdout ;;
+	-c|--cleanup) cleanup=1 ;;
 	-m|--memtest) memtest=1 ;;
 	-r|--register) register=1 ;;
 	-h|--help) Help && exit 0 ;;
@@ -47,19 +54,30 @@ do
 done
 
 sudo=
-((go && EUID)) && ! sudo=$(type -p sudo) &&
+((EUID)) && ! sudo=$(type -p sudo) &&
 	Echo "Need to escalate privilege, but sudo not present" 2
 
-((go)) || Echo "### Simulation, no actual copying/writing/registering"
+((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
 
 [[ -d /sys/firmware/efi/efivars ]] ||
 	Echo "Not in UEFI mode, EFI variables not accessible" 3
-p=$($sudo blkid |grep 'EFI System') || Echo 'EFI System Partition not mounted' 4
+p=$($sudo blkid |grep 'EFI System') ||
+	Echo "EFI System Partition not mounted" 4
 
 p=${p:0: -1} p=${p##*\"} p=$(readlink -e /dev/disk/by-partuuid/$p)
 esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
 entries="$esp/loader/entries"
 id=$(</etc/machine-id)
+
+vs=$(printf "%s " $($sudo ls -1 "$esp/$id"))
+Echo "\nIn ESP: $vs\n"
+((cleanup)) &&
+	for v in $vs
+	do [[ ! -f /boot/vmlinuz-$v ]] &&
+		$sudo rm -rf -- "$esp/$id/$v" &&
+		Echo "\nRemoved from ESP: $v\n"
+	done
+
 p=$(mount |grep ' / ') part=${p%% *}
 p=$(grep PRETTY_NAME /etc/os-release) p=${p#*\"}
 release=${p:0: -1}
@@ -80,16 +98,21 @@ then
 	$sudo mkdir -p "$esp/$id" "$entries" "$esp/EFI/systemd" "$esp/EFI/Boot" ||
 		Echo "Problem making required directories" 5
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] && mv "$out" "$out~" &&
-		Echo "WARNING: previous loader.conf renamed to '$out~'"
-	Echo "Writing '$out':\n"
-	echo -e "$file" |$sudo tee "$out"
+		Echo "\nWARNING: previous loader.conf renamed to '$out~'\n"
+	Echo "\nWriting '$out'"
+	Echo ":\n" 0
+	Echo "\n"
+	echo -e "$file" |$sudo tee "$out" >$rd
 	efipath='/usr/lib/systemd/boot/efi'
-	cp "$efipath/systemd-bootx64.efi" "$esp/EFI/systemd"
-	cp "$efipath/systemd-bootx64.efi" "$esp/EFI/Boot/BOOTX64.EFI"
+	Echo "\nInstall bootloader binaries\n" 0
+	$sudo cp "$efipath/systemd-bootx64.efi" "$esp/EFI/systemd"
+	$sudo cp "$efipath/systemd-bootx64.efi" "$esp/EFI/Boot/BOOTX64.EFI"
 else
-	Echo "Writing '$out':\n\n$file"
+	Echo "\nWriting '$out'"
+	Echo ":\n\n$file" 0
+	Echo "\n"
 fi
-Echo "Copying efi-loader"
+Echo "\nCopying efi-loader\n"
 
 versions=
 for f in $(printf "%s\n" /boot/vmlinuz-* |sort -Vr)
@@ -102,11 +125,13 @@ do
 	path="$esp/$id/$version"
 	((go)) && ! $sudo mkdir -p "$path" &&
 		Echo "Problem making required directory" 6
-	Echo "Copying files to $path"
+	Echo "\nCopying files to $path\n"
 	((go)) && $sudo cp "/boot/vmlinuz-$version" "$path/linux"
 	((go)) && $sudo cp "/boot/initrd.img-$version" "$path/initrd"
 	out="$entries/$id-$version.conf"
-	Echo "Writing '$out':"
+	Echo "\nWriting '$out'"
+	Echo ":" 0
+	Echo "\n"
 	file=$(cat <<-EOF
 		title $release on $part ($version)
 		version $version
@@ -116,12 +141,13 @@ do
 		initrd /$id/$version/initrd
 	EOF
 	)
-	((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
+	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
+		Echo "\n$file\n" 0
 done
 
 if ((memtest))
 then
-	Echo "Downloading and extracting MemTest86..."
+	Echo "\nDownloading and extracting MemTest86...\n"
 	tmp=$(mktemp -d)
 	cd "$tmp"
 	wget -q https://www.memtest86.com/downloads/memtest86-iso.tar.gz ||
@@ -130,23 +156,27 @@ then
 	v=$(echo Memtest86-*.iso) v=${v#*-} v=${v//.iso}
 	7z x Memtest86-$v.iso EFI/BOOT >/dev/null
 	memtest="$esp/EFI/memtest86"
-	$sudo rm -rf -- "$memtest"
-	$sudo cp --no-preserve=mode,ownership -R EFI/BOOT "$memtest" ||
+	((go)) && $sudo rm -rf -- "$memtest"
+	((go)) &&
+		! $sudo cp --no-preserve=mode,ownership -R EFI/BOOT "$memtest" &&
 		Echo "Can't setup the files for MemTest86" 8
 	cd -
 	rm -r -- "$tmp"
 	out="$entries/memtest86.conf"
-	Echo "Writing '$out':"
+	Echo "\nWriting '$out'"
+	Echo ":" 0
+	Echo "\n"
 	file=$(cat <<-EOF
 		title MemTest86
 		version $v
 		efi /EFI/memtest86/BOOTX64.EFI
 	EOF
 	)
-	((go)) && echo && echo -e "$file" |$sudo tee "$out" || Echo "$file"
+	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
+		Echo "\n$file\n" 0
 fi
 
-((!go || register)) && Echo "Registering the systemd loader with UEFI"
+((!go || register)) && Echo "\nRegistering the bootloader with UEFI\n"
 if ((go && register))
 then
 	ebm=$(type -p efibootmgr) ||
@@ -155,16 +185,16 @@ then
 	for entry in $entries
 	do
 		$ebm -b ${entry:4:4} -B >/dev/null
-		Echo "UEFI entry '$entry $entryname' removed"
+		Echo "\nUEFI entry '$entry $entryname' removed" 0
 	done
 	echo
 	$ebm -c -l '\EFI\systemd\systemd-bootx64.efi' -L "$entryname" &&
-		Echo "Successfully registered $entryname"
+		Echo "\nSuccessfully registered $entryname\n" 0
 fi
 ((go && !register)) &&
-	Echo "Not registering with UEFI, no -r/--register option given"
+	Echo "\nNot registering with UEFI, no -r/--register option given\n" 0
 
 ((go)) ||
-	Echo "### End of simulation, nothing actually copied/written/registered"
+	Echo "\n### End of simulation, nothing actually copied/written/registered\n"
 
 exit 0
