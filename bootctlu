@@ -69,16 +69,20 @@ esp="$(grep "$p" /proc/mounts |cut -d' ' -f2)"
 entries="$esp/loader/entries"
 id=$(</etc/machine-id)
 
-vs=$(printf "%s\n" $($sudo ls -1 "$esp/$id"))
-vs+=$'\n'$(printf "%s\n" $($sudo ls -1 /boot/efi/loader/entries/40bc8281a6764809b50b02e5c411e1aa-*) |sed -e 's@^/boot/efi/loader/entries/40bc8281a6764809b50b02e5c411e1aa-@@' -e 's@.conf$@@')
-vs=$(sort -u <<<"$vs")
+#vs=$(printf "%s\n" $($sudo ls -1 "$esp/$id"))
+#vs+=$'\n'$(printf "%s\n" $($sudo ls -1 /boot/efi/loader/entries/$id-*)\
+#	|sed -e "s@^/boot/efi/loader/entries/$id-@@" -e 's@.conf$@@')
+#vs=$(sort -u <<<"$vs")
+vs=$(printf "%s\n" $($sudo ls -1 "$esp/$id") \
+	$($sudo ls -1 /boot/efi/loader/entries/$id-* \
+	|sed -e "s@^/boot/efi/loader/entries/$id-@@" -e 's@.conf$@@') |sort -u)
 Echo "\nIn ESP: ${vs//$'\n'/ }\n"
 
 ((cleanup)) &&
 	for v in $vs
 	do [[ ! -f /boot/vmlinuz-$v ]] &&
-		$sudo rm -rf -- "$esp/$id/$v" "$esp/loader/entries/$id-$v.conf" &&
-		Echo "\nRemoved from ESP: $v\n"
+		Echo "Removed from ESP: $v\n" && ((go)) &&
+		$sudo rm -rf -- "$esp/$id/$v" "$esp/loader/entries/$id-$v.conf"
 	done
 
 p=$(mount |grep ' / ') part=${p%% *}
