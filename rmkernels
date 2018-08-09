@@ -6,6 +6,7 @@ set +xv
 ##   -f, --force:   force removal of newer than currently running kernel
 ##  anything installed that matches <version> will be proposed for removal
 ## Requires: grep, sed, find, coreutils(sort, uname, tail), dpkg, apt. sudo
+##  If bootctlu is present and active, it will be called to cull the entries
 
 Usage(){
 	cat <<-EOS
@@ -85,6 +86,8 @@ Main(){
 
 	## Purge all superfluous and extra versions, and improperly removed packages
 	[[ $pkgsf || $pkgpat || $rc ]] && sudo apt purge $pkgsf $pkgpat $rc || echo "Nothing to remove"
+
+	bootctlu=$(type -p bootctlu) && $bootctlu -c
 }
 
 Main $*

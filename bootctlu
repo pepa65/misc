@@ -8,7 +8,6 @@
 #   For -m/--memtest: wget tar p7zip(7z)
 #   For -r/--register: efibootmgr
 
-edition='generic'
 entryname='Ubuntu menu'
 
 Help(){
