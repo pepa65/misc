@@ -20,7 +20,7 @@ Usage(){ # $1: code for exit
 		  (For more than 1 copy, select 'Collate' before printing.)
 	EOS
 	[[ $1 ]] && exit $1
-}		
+}
 
 # process commandline
 (($#)) || Usage 1
@@ -38,6 +38,14 @@ out=$(basename "$in")
 [[ $1 ]] && echo "ABORT: unrecognized option: '$1'" &&
 	Usage 3
 
+missing=
+for cmd in psselect pdf2ps ps2pdf psnup
+do type -p $cmd &>/dev/null || missing+=" $cmd"
+done
+[[ $missing ]] &&
+	echo "Missing commands:$missing, install ghostscript/psutils" &&
+	exit 4
+
 echo "Convert to A5 pdf to ps..."
 tmp=$(mktemp -d)
 pdf2ps "$in" "$tmp/a5.ps" 2>/dev/null
@@ -46,7 +54,7 @@ echo "Convert A5 ps to A4..."
 cd "$tmp"
 # Get number of pages
 p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
-((!p)) && echo "ABORT: no pages found" && rm -r "$tmp" && exit 3
+((!p)) && echo "ABORT: no pages found" && rm -r "$tmp" && exit 5
 
 # p: # of A5-pages; n: full [multiple of 4] # of A5-pages; s: # of A4-sheets
 ((n=p,r=p%4)) && ((r=4-r,n+=r))
