@@ -57,7 +57,7 @@ do
 done
 
 sudo=
-((EUID)) && ! sudo=$(type -p sudo) &&
+((EUID)) && ! sudo=$(type -P sudo) &&
 	Echo "Need to escalate privilege, but sudo not present" 3
 
 ((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
@@ -197,7 +197,7 @@ fi
 ((!go || register)) && Echo "\nRegistering the bootloader with UEFI\n"
 if ((go && register))
 then
-	ebm=$(type -p efibootmgr) ||
+	ebm=$(type -P efibootmgr) ||
 		Echo "Can't register with UEFI, efibootmgr not available" 9
 	entries=$($ebm |grep " $entryname$" |grep -o 'Boot....')
 	for entry in $entries

@@ -40,7 +40,7 @@ out=$(basename "$in")
 
 missing=
 for cmd in psselect pdf2ps ps2pdf psnup
-do type -p $cmd &>/dev/null || missing+=" $cmd"
+do type -P $cmd &>/dev/null || missing+=" $cmd"
 done
 [[ $missing ]] &&
 	echo "Missing commands:$missing, install ghostscript/psutils" &&

@@ -25,10 +25,10 @@ self=$(basename "$0")
 	echo "Either pass directories to check as commandline arguments, or in \$BITROT_DIRS" &&
 	exit 1
 
-! type -p bitrot >/dev/null &&
+! type -P bitrot >/dev/null &&
 	echo "Install bitrot first: https://github.com/liloman/bitrot" && exit 2
 
-! type -p par2 >/dev/null && echo "Install par2 package first" && exit 3
+! type -P par2 >/dev/null && echo "Install par2 package first" && exit 3
 
 [[ ! -d $BITROT_DATA ]] && mkdir -p "$BITROT_DATA"
 

@@ -49,7 +49,7 @@ name=compare.html
 self=$(basename $0)
 for f in sed swath dwdiff
 do
-	! type -p "$f" &>/dev/null && Abort "Package '$f' not installed"
+	! type -P "$f" &>/dev/null && Abort "Package '$f' not installed"
 done
 
 tmp=$(mktemp -d "/tmp/$self-XXXX") t1="$tmp/t1" t2="$tmp/t2" stat="$tmp/stat"

@@ -12,7 +12,7 @@
 //     export SCT
 //     sct(){
 //       SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000)
-//       [[ $SCT ]] && $(type -p sct) $SCT  ## sct executable in PATH
+//       [[ $SCT ]] && $(type -P sct) $SCT  ## sct executable in PATH
 //     }
 //
 // Original license: Public domain, do as you wish

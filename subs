@@ -31,11 +31,11 @@ Entry(){ ## $1: Message
 
 domain='https://subscene.com'
 lang=${lang,,}
-wget=$(type -p wget)
+wget=$(type -P wget)
 [[ -z $wget ]] && Error "Exit: 'wget' required" 1
 wget="$wget -qO"
-less=$(type -p less)
-zenity=$(type -p zenity)
+less=$(type -P less)
+zenity=$(type -P zenity)
 if [[ $zenity ]]
 then
 	exec 2>/dev/null
