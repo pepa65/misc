@@ -482,7 +482,7 @@ def run_from_command_line():
         '-t', '--test', action='store_true',
         help='just test against an existing database, don\'t update anything')
     parser.add_argument(
-        '--version', action='version',
+        '-V', '--version', action='version',
         version='%(prog)s {}.{}.{}'.format(*VERSION))
     parser.add_argument(
         '--commit-interval', type=float, default=300,

@@ -195,3 +195,11 @@ Setting up and registering systemd_boot on Ubuntu.
     -r/--register:  Also register the efi-loader with UEFI
 ```
 **Required: util-linux(blkid) grep find systemd[efi loader binary] coreutils(readlink sort cut head tail mkdir cat cp) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z). For -r/--register: efibootmgr.**
+
+## ypass
+**# ypass - the standard unix password manager with GUI**
+
+GUI frontend for pass, the standard unix password manager, in bash/yad.
+Can view, edit and delete.
+
+**Requirements: pass coreutils(type sleep shred ls) sed diffutils(diff).**

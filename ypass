@@ -1,0 +1,77 @@
+#!/bin/bash
+set +vx
+# ypass - the standard unix password manager with GUI
+# Requirements: pass coreutils(type sleep shred ls) sed diffutils(diff)
+
+height=700
+store=~/.password-store
+cd "$store"
+
+! type -P pass &>/dev/null && echo "Error: pass needs to be installed" &&
+	exit 1
+! type -P yad &>/dev/null && echo "Error: yad needs to be installed" &&
+	exit 2
+
+rmtemp(){ sleep .2; shred -fu /dev/shm/pass"$$".*;}
+trap 'rmtemp' EXIT
+trap "rmtemp; trap - HUP; kill -HUP $$" HUP
+trap "rmtemp; trap - INT; kill -INT $$" INT
+trap "rmtemp; trap - QUIT; kill -QUIT $$" QUIT
+trap "rmtemp; trap - TERM; kill -TERM $$" TERM
+
+yad="yad --title=pass --height=$height"
+tmpsel="/dev/shm/pass$$.sel"
+rc=0 ls=
+while ((rc!=252))
+do
+	if [[ $ls ]]
+	then
+		ls -1F -t $ls |sed 's@\.gpg$@@' \
+				|$yad --list --width=200 --text="<b>$ls</b>" \
+				--button=Delete:2 --button=View:3 --button=Back:4 --response=3 \
+				--column="- - - sort - - -" 2>/dev/null >"$tmpsel"
+	else
+		ls -1F -t |sed 's@\.gpg$@@' \
+				|$yad --list --width=200 \
+				--button=Delete:2 --button=View:3 --response=3 \
+				--column="- - - sort - - -" 2>/dev/null >"$tmpsel"
+	fi
+	rc=$? dir=0 sel=$(<"$tmpsel") sel=${sel%|}
+	[[ ${sel: -1} = / ]] && sel=${sel%/} dir=1
+	[[ $ls && $sel ]] && sel=$ls/$sel
+	case $rc in
+		252) # Close
+			exit 0 ;;
+		2) # Delete
+			if [[ $sel ]]
+			then
+				[[ ${sel%%/*} = trash ]] &&
+					pass rm -f "$sel" ||
+					pass mv -f "$sel" "trash/$sel"
+			fi
+			continue ;;
+		4) # Back
+			[[ $ls == */* ]] && ls=${ls%/*} || ls=
+			continue ;;
+		3|0) # View or Clicked entry
+			((dir)) && ls=$sel && continue ;;
+	esac
+
+	tmp1=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
+	tmp2=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
+	pass show "$sel" >"$tmp1"
+	$yad --text-info --text="<b>$sel</b>" --width=400 \
+			--button=Update:6 --button=Back:5 --response=5 \
+			--filename="$tmp1" --editable --wrap --show-uri 2>&1 >"$tmp2"
+	rc=$?
+	case $rc in
+		6) # Update
+			diff -q "$tmp1" "$tmp2" && continue
+			pass mv -f "$sel" "backup/$sel"
+			pass insert -m "$sel" <"$tmp2" ;;
+		5) # Back
+			[[ $ls == */* ]] && ls=${ls%/*} || ls= ;;
+	esac
+done
+
+exit 0
