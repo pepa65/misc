@@ -3,7 +3,6 @@ set +vx
 # ypass - the standard unix password manager with GUI
 # Requirements: pass coreutils(type sleep shred ls) sed diffutils(diff)
 
-height=700
 store=~/.password-store
 cd "$store"
 
@@ -19,21 +18,22 @@ trap "rmtemp; trap - INT; kill -INT $$" INT
 trap "rmtemp; trap - QUIT; kill -QUIT $$" QUIT
 trap "rmtemp; trap - TERM; kill -TERM $$" TERM
 
-yad="yad --title=pass --height=$height"
+yad="yad --title=pass"
 tmpsel="/dev/shm/pass$$.sel"
 rc=0 ls=
 while ((rc!=252))
-do
+do # No close clicked
 	if [[ $ls ]]
 	then
 		ls -1F -t $ls |sed 's@\.gpg$@@' \
-				|$yad --list --width=200 --text="<b>$ls</b>" \
-				--button=Delete:2 --button=View:3 --button=Back:4 --response=3 \
+				|$yad --list --height=750 --width=200 --text="<b>$ls</b>" \
+				--response=3 \
+				--button=Delete:2 --button=View:3 --button=Back:4 --button=New:5 \
 				--column="- - - sort - - -" 2>/dev/null >"$tmpsel"
 	else
 		ls -1F -t |sed 's@\.gpg$@@' \
-				|$yad --list --width=200 \
-				--button=Delete:2 --button=View:3 --response=3 \
+				|$yad --list --height=750 --width=200 \
+				--button=Delete:2 --button=View:3 --button=New:5 --response=3 \
 				--column="- - - sort - - -" 2>/dev/null >"$tmpsel"
 	fi
 	rc=$? dir=0 sel=$(<"$tmpsel") sel=${sel%|}
@@ -42,11 +42,23 @@ do
 	case $rc in
 		252) # Close
 			exit 0 ;;
+		5) # New
+			sel=
+			while [[ -d $store/$ls/$sel ]]
+			do
+				$yad --entry --height=80 --width=220 --editable \
+						--entry-label="New entry name" 2>/dev/null >"$tmpsel"
+				rc=$?
+				((rc==1 || rc==252)) && continue 2
+				sel=$(<"$tmpsel")
+			done
+			[[ $ls ]] && sel=$ls/$sel
+			echo |pass insert -f "$sel" ;;
 		2) # Delete
 			if [[ $sel ]]
 			then
 				[[ ${sel%%/*} = trash ]] &&
-					pass rm -f "$sel" ||
+					pass rm -r -f "$sel" ||
 					pass mv -f "$sel" "trash/$sel"
 			fi
 			continue ;;
@@ -60,7 +72,7 @@ do
 	tmp1=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
 	tmp2=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
 	pass show "$sel" >"$tmp1"
-	$yad --text-info --text="<b>$sel</b>" --width=400 \
+	$yad --text-info --text="<b>$sel</b>" --height=500 --width=400 \
 			--button=Update:6 --button=Back:5 --response=5 \
 			--filename="$tmp1" --editable --wrap --show-uri 2>&1 >"$tmp2"
 	rc=$?
