@@ -11,49 +11,37 @@ cd "$store"
 ! type -P yad &>/dev/null && echo "Error: yad needs to be installed" &&
 	exit 2
 
-rmtemp(){ sleep .2; shred -fu /dev/shm/pass"$$".*;}
+rmtemp(){ sleep .2; shred -fu /dev/shm/pass"$$".* 2>/dev/null; return 0;}
 trap 'rmtemp' EXIT
 trap "rmtemp; trap - HUP; kill -HUP $$" HUP
 trap "rmtemp; trap - INT; kill -INT $$" INT
 trap "rmtemp; trap - QUIT; kill -QUIT $$" QUIT
 trap "rmtemp; trap - TERM; kill -TERM $$" TERM
 
-yad="yad --title=pass"
-tmpsel="/dev/shm/pass$$.sel"
-rc=0 ls=
+yad='yad --title=ypass' msg= rc=0 ls= entry='Entry  - - - sort - - -'
 while ((rc!=252))
 do # No close clicked
+	tmp=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
 	if [[ $ls ]]
 	then
 		ls -1F -t $ls |sed 's@\.gpg$@@' \
 				|$yad --list --height=750 --width=200 --text="<b>$ls</b>" \
-				--response=3 \
-				--button=Delete:2 --button=View:3 --button=Back:4 --button=New:5 \
-				--column="- - - sort - - -" 2>/dev/null >"$tmpsel"
+				--response=5 --button=Delete:2 --button=New:3 \
+				--button=Search:4 --button=View:5 --button=Back:6 \
+				--column=$entry 2>/dev/null >"$tmp"
 	else
 		ls -1F -t |sed 's@\.gpg$@@' \
-				|$yad --list --height=750 --width=200 \
-				--button=Delete:2 --button=View:3 --button=New:5 --response=3 \
-				--column="- - - sort - - -" 2>/dev/null >"$tmpsel"
+				|$yad --list --height=750 --width=200 $msg \
+				--response=5 --button=Delete:2 --button=New:3 --button=Search:4 \
+				--button=View:5 --column=$entry 2>/dev/null >"$tmp"
 	fi
-	rc=$? dir=0 sel=$(<"$tmpsel") sel=${sel%|}
+	rc=$? dir=0 sel=$(<"$tmp") sel=${sel%|} msg=
+	rmtemp
 	[[ ${sel: -1} = / ]] && sel=${sel%/} dir=1
 	[[ $ls && $sel ]] && sel=$ls/$sel
 	case $rc in
 		252) # Close
 			exit 0 ;;
-		5) # New
-			sel=
-			while [[ -d $store/$ls/$sel ]]
-			do
-				$yad --entry --height=80 --width=220 --editable \
-						--entry-label="New entry name" 2>/dev/null >"$tmpsel"
-				rc=$?
-				((rc==1 || rc==252)) && continue 2
-				sel=$(<"$tmpsel")
-			done
-			[[ $ls ]] && sel=$ls/$sel
-			echo |pass insert -f "$sel" ;;
 		2) # Delete
 			if [[ $sel ]]
 			then
@@ -62,25 +50,66 @@ do # No close clicked
 					pass mv -f "$sel" "trash/$sel"
 			fi
 			continue ;;
-		4) # Back
+		6) # Back
 			[[ $ls == */* ]] && ls=${ls%/*} || ls=
 			continue ;;
-		3|0) # View or Clicked entry
+		5|0) # View or Clicked entry
 			((dir)) && ls=$sel && continue ;;
+		4) # Search
+			$yad --entry --height=80 --width=220 --editable \
+					--entry-label="Search terms" 2>/dev/null >"$tmp"
+			rc=$?
+			((rc==1 || rc==252)) && continue
+			sel=$(<"$tmp")
+			rmtemp
+			echo "This might take a while..." \
+				|$yad --text-info --width=260 --text "<b>Searching</b>" --no-buttons &
+			pid=$!
+			cols=("$(pass grep "$sel" |cat -v \
+				|sed -e ':a' -e 'N' -e '$!ba' -e 's@\n@ / @g' \
+				|sed -e 's@ / \^\[\[94m\^\[\[1m@\n@g' -e 's@\^\[\[01;31m\^\[\[K@@g' \
+						-e 's@\^\[\[m\^\[\[K@@g' -e 's@\^\[\[0m: / @\n@g' \
+						-e 's@^\^\[\[94m\^\[\[1m@@')")
+			kill -USR1 $pid 2>/dev/null
+			[[ -z ${cols[@]} ]] && ls= msg="--text=<b>No results</b>" && continue
+			echo "${cols[@]}" |$yad --list --height=750 --width=400 \
+					--expand-column=0 --print-column=1 --wrap-cols=2 \
+					--column="Entry" --column="Search results" \
+					2>/dev/null >"$tmp"
+			rc=$?
+			((rc==1 || rc==252)) && continue
+			sel=$(<"$tmp") sel=${sel%|}
+			rmtemp
+			[[ $sel ]] || continue
+			[[ $ls ]] && sel=$ls/$sel ;;
+		3) # New
+			sel=
+			while [[ -d $store/$ls/$sel ]]
+			do
+				$yad --entry --height=80 --width=220 --editable \
+						--entry-label="New entry name" 2>/dev/null >"$tmp"
+				rc=$?
+				((rc==1 || rc==252)) && continue 2
+				sel=$(<"$tmp")
+				rmtemp
+			done
+			[[ $ls ]] && sel=$ls/$sel
+			echo |pass insert -f "$sel" ;;
 	esac
 
-	tmp1=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
-	tmp2=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
-	pass show "$sel" >"$tmp1"
+	tmp=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
+	tmpu=$(mktemp "/dev/shm/pass$$.XXXXXXXX")
+	pass show "$sel" >"$tmp"
 	$yad --text-info --text="<b>$sel</b>" --height=500 --width=400 \
 			--button=Update:6 --button=Back:5 --response=5 \
-			--filename="$tmp1" --editable --wrap --show-uri 2>&1 >"$tmp2"
+			--filename="$tmp" --editable --wrap --show-uri 2>&1 >"$tmpu"
 	rc=$?
 	case $rc in
 		6) # Update
-			diff -q "$tmp1" "$tmp2" && continue
+			diff -q "$tmp" "$tmpu" && rmtemp && continue
 			pass mv -f "$sel" "backup/$sel"
-			pass insert -m "$sel" <"$tmp2" ;;
+			pass insert -m "$sel" <"$tmpu"
+			rmtemp ;;
 		5) # Back
 			[[ $ls == */* ]] && ls=${ls%/*} || ls= ;;
 	esac
