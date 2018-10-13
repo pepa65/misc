@@ -26,7 +26,7 @@ do # No close clicked
 	then
 		ls -1F -t $ls |sed 's@\.gpg$@@' \
 				|$yad --list --height=1200 --width=200 --text="<b>$msg/$ls</b>" \
-				--response=6 --button="Search!!Long deep search with grep:4" \
+				--response=6 --button="Search!!Long search of entry contents:4" \
 				--button="Delete!!Delete entry or directory:2" \
 				--button="New!!Create new entry:3" --button="View!!View or Edit:5" \
 				--button="Back!!Back to parent directory:6" \
@@ -34,7 +34,7 @@ do # No close clicked
 	else
 		ls -1F -t |sed 's@\.gpg$@@' \
 				|$yad --list --height=1200 --width=200 --text="<b>$msg/</b>" \
-				--response=0 --button="Search!!Long deep search with grep:4" \
+				--response=252 --button="Search!!Long sarch of entry contents:4" \
 				--button="Delete!!Delete entry or directory:2" \
 				--button="New!!Create new entry:3" --button="View!!View or Edit:5" \
 				--column="Entry" 2>/dev/null >"$tmp"
