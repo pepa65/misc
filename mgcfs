@@ -2,19 +2,21 @@
 set +vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
 ## Required: gocryptfs(http://github/com/rfjakob/gocryptfs) fuse grep procps
-##   tar coreutils(cat rm type ls mktemp stat shred mkdir chmod sleep sync)
-## Optional: zenity/whiptail/cryptsetup(askpass) <run>
-## Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
+##   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync)
+## Optional: zenity/whiptail/cryptsetup(askpass) gpg <run>
+## Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN/GPGID
+##   (MGCFS_DIR and MGCFS_NAME can be overridden on the commandline)
 
-## Mountpoint: set here or in $MGCFS_MOUNT, must start with '/'
+## Mountpoint, must start with '/'; can be overridden with $MGCFS_MOUNT
 mount="$HOME/Private"
-## Containing directory: set here or in $MGCFS_DIR
+## Containing directory; can be overridden with $MGCFS_DIR
 dir="$HOME/SECURE"
-## Name of encrypted directory: set here or in $MGCFS_NAME
+## Name of encrypted directory; can be overridden with $MGCFS_NAME
 name="SECRET"
-## <run> is the command to run after mounting: set here or in $MGCFS_RUN
+## <run> is executed after mounting; can be overridden with $MGCFS_RUN
 run=""
-## Init with plain (1) or encrypted (0) filenames: set here or in $MGCFS_PLAIN
+## Option used for Init: use plain (1) or encrypted (0) filenames;
+##   can be overridden with $MGCFS_PLAIN
 plain=0
 ## Logfile for gocryptfs operations
 log=/tmp/gocryptfs.log
@@ -32,7 +34,8 @@ Help(){
 		  -h/--help:     display this help text
 		Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
 		  (and optionally <run>), or set the corresponding environment variables
-		  MGCFS_MOUNT, MGCFS_DIR, MGCFS_NAME (and optionally MGCFS_RUN).
+		  MGCFS_MOUNT, MGCFS_DIR, MGCFS_NAME (and optionally MGCFS_RUN);
+		  if MGCFS_GPGID is set, the tar (backup) archive is encrypted.
 		As a run-by-run backup, <dir>/<name>.tar will be used.
 		When during 'init' MGCFS_PLAIN is 1, filenames will not be encrypted.
 		<sleeplength> is in minutes if no unit is given; <unit> can be:
@@ -92,7 +95,7 @@ Password(){  ## $1: text, Using: zenity whiptail title pass
 	((console)) && [[ $(echo $(hexdump -b "$pass")) = "0000000 012 0000001" ]] &&
 		echo "Exited: empty password" && cancel=1
 	((cancel)) || return 0
-	rm -- "$pass"
+	shred -fu -- "$pass"
 	exit 1
 }
 
@@ -104,6 +107,8 @@ dir=${MGCFS_DIR:-$dir}
 name=${MGCFS_NAME:-$name}
 run=${MGCFS_RUN:-$run}
 plain=${MGCFS_PLAIN:-$plain}
+gpgid=$MGCFS_GPGID
+
 title="Manage encryption of $name"
 ## Try zenity unless -c or -w or not present or no GUI
 zenity=1 init=0 sleep= q='-q'
@@ -160,7 +165,7 @@ then
 		[[ "$(cat "$pass")" = "$first" ]] && break || cue="Passwords not the same!\n"
 	done
 	gocryptfs -passfile "$pass" -init $ptn -- "$dn" >"$log" &&
-		shred -fu "$pass" &&
+		shred -fu -- "$pass" &&
 		Info "Directory '$dn' initialized as gocryptfs directory" &&
 		exit 0 ||
 		Abort "Initializing '$dn' as gocryptfs directory failed"
@@ -176,11 +181,15 @@ else  ## $mount could not be created: abort
 	Abort "Mount point $mount could not be created or\nalready exists and isn't a directory"
 fi
 
-## If $name doesn't exist or is empty, but $name.tar does: unpack
-if [[ ! -d $dn || -z $(ls -A "$dn") ]] && [[ -f $dn.tar ]]
+## If $name is no directory or is empty, unpack $name.tar[.gpg] if present
+if [[ ! -d $dn || -z $(ls -A "$dn") ]]
 then
-	Info "No files in '$dn'\n,unpacking '$dn.tar'"
-	tar xf "$dn.tar" -C "$dir"
+	[[ -f $dn.tar.gpg && $gpgid ]] &&
+		Info "No files in '$dn'\n,decrypting '$dn.tar.gpg'" &&
+		gpg -r "$gpgid" -d "$dn.tar.gpg"
+	[[ -f $dn.tar ]] &&
+		Info "No files in '$dn'\n,unpacking '$dn.tar'" &&
+		tar xf "$dn.tar" -C "$dir"
 fi
 [[ -s $dn/gocryptfs.conf ]] || Abort "$dn is not a gocryptfs directory"
 
@@ -192,16 +201,17 @@ Password "$cue"
 ## Allow mounting over non-empty mountpoint with -nonempty
 while ! gocryptfs $q -nonempty -passfile "$pass" -- "$dn" "$mount" 2>"$log"
 do
-	shred -fu "$pass"
+	shred -fu -- "$pass"
 	Password "Decryption failed, try a different password!\n\n$cue"
 done
-shred -fu "$pass"
+shred -fu -- "$pass"
 sync
 
 [[ $run ]] && DISPLAY=:0.0 $run &
 ## Tar up the encrypted directory for backup
 tar cfC "$dn.tar" "$dir" "$name" ||
 	Info "Return code on creating backup archive\n'$dn.tar': $?"
+[[ $gpgid ]] && gpg --yes -r "$gpgid" -e "$dn.tar" && shred -fu -- "$dn.tar"
 
 [[ $sleep ]] && sleep $sleep && Unmount &
 sync
