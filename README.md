@@ -177,13 +177,13 @@ a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
 * Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
 
 ## pdfslice
-**pdfslice - Return page ranges from a source document**
+**Return page ranges from a source document**
 
 Usage: `pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
 * Required: pdfseparate pdfunite coreutils(mktemp cd)
 
 ## bootctlu
-**bootctlu - Setting up and registering systemd_boot on Ubuntu**
+**Setting up and registering systemd_boot on Ubuntu**
     
 Usage:
 ```
@@ -197,9 +197,19 @@ Setting up and registering systemd_boot on Ubuntu.
 **Required: util-linux(blkid) grep find systemd[efi loader binary] coreutils(readlink sort cut head tail mkdir cat cp) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z). For -r/--register: efibootmgr.**
 
 ## ypass
-**# ypass - the standard unix password manager with GUI**
+**the standard unix password manager with GUI**
 
 GUI frontend for pass, the standard unix password manager, in bash/yad.
 Can view, edit and delete.
 
 **Requirements: pass coreutils(type sleep shred ls) sed diffutils(diff).**
+
+## bitwarden2xml
+**Enter bitwarden data into keepassx database**
+
+**Required: csvtool**
+Usage: `bitwarden2xml <bitwardenfile>.csv`
+
+## kbt2bitwarden
+**Enter keepassx text into bitwarden .csv format**
+Usage: kbt2bitwarden <Text Export from Keepass1>

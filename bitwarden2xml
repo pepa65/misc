@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# bitwarden2xml - Enter bitwarden data into keepassx database:
+#  database=[group[<title>,icon=0,entry=[title=<name>,<username>,<password>,<url>,<comment>,<creation?>,<lastaccess?>,<lastmod?>,expire=Never]..]..]
+#  (<comment>: <br/> for \n, &lt; for <, &amp; for &; <?>: yyyy-mo-ddThh:mi:ss)
+# Required: csvtool
+# Usage: bitwarden2xml <bitwardenfile>.csv
+
+[[ ! -f $1 || ! ${1: -4} = .csv ]] && echo "Need .csv file from Bitwarden" && exit 1
+[[ -f $1.xml ]] && echo "File '$1.xml'exists, not overwriting" && exit 2
+input=$(<"$1")$'\xd' out=$1.xml
+echo -e "<!DOCTYPE KEEPASSX_DATABASE>\n<database>" >"$out"
+
+d=$(date +"%Y-%m-%dT%H:%M:%S")
+title0=
+while read -r -d $'\xd'
+do
+	[[ -z $title0 ]] && title0=$RANDOM && continue  # Skip header, read next
+	title=$(echo "$REPLY" |csvtool col 3 -) title=${title:1}
+	title=${title//&/&amp;} title=${title//</&lt;}
+	name=$(echo "$REPLY" |csvtool col 4 -) name=${name:1}
+	name=${name//&/&amp;} name=${name//</&lt;}
+	comment=$(echo "$REPLY" |csvtool col 5 -) comment=${comment:1}
+	comment=${comment//&/&amp;} comment=${comment//</&lt;}
+	comment=${comment//$'\n'/<br/>} comment=${comment//\"\"/\"}
+	comment=${comment#\"} comment=${comment%\"} comment=${comment%<br/>}
+	url=$(echo "$REPLY" |csvtool col 7 -) url=${url:1}
+	url=${url//&/&amp;} url=${url//</&lt;}
+	username=$(echo "$REPLY" |csvtool col 8 -) username=${username:1}
+	username=${username//&/&amp;} username=${username//</&lt;}
+	password=$(echo "$REPLY" |csvtool col 9 -) password=${password:1}
+	password=${password//&/&amp;} password=${password//</&lt;}
+	if [[ ! $title = $title0 ]]
+	then  # New group
+		((title0>0)) || echo -e " </group>" >>"$out"
+		echo -e " <group>\n  <title>$title</title>\n  <icon>0</icon>" >>"$out"
+		title0=$title
+	fi
+	echo -e "  <entry>\n   <title>$name</title>\n   <username>$username</username>\n   <password>$password</password>\n   <url>$url</url>\n   <comment>$comment</comment>\n   <icon>0</icon>\n   <creation>$d</creation>\n   <lastaccess>$d</lastaccess>\n   <lastmod>$d</lastmod>\n   <expire>Never</expire>\n  </entry>" >>"$out"
+done <<<"$input"
+
+echo -e " </group>\n</database>" >>"$out"
+
+exit 0
