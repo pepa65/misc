@@ -208,8 +208,8 @@ Can view, edit and delete.
 **Enter bitwarden data into keepassx database**
 
 **Required: csvtool**
-Usage: `bitwarden2xml <bitwardenfile>.csv`
+Usage: `bitwarden2xml bitwarden.csv >keepassx.xml`
 
-## kbt2bitwarden
+## kpt2bitwarden
 **Enter keepassx text into bitwarden .csv format**
-Usage: kbt2bitwarden <Text Export from Keepass1>
+Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`

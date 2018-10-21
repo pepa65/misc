@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# kpt2bitwarden - Enter keepassx text into bitwarden .csv format:
+#  <group>,,login,<name>,<notes>,,<url>,<user>,<pw>,^M
+# Usage: kpt2bitwarden keepassx.kpt >bitwarden.csv
+
+[[ ! -f $1 ]] && echo "Need filename of Text Export from KeepassX" && exit 1
+in=$1 out=&1
+
+echo "folder,favorite,type,name,notes,fields,login_uri,login_username,login_password,login_totp"$'\xd' >"$out"
+
+group=
+while read -r
+do
+	r=$REPLY
+	case "$r" in
+		'*** Group: '*) [[ $group ]] &&  # Unprocessed previous entry
+				echo "$group,,login,$name,\"${notes//\"/\"\"}\",,$url,$user,$pw,"$'\xd' >>"$out"
+			group=${r:11} group=${group% ???} name= ;;
+		'  Title:    '*)
+			[[ $name ]] &&  # Unprocessed previous entry
+				echo "$group,,login,$name,\"${notes//\"/\"\"}\",,$url,$user,$pw,"$'\xd' >>"$out"
+			name=${r:12} notes= ;;
+		'  Username: '*) user=${r:12} ;;
+		'  Url:      '*) url=${r:12} ;;
+		'  Password: '*) pw=${r:12} ;;
+		'  Comment:  '*) notes=${r:12} ;;
+		'            '*) notes+=$'\n'${r:12} ;;
+	esac
+done <"$in"
+
+# Output final entry
+echo "$group,,login,$name,\"${notes//\"/\"\"}\",,$url,$user,$pw,"$'\xd' >>"$out"
+
+exit 0

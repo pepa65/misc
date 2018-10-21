@@ -4,11 +4,10 @@
 #  database=[group[<title>,icon=0,entry=[title=<name>,<username>,<password>,<url>,<comment>,<creation?>,<lastaccess?>,<lastmod?>,expire=Never]..]..]
 #  (<comment>: <br/> for \n, &lt; for <, &amp; for &; <?>: yyyy-mo-ddThh:mi:ss)
 # Required: csvtool
-# Usage: bitwarden2xml <bitwardenfile>.csv
+# Usage: bitwarden2xml bitwarden.csv >keepassx.kpt
 
 [[ ! -f $1 || ! ${1: -4} = .csv ]] && echo "Need .csv file from Bitwarden" && exit 1
-[[ -f $1.xml ]] && echo "File '$1.xml'exists, not overwriting" && exit 2
-input=$(<"$1")$'\xd' out=$1.xml
+input=$(<"$1")$'\xd' out=&1
 echo -e "<!DOCTYPE KEEPASSX_DATABASE>\n<database>" >"$out"
 
 d=$(date +"%Y-%m-%dT%H:%M:%S")
