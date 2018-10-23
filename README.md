@@ -213,3 +213,15 @@ Usage: `bitwarden2xml bitwarden.csv >keepassx.xml`
 ## kpt2bitwarden
 **Enter keepassx text into bitwarden .csv format**
 Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
+
+## ffpw.py
+**Decode Firefox passwords**
+
+**Required: **
+Usage:
+```
+ffpw.py [<options>]
+    options:  -d/--directory <firefox-dir>
+              -p/--password <masterpassword>
+              -v/--verbose
+```

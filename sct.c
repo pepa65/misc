@@ -1,6 +1,6 @@
 // sct.c
 // Set Colour Temperature of screen
-// Requires: libxrandr-dev (will pull in libx11-dev)
+// Required: libxrandr-dev (will pull in libx11-dev)
 // Compile:
 //     cc -o sct sct.c -lX11 -lXrandr
 //   Or:
@@ -15,7 +15,7 @@
 //       [[ $SCT ]] && $(type -P sct) $SCT  ## sct executable in PATH
 //     }
 //
-// Original license: Public domain, do as you wish
+// Original license: Public domain, do as you wish.
 // Adapted to work on all screens by pepa65 <solusos@passchier.net>
 // Modifications relicenced under GPLv3+
 

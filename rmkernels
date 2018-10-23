@@ -5,7 +5,7 @@ set +xv
 ##   -h, --help:    display help text
 ##   -f, --force:   force removal of newer than currently running kernel
 ##  anything installed that matches <version> will be proposed for removal
-## Requires: grep, sed, find, coreutils(sort, uname, tail), dpkg, apt. sudo
+## Required: grep, sed, find, coreutils(sort, uname, tail), dpkg, apt. sudo
 ##  If bootctlu is present and active, it will be called to cull the entries
 
 Usage(){
