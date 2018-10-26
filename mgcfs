@@ -182,14 +182,21 @@ else  ## $mount could not be created: abort
 fi
 
 ## If $name is no directory or is empty, unpack $name.tar[.gpg] if present
+ungpg=0
 if [[ ! -d $dn || -z $(ls -A "$dn") ]]
 then
-	[[ -f $dn.tar.gpg && $gpgid ]] &&
-		Info "No files in '$dn'\n,decrypting '$dn.tar.gpg'" &&
-		gpg -r "$gpgid" -d "$dn.tar.gpg"
-	[[ -f $dn.tar ]] &&
-		Info "No files in '$dn'\n,unpacking '$dn.tar'" &&
+	if [[ -f $dn.tar.gpg && $gpgid ]]
+	then
+		Info "No files in '$dn'\n,decrypting '$dn.tar.gpg'"
+		gpg -r "$gpgid" -o "$dn.tar" -d "$dn.tar.gpg"
+		ungpg=1
+	fi
+	if [[ -f $dn.tar ]]
+	then
+		((ungpg) || Info "No files in '$dn'\n,unpacking '$dn.tar'"
 		tar xf "$dn.tar" -C "$dir"
+		shred -fu "$dn.tar"
+	fi
 fi
 [[ -s $dn/gocryptfs.conf ]] || Abort "$dn is not a gocryptfs directory"
 
