@@ -1,5 +1,5 @@
 #!/bin/bash
-set +vx
+set -vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
 ## Required: gocryptfs(http://github/com/rfjakob/gocryptfs) fuse grep procps
 ##   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync)
@@ -185,7 +185,7 @@ fi
 ungpg=0
 if [[ ! -d $dn || -z $(ls -A "$dn") ]]
 then
-	if [[ -f $dn.tar.gpg && $gpgid ]]
+	if [[ $gpgid && -f $dn.tar.gpg ]]
 	then
 		Info "No files in '$dn'\n,decrypting '$dn.tar.gpg'"
 		gpg -r "$gpgid" -o "$dn.tar" -d "$dn.tar.gpg"
@@ -193,7 +193,7 @@ then
 	fi
 	if [[ -f $dn.tar ]]
 	then
-		((ungpg) || Info "No files in '$dn'\n,unpacking '$dn.tar'"
+		((ungpg)) || Info "No files in '$dn'\n,unpacking '$dn.tar'"
 		tar xf "$dn.tar" -C "$dir"
 		shred -fu "$dn.tar"
 	fi
