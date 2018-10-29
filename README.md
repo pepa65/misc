@@ -1,5 +1,5 @@
 # misc
-*miscellaneous utilities and programs*
+**miscellaneous utilities and programs**
 
 ## difth
 **Show differences between 2 Thai language sources in html or terminal**
@@ -217,7 +217,7 @@ Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
 ## ffpw.py
 **Decode Firefox passwords**
 
-**Required: **
+**Required: python-pyasn1 python-pycryptodome**
 Usage:
 ```
 ffpw.py [<options>]
@@ -225,3 +225,13 @@ ffpw.py [<options>]
               -p/--password <masterpassword>
               -v/--verbose
 ```
+
+## keepassx.sh
+**Unpack selfmake archive script**
+
+**Requires: makeself find sudo sed**
+
+## keepassx2pass.py
+**Convert KeePassX xml export to pass store**
+
+Usage: `keepassx2pass.py keepassx.xml`
