@@ -52,6 +52,7 @@ pdf2ps "$in" "$tmp/a5.ps" 2>/dev/null
 
 echo "Convert A5 ps to A4..."
 cd "$tmp"
+
 # Get number of pages
 p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
 ((!p)) && echo "ABORT: no pages found" && rm -r "$tmp" && exit 5
@@ -91,8 +92,8 @@ fi
 psselect -p $r a5.ps a5c.ps
 PAPERSIZE=a4 psnup -2 -Pa5 -pa4 a5c.ps a4.ps
 #pstops -pA4 "2:0L(21cm,0cm)+1L(21cm,14.85cm)" a5c.ps a4.ps
-cd -
 
+cd -
 echo "Convert A4 ps to pdf..."
 PAPERSIZE=a4 ps2pdf "$tmp/a4.ps" "$out"
 rm -r -- "$tmp"

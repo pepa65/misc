@@ -2,6 +2,7 @@
 
 ## count - count character occurrences in file
 ## Usage: count <file> [-s]  # -s: sort by code point instead of frequency
+## Required: uni2ascii sed coreutils(uniq)
 
 f=1
 [[ $1 = "-s" ]] && f=0 && shift

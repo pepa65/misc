@@ -4,7 +4,7 @@
 # lclevy@free.fr - 28 Aug 2013; Oct 2016: logins.json; Feb 2018: key4.db
 # Now integrated into https://github.com/AlessandroZ/LaZagne
 # Usage: ffpw.py [<options>]
-#   options:   -d/--directory <firefox-dir>
+#   options:   -d/--directory <firefox-directory>
 #              -p/--password <masterpassword>
 #              -v/--verbose
 # Required: python-pyasn1 python-pycryptodome
@@ -295,13 +295,18 @@ def getKey():
   except:
     keyData = readBsddb(options.directory+'key3.db')
     key = extractSecretKey(options.masterPassword, keyData)
+  try:
+    key
+  except:
+    print "ABORT: Masterpassword needed, specify after '-p'"
+    sys.exit(1)
   return key[:24]
 
 dirs = glob.glob(os.getenv('HOME')+'/.mozilla/firefox/*.default/')
 parser = OptionParser(usage="usage: %prog [options]")
 parser.add_option("-v", "--verbose", type="int", dest="verbose", help="verbose level", default=0)
 parser.add_option("-p", "--password", type="string", dest="masterPassword", help="masterPassword", default='')
-parser.add_option("-d", "--dir", type="string", dest="directory", help="directory", default=dirs[0])
+parser.add_option("-d", "--directory", type="string", dest="directory", help="directory", default=dirs[0])
 (options, args) = parser.parse_args()
 
 def unpad(text):
