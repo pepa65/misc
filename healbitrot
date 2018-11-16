@@ -4,14 +4,16 @@ set +vx
 # (adapted from heal-bitrots: https://github.com/liloman/heal-bitrots)
 # Required: bitrot(https://github.com/liloman/bitrot getconf(libc-bin)
 #   par2 grep find coreutils(rm mv cp mkdir cd du readlink)
-# Environment variables (optional): $BITROT_DATA $BITROT_DIRS
+# Environment variables (optional): BITROT_DATA BITROT_DIRS
 Help(){
 	cat <<-EOS
-		USAGE: $self [<dir>...]
-		  <dir>: directory to check; only if none given, the file in \$BITROT_DIRS
+		healbitrot - Automatic check and self-healing for bitrot
+		USAGE: $self [-h|--help] [<dir>...]
+		  <dir>:  directory to check; only if none given, the file in \$BITROT_DIRS
 		  is read, one directory per line. Bitrot data is stored in \$BITROT_DATA.
-		\$BITROT_DIRS: $BITROT_DIRS
-		\$BITROT_DATA: $BITROT_DATA
+			-h/--help:  display this help text
+		BITROT_DIRS: $BITROT_DIRS
+		BITROT_DATA: $BITROT_DATA
 	EOS
 }
 
@@ -24,6 +26,7 @@ self=$(basename "$0")
 (($#==0)) && [[ ! -f $BITROT_DIRS ]] && Help &&
 	echo "Either pass directories to check as commandline arguments, or in \$BITROT_DIRS" &&
 	exit 1
+[[ $1 = -h || $1 = --help ]] && Help && exit 0
 
 ! type -P bitrot >/dev/null &&
 	echo "Install bitrot first: https://github.com/liloman/bitrot" && exit 2

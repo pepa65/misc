@@ -1,6 +1,9 @@
 # misc
 **miscellaneous utilities and programs**
 
+Almost all these utilities can be used by downloading them and running them like `bash <utility>`. Running like `bash <utility> -h` is always safe and will provide some sort of help text. If necessary packages are missing, this will be reported at runtime.
+
+
 ## difth
 **Show differences between 2 Thai language sources in html or terminal**
 
@@ -34,14 +37,35 @@ Usage: `count <file> [-s]`
 Usage: `rmkernels`
 
 ## backup
-**A utility to back up a list of files and directories**
+**back up a list of files and directories**
 
-Usage: `backup [-h|--help] [<backup-list> [<backup-file>]]`
+Usage:
+```
+backup [-h|--help] | [<backup-list> [<backup-file> [<backup-log>]]]
+    backup-list: file with list of all files to be backed up, one per line
+      multiple file/dir(s) possible with bash globbing (with * ? and [...])
+    backup-file: output file name (.txz will be appended)
+      backup-file can also be specified in the first line of backup-list, like:
+      @<backup-file> but will be overridden by the command-line if set
+   backup-log: log file
+
+   Lines in backup-list are file/dirnames, except when the first character is:
+     '@' (at):       <backup-file> (only in the very first line)
+     ' ' (space):    skipped line
+     '#' (pound):    comment line
+     '$' (dollar):   command line
+     '%' (percent):  gpg-password
+```
 
 ## duckdns
 **Update duckdns.org DDNS service**
 
-Usage: `duckdns [date]`
+Usage:
+```
+duckdns [-d|--date | -h|--help]
+  -d/--date:  add a timestamp in the log
+  -h/--help:  display this help text and values of domain and token
+```
 
 ## merge2ass
 **Merge 2 subtitle files into one**
@@ -61,7 +85,7 @@ See the file for instructions to compile and use.
 ## subs
 **Download subtitles from subscene.com**
 
-Usage: `subs <search terms>`
+Usage: `subs -h|--help | <search terms>`
 
 ## qemu-create-os-img
 **Create a fresh Debian/Ubuntu qemu image**
@@ -125,61 +149,49 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 * Required: bitrot par2 grep find libc-bin(getconf) coreutils(rm mv cp mkdir cd du)
 Usage:
 ```
-healbitrot [<dir>]...
-   <dir> are the directories to check
-   if no directories specified, the file in $BITROT_BACKUPS_DEST is read
+healbitrot [-h|--help] [<dir>...]
+      <dir>:  directory to check; only if none given, the file in \$BITROT_DIRS
+      is read, one directory per line. Bitrot data is stored in \$BITROT_DATA.
+      -h/--help:  display this help text
 ```
 
 *The python script `bitrot` is included*
-
-## spr
-**Script to paste stdin to sprunge.us**
-
-* Original: Copyright Han Boetes <hboetes@gmail.com>
-* Modified by TerrorBite //github.com/TerrorBite
-* Licence: public domain
-* Required: POSIX shell netcat(nc) coreutils(cat od) date [if /dev/urandom not present]
-Usage:
-```
-    spr <file
-    spr <<<$string
-    spr  # end the input with Ctrl-D on a new line
-```
 
 ## sct.c
 **Utility to set the screen "temperature" to adjust the red-blue balance**
 
 See the file for instructions on how to compile and use.
 
-## tf
-**Transfer files via transfer.sh**
-* Required: curl
-* Optional: gpg tar qrencode
-Usage:
-```
-tf [-q|--qr] [-z|--zip] [-c|--crypt] [-h|--help | <link> | <path>...
-    -q|--qr:     Also give QR code for resulting link
-    -z|--zip:    Use zip instead of tar for the uploaded archive
-    -c|--crypt:  Use gpg for en/decryption of file/archive to be up/downloaded
-    -h|--help:   Display this help text
-  <link> is a transfer.sh link starting with https://
-  <path> is the path to a file or directory; there can be multiple
-```
-
 ## a5toa4
 **Print an A5 size document on A4 for booklet folding**
 Usage:
 ```
-a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
-    Print the resulting A4 document on a single-sided printer by printing the
-    even pages, flipping the bundle of sheets over, then printing the uneven pages
+a5toa4 [-c|--collate] <a5.pdf> [<a4.pdf>]
+    Print the resulting A4 document on a single-sided printer by:
+      - printing the even pages
+      - flipping the whole bundle of sheets over
+      - printing the odd pages
+    Or print it on a full-duplex printer.
+
+    If -c or --collate is given, the printing can be done by:
+      - printing pages 1..n/2
+      - flipping the whole bundle of sheets over
+      - printing pages n/2+1..n
+      (For more than 1 copy, select 'Collate' before printing.)
+
+    -h/--help:  display this help text
 ```
 * Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
 
 ## pdfslice
-**Return page ranges from a source document**
+**Make pdf from page ranges in a source document**
 
-Usage: `pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
+Usage:
+```
+pdfslice [-h|--help ] | <from> <to> <source.pdf> [<destination.pdf>]
+    where <from> and <to> are the first and last page number
+  -h/--help:  display this help text
+```
 * Required: pdfseparate pdfunite coreutils(mktemp cd)
 
 ## bootctlu
@@ -187,22 +199,26 @@ Usage: `pdfslice <from> <to> <source.pdf> [<destination.pdf>]`
     
 Usage:
 ```
-bootctlu [-n|--nogo] [-q|--quiet] [-m|--memtest] [-r|--register]
-Setting up and registering systemd_boot on Ubuntu.
+bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
+         [-c|--cleanup] [-m|--memtest] [-r|--register]
+    -h/--help:      Display this help text
     -n/--nogo:      No writing to the system at all.
     -q/--quiet:     Only fatal errors output to the terminal.
+    -v/--verbose:   Show more detail of the actions.
+    -e/--efi:       EFI partition mountpoint (default $efimnt)
+    -c/--cleanup:   Remove no longer installed versions.
     -m/--memtest:   Also download and set up a MemTest86 entry.
-    -r/--register:  Also register the efi-loader with UEFI
+    -r/--register:  Also register the efi-loader with UEFI.
 ```
-**Required: util-linux(blkid) grep find systemd[efi loader binary] coreutils(readlink sort cut head tail mkdir cat cp) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z). For -r/--register: efibootmgr.**
+**Required: util-linux(blkid) grep find systemd[efi loader binary] coreutils(readlink sort cut head tail mkdir cat cp rm) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z). For -r/--register: efibootmgr.**
 
 ## ypass
-**the standard unix password manager with GUI**
+**GUI for 'pass' the standard unix password manager**
 
-GUI frontend for pass, the standard unix password manager, in bash/yad.
+Yad GUI frontend for pass, the standard unix password manager.
 Can view, edit and delete.
 
-**Requirements: pass coreutils(type sleep shred ls) sed diffutils(diff).**
+**Requirements: yad pass coreutils(type sleep shred ls) sed diffutils(diff).**
 
 ## bitwarden2xml
 **Enter bitwarden data into keepassx database**

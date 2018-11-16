@@ -1,7 +1,10 @@
 #!/bin/bash
 set +vx
-# ypass - the standard unix password manager with GUI
-# Requirements: pass coreutils(type sleep shred ls) sed diffutils(diff)
+# ypass - GUI for 'pass' the standard unix password manager
+# Requirements: yad pass coreutils(type sleep shred ls) sed diffutils(diff)
+
+[[ $1 = -h || $1 = --help ]] &&
+	echo "ypass - GUI for 'pass', the standard unix password manager" && exit 0
 
 store=~/.password-store
 cd "$store"

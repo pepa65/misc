@@ -3,13 +3,13 @@
 # bootctlu - Setting up and registering systemd_boot on Ubuntu
 #
 # Required: util-linux(blkid) grep systemd[binaries]
-#           coreutils(readlink sort cut mkdir cat cp ls wc)
+#           coreutils(readlink sort cut mkdir cat cp ls wc rm)
 #           sudo (unless run as root, or only invoked with -n/--nogo)
 #   For -m/--memtest: wget tar p7zip(7z)
 #   For -r/--register: efibootmgr
 
 entryname='Ubuntu menu'
-efidef=/boot/efi
+efimnt=/boot/efi
 
 Help(){
 	cat <<-EOH
@@ -17,10 +17,11 @@ Help(){
 
 		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-v|--verbose]
 		                  [-c|--cleanup] [-m|--memtest] [-r|--register]
+		          -h/--help:      Display this help text.
 		          -n/--nogo:      No writing to the system at all.
 		          -q/--quiet:     Only fatal errors output to the terminal.
 		          -v/--verbose:   Show more detail of the actions.
-		          -e/--efi:       EFI partition mountpoint (default $efidef)
+		          -e/--efi:       EFI partition mountpoint (default $efimnt)
 		          -c/--cleanup:   Remove no longer installed versions.
 		          -m/--memtest:   Also download and set up a MemTest86 entry.
 		          -r/--register:  Also register the efi-loader with UEFI.
@@ -76,7 +77,7 @@ Echo "Mount points of EFI partitions: $*\n" 0
 
 if [[ -z $efi ]]
 then # Use default mount point if more than 1 mounted
-	(($(wc -w <<<"$@")>1)) && efi=$efidef || read efi <<<"$@"
+	(($(wc -w <<<"$@")>1)) && efi=$efimnt || read efi <<<"$@"
 fi
 [[ " $@ " == *" $efi "* ]] ||
 	Echo "Specified EFI mount point '$efi' has no EFI partition mounted" 6

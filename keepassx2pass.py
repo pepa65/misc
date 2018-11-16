@@ -5,7 +5,7 @@
 # <pepa65@passchier.net> 20181028 - Keep more entries as they were
 #
 # keepassx2pass.py - Convert KeePassX xml export to pass store
-# Usage: keepassx2pass.py keepassx.xml
+# Usage: keepassx2pass.py <keepassx xml file>
 
 import sys
 import re
@@ -58,6 +58,10 @@ def import_group(element, path=''):
 
 def main(xml_file):
     """ Parse given KeepassX XML file and import password groups from it """
+    if xml_file == "-h" or xml_file == "--help":
+        print("keepassx2pass.py - Convert KeePassX xml export to pass store")
+        print("Usage: keepassx2pass.py <keepassx xml file>")
+        return
     for group in ElementTree.parse(xml_file).findall('group'):
         import_group(group)
 

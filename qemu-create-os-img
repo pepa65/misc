@@ -16,9 +16,9 @@ Help(){
 	cat <<-EOF
 		$self - Create a fresh Debian/Ubuntu qemu image
 
-		USAGE: $self [-h] [-r <release>] [-h <hostname>] [-i <img_file>]
-		                          [-s <disk_size>] [-b <boot_size>] [<debootstrap>]
-		    -h:              Just display this help text
+		USAGE: $self [-h|--help] [-r <release>] [-n <hostname>] [-i <img_file>]
+		             [-s <disk_size>] [-b <boot_size>] [<debootstrap>]
+		    -h|--help:       Just display this help text
 		    -r <release>:    A supported Debian ($debianrels) or
 		                     Ubuntu ($ubunturels) release
 		    -n <hostname>:   Desired hostname
@@ -34,7 +34,7 @@ Help(){
 		    <boot_size>:     $boot_size
 
 		Authors: Kamil Trzcinski (http://ayufan.eu)
-		         pepa65 <solusos@passchier.net> github.com/pepa65/misc
+		         pepa65 <solusos@passchier.net> gitlab.com/pepa65/misc
 		License: GPL-3+
 	EOF
 }
@@ -73,16 +73,16 @@ args=
 while (($#))
 do
 	case $1 in
-	-h) Help; exit 0 ;;
-	-r) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
+	-h|--help) Help; exit 0 ;;
+	-r|--release) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
 		release=$2; shift 2 ;;
-	-n) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
+	-n|--name) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
 		hostname=$2; shift 2 ;;
-	-i) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
+	-i|--image) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
 		img_file=$2; shift 2 ;;
-	-d) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
+	-d|--disksize) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
 		disk_size=$2; shift 2 ;;
-	-b) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
+	-b|--bootsize) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
 		boot_size=$2; shift 2 ;;
 	*) args+="$1 "
 		shift ;;

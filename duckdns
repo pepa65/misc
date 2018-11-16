@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## duckdns - update duckdns.org DDNS service
+## duckdns - Update duckdns.org DDNS service
 ## Usage: duckdns [-d]  # -d adds a timestamp in the log
 ##  domain and token variables need to be set below
 
@@ -12,9 +12,23 @@
 domain=''
 token=''
 
+Help(){
+	echo "duckdns - Update duckdns.org DDNS service"
+	echo "Usage: duckdns [-d|--date | -h|--help]"
+	echo "  -d/--date:  add a timestamp in the log"
+	echo "  -h/--help:  display this help text and values of domain and token"
+	[[ $domain && $token ]] && echo "Domain: $domain, token: $token" && return
+	echo "Both variables 'domain' and 'token' need to be set in the source"
+	echo "or in environment variables 'DUCKDNS_DOMAIN' and 'DUCKDNS_TOKEN'"
+	exit 1
+}
+
 duckdir="$HOME"
 log="$duckdir/duckdns.log"
 msg="$duckdir/duckdns.msg"
+# Values set in the source take precedence over the environment variables
+: ${domain:=$DUCKDNS_DOMAIN}
+: ${token:=$DUCKDNS_TOKEN}
 [[ -f "$log" ]] || echo -n "Log duckdns" >"$log"
 [[ -f "$msg" ]] || touch "$msg"
 ip='' res=''
@@ -26,7 +40,8 @@ Long(){
 	! grep -q "$ip" <<<$(tail -1 "$msg") && echo $res >>"$msg" && echo -ne "\n $ip" >>"$log"
 }
 
-[[ $1 = -d ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
+[[ $1 = -h || $1 = --help ]] && Help
+[[ $1 = -d || $1 = --date ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
 Long
 if [[ ${res:0:2} = OK ]]
 then

@@ -1,6 +1,6 @@
 #!/bin/bash
 set +vx
-## subs - download subtitles from subscene.com
+## subs - Download subtitles from subscene.com
 ## Usage: subs <search terms>
 ## Required: wget less/zenity unzip sed grep coreutils(rm)
 
@@ -11,6 +11,11 @@ addlang=0
 ## debug=1 gives extra output and preserves intermediate files
 debug=0
 
+Help(){
+	echo "subs - Download subtitles from subscene.com"
+	echo "Usage: subs -h|--help | <search terms>"
+	exit 0
+}
 
 Info(){ ## $1: Message
 	((zen)) && $zenity --info --text="$1" || echo "$1"
@@ -30,6 +35,7 @@ Entry(){ ## $1: Message
 }
 
 domain='https://subscene.com'
+[[ $1 = -h || $1 = --help ]] && Help
 lang=${lang,,}
 wget=$(type -P wget)
 [[ -z $wget ]] && Error "Exit: 'wget' required" 1

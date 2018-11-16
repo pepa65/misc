@@ -7,28 +7,30 @@ set +vx
 Usage(){ # $1: code for exit
 	cat <<-EOS
 		a5toa4 - Print an A5 size document on A4 for booklet folding
-		USAGE: a5toa4 [-h|--half] <a5.pdf> [<a4.pdf>]
+		USAGE: a5toa4 [-c|--collate] <a5.pdf> [<a4.pdf>]
 		  Print the resulting A4 document on a single-sided printer by:
 		  - printing the even pages
 		  - flipping the whole bundle of sheets over
 		  - printing the odd pages
 		  Or print it on a full-duplex printer.
-		  If -h or --half is given, the printing can be done by:
+		  If -c or --collate is given, the printing can be done by:
 		  - printing pages 1..n/2
 		  - flipping the whole bundle of sheets over
 		  - printing pages n/2+1..n
 		  (For more than 1 copy, select 'Collate' before printing.)
+		-h/--help:  display this help text
 	EOS
 	[[ $1 ]] && exit $1
 }
 
 # process commandline
 (($#)) || Usage 1
+[[ $1 = -h || $1 = --help ]] && Usage 0
 in=
 half=0
-[[ $1 = -h || $1 = --half ]] && half=1 && shift
+[[ $1 = -c || $1 = --collate ]] && half=1 && shift
 [[ $1 ]] && in=$1 && shift
-[[ $1 = -h || $1 = --half ]] && half=1 && shift
+[[ $1 = -c || $1 = --collate ]] && half=1 && shift
 [[ ! -f $in ]] && echo "ABORT: filename of A5 sized pdf required, no file: '$in'" &&
 	Usage 2
 out=$(basename "$in")

@@ -2,11 +2,11 @@
 set +vx
 # Required: coreutils(cat readlink) tar less xz gpg
 
-help(){
-cat <<-END
-	 A utility to backup a list of files and directories (links are followed)
+Help(){ # $1:message $2:exitcode
+cat <<-EOH
+	 $Self - backup a list of files and directories (links are followed)
 	
-	 Usage: $self [<backup-list> [<backup-file> [<backup-log>]]]
+	 Usage: $Self [-h|--help] | [<backup-list> [<backup-file> [<backup-log>]]]
 	   backup-list: file with list of all files to be backed up, one per line
 	     multiple file/dir(s) possible with bash globbing (with * ? and [...])
 	   backup-file: output file name (.txz will be appended)
@@ -19,11 +19,14 @@ cat <<-END
 	   '#' (pound):    comment line
 	   '$' (dollar):   command line
 	   '%' (percent):  gpg-password
-
+EOH
+	[[ $1 ]] && echo -e "\nABORT: $1"
+	[[ $2 ]] && exit $2 || exit 0
 END
 }
 
 self=$(readlink -e "$0")
+Self=${self##*/}
 root="$HOME"
 list="$root/backup.lst"
 txz="$root/backup.txz"
@@ -31,19 +34,18 @@ tar="$txz-$RANDOM.tar"
 log="$root/backup.log"
 pw=$(mktemp)
 
+[[ $1 = -h || $1 = --help ]] && Help
 [[ $1 ]] && list="$1"
 [[ $2 ]] && txz="$2"
 [[ $3 ]] && log="$3"
 
-[[ ! -f "$list" ]] && help &&
-	echo "ABORT: no backup list file $list present" && exit 1
-! >"$txz" && help && echo "ABORT: can't write to backup file $txz" && exit 2
-! >"$log" && help && echo "ABORT: can't write to log file $log" && exit 3
+[[ ! -f "$list" ]] && Help "no backup list file $list present" 1
+! >"$txz" && Help "can't write to backup file $txz" 2
+! >"$log" && Help "can't write to log file $log" 3
 
 list=$(readlink -e "$list")
 readarray -t files <"$list"
-! tar cPf "$tar" "$list" && help &&
-	echo "ABORT: can't write to temporary file $tar" && exit 4
+! tar cPf "$tar" "$list" && Help "can't write to temporary file $tar" 4
 trap "rm $tar" EXIT
 tar rPf "$tar" "$self"  ## This script
 
