@@ -2,7 +2,7 @@
 
 # buildgocryptfs - Build gocryptfs
 # Required: go coreutils(cd ls)
-# Or (to install go): wget sudo tar coreutils(mktemp cd mv rmdir)
+# Or (to install go): wget sudo tar coreutils(mktemp cd mv rm rmdir)
 
 goz=go1.11.2.linux-amd64.tar.gz
 loc=/usr/local
@@ -17,7 +17,9 @@ then # Check for latest version: https://golang.org/dl/
 	export GOROOT="$loc/go" GOPATH=~/go
 	sudo mv go "$loc"
 	go="$loc/go/bin/go"
+	export PATH="$loc/go/bin:$PATH"
 	cd -
+	rm "$dir/$goz"
 	rmdir "$dir"
 fi
 "$go" get -d github.com/rfjakob/gocryptfs
