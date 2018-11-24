@@ -115,8 +115,8 @@ Usage:
 ```
 earthwallpaperlive [<projection>]
   <projection> is one of: mercator (default), peters, rectangular, random
-Required: wget imagemagick(convert) [for peters projection]
 ```
+* Required: wget imagemagick(convert) [for peters projection]
 
 ## mgcfs
 **Manage access to gocryptfs encrypted directory**
@@ -143,10 +143,16 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
    s (seconds), m (minutes), h (hours), d (days).
 ```
 
+## buildgocryptfs
+**Build gocryptfs**
+
+* Required: go git coreutils(cd ls)
+
 ## healbitrot
 **Automatic check and self-healing for bitrot**
 
 * Required: bitrot par2 grep find libc-bin(getconf) coreutils(rm mv cp mkdir cd du)
+
 Usage:
 ```
 healbitrot [-h|--help] [<dir>...]
@@ -210,7 +216,7 @@ bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
     -m/--memtest:   Also download and set up a MemTest86 entry.
     -r/--register:  Also register the efi-loader with UEFI.
 ```
-**Required: util-linux(blkid) grep find systemd[efi loader binary] coreutils(readlink sort cut head tail mkdir cat cp rm) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z). For -r/--register: efibootmgr.**
+* Required: util-linux(blkid) grep find systemd[efi loader binary] coreutils(readlink sort cut head tail mkdir cat cp rm) sudo (unless run as root, or only invoked with -n/--nogo). For -m/--memtest: wget tar p7zip(7z). For -r/--register: efibootmgr.
 
 ## ypass
 **GUI for 'pass' the standard unix password manager**
@@ -218,12 +224,13 @@ bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
 Yad GUI frontend for pass, the standard unix password manager.
 Can view, edit and delete.
 
-**Requirements: yad pass coreutils(type sleep shred ls) sed diffutils(diff).**
+*Required: yad pass coreutils(type sleep shred ls) sed diffutils(diff).
 
 ## bitwarden2xml
 **Enter bitwarden data into keepassx database**
 
-**Required: csvtool**
+* Required: csvtool
+
 Usage: `bitwarden2xml bitwarden.csv >keepassx.xml`
 
 ## kpt2bitwarden
@@ -233,7 +240,8 @@ Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
 ## ffpw.py
 **Decode Firefox passwords**
 
-**Required: python-pyasn1 python-pycryptodome**
+* Required: python-pyasn1 python-pycryptodome
+
 Usage:
 ```
 ffpw.py [<options>]
@@ -245,7 +253,7 @@ ffpw.py [<options>]
 ## keepassx.sh
 **Unpack selfmake archive script**
 
-**Requires: makeself find sudo sed**
+* Required: makeself find sudo sed
 
 ## keepassx2pass.py
 **Convert KeePassX xml export to pass store**

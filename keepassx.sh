@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # keepassx.sh - Unpack makeself archive helper script
-# Requires: makeself find sudo sed
+# Required: makeself find sudo sed
+
 ## Construct the SFX by:
 ##   makeself --target /tmp/keepassx-0.4.4 --xz . \
 ##     keepassx-0.4.4-1.mga6.x86_64.run \

@@ -1,7 +1,7 @@
 #!/bin/bash
 set +vx
 # ypass - GUI for 'pass' the standard unix password manager
-# Requirements: yad pass coreutils(type sleep shred ls) sed diffutils(diff)
+# Required: yad pass coreutils(type sleep shred ls) sed diffutils(diff)
 
 [[ $1 = -h || $1 = --help ]] &&
 	echo "ypass - GUI for 'pass', the standard unix password manager" && exit 0

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# buildgocryptfs - Build gocryptfs
+# Required: go git coreutils(cd ls)
+
+go get -d github.com/rfjakob/gocryptfs
+cd $(go env GOPATH)/src/github.com/rfjakob/gocryptfs
+./build.bash
+#./test.bash
+ls -AFl $(go env GOPATH)/src/github.com/rfjakob/gocryptfs/gocryptfs
+cd -
