@@ -1,43 +1,48 @@
 #!/bin/bash
 
 # buildgocryptfs - Build gocryptfs
-# Required: go coreutils(cd ls) pkg-config
-#   Or (to install go): wget sudo tar coreutils(mktemp cd mv rm rmdir)
+# Required: go coreutils(ls) pkg-config
+#   Or (to install go): wget sudo tar coreutils(mktemp mv rm)
 # GOZ can be set to a different go-relase-archive
 # When TMPDIR is set, it is used for the temporary directory
 
 goloc=/usr/local # Install location for the go tree
 bin=/usr/local/bin # Install location for gocryptfs binary
 
+Abort(){ # $1:message
+	echo "ABORT: $1"
+	exit 1
+}
+
+# Try to install go if not found in PATH
 if ! go=$(type -p go)
-then # Check for latest version: https://golang.org/dl/
-  arch=$(uname -m)
-  [[ $GOZ ]] && goz=$GOZ ||
-    case $arch in
-      armv7l) goz=go1.11.2.linux-armv6l.tar.gz ;;
-      x86_64) goz=go1.11.2.linux-amd64.tar.gz ;;
-      *) echo "Manually select the right go release for $arch" && exit 1
-    esac
-  dir=$(mktemp -d --tmpdir=$TMPDIR)
-  cd "$dir"
-  wget -q "https://dl.google.com/go/$goz"
-  tar xf "$goz"
-  echo "Set in .bashrc: export GOROOT='$goloc/go' GOPATH='~/go'"
-  export GOROOT="$goloc/go" GOPATH=~/go
-  [[ -d $goloc/go ]] &&
-    sudo rm -rf "$goloc/go-old" && sudo mv "$goloc/go" "$goloc/go-old"
-  sudo mv go "$goloc"
-  go="$goloc/go/bin/go"
-  export PATH="$goloc/go/bin:$PATH"
-  cd -
-  rm "$dir/$goz"
-  rmdir "$dir"
+then
+	arch=$(uname -m)
+	[[ $GOZ ]] && goz=$GOZ ||
+		case $arch in # Check for latest version: https://golang.org/dl/
+			armv7l) goz=go1.11.2.linux-armv6l.tar.gz ;;
+			x86_64) goz=go1.11.2.linux-amd64.tar.gz ;;
+			*) Abort "manually select the right go release for $arch"
+		esac
+	tmp=$(mktemp -d --tmpdir=$TMPDIR)
+	trap "rm -rf -- '$tmp'" QUIT EXIT
+	wget -qO "$tmp/$goz" "https://dl.google.com/go/$goz" ||
+		Abort "could not download go and it's not in PATH"
+	tar xf "$tmp/$goz" -C "$tmp" || Abort "could not unpack $goz to $tmp"
+	# Move install directory if it exists already
+	[[ -d $goloc/go ]] && ! sudo mv "$goloc/go" "$goloc/$go_old$RANDOM" &&
+		Abort "could not move $goloc/go out of the way"
+	sudo mv "$tmp/go" "$goloc" || Abort "could not move $tmp/go to $goloc"
+	export PATH="$goloc/go/bin:$PATH"
+	echo "Set in .bashrc: export GOROOT='$goloc/go' GOPATH='~/go'"
+	export GOROOT="$goloc/go" GOPATH=~/go
+	go="$goloc/go/bin/go"
 fi
+
+# Install gocryptfs
 "$go" get -d github.com/rfjakob/gocryptfs
-cd $("$go" env GOPATH)/src/github.com/rfjakob/gocryptfs
-./build.bash
-#./test.bash
+"$("$go" env GOPATH)/src/github.com/rfjakob/gocryptfs/build.bash"
+# "$("$go" env GOPATH)/src/github.com/rfjakob/gocryptfs/test.bash"
 sudo cp gocryptfs "$bin" && echo "gocryptfs installed in $bin"
-cd -
 
 exit 0
