@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # buildnano - Build nano from git repo on Ubuntu
-# Required: coreutils(mkdir cd)
-#   git build-essential autoconf autopoint pkg-config libncursesw5-dev texinfo
+# Required: coreutils(mkdir cd) sudo git
+#   build-essential autoconf autopoint pkg-config libncursesw5-dev texinfo
 
 gitdir=~/git
 
@@ -11,15 +11,28 @@ Abort(){ # $1:message
 	exit 1
 }
 
+Sudo(){ # $@:command+arguments
+	echo "Elevated privileges required"
+	sudo "$@"
+}
+
 [[ $- = *i* ]] && echo "Don't source, but run like: bash $BASH_SOURCE" &&
 	return 2
 
+sudo=
+if ((EUID))
+then
+	sudo=$(type -p sudo) ||
+		Abort "package sudo required to elevate privilege"
+fi
+
 # Install missing packages
-pkgs=$(dpkg -l) ins=
+pkgs=$(dpkg -l) inst=
 for p in git build-essential autoconf autopoint pkg-config libncursesw5-dev \
 		texinfo
-do grep -q "^ii  $p " <<<$pkgs || ins+=" $p"; done
-[[ $ins ]] && ! sudo apt-get install $ins && Abort "need packages $ins"
+do grep -q "^ii  $p " <<<$pkgs || inst+=" $p"; done
+[[ $inst ]] && echo "Need to install $inst" &&
+	! Sudo apt-get install $inst && Abort "could not install packages $inst"
 
 # Prepare git repo clone
 mkdir -p "$gitdir" || Abort "$gitdir not a directory"
@@ -40,7 +53,7 @@ cd nano
 ./autogen.sh || Abort "error in Autogen"
 ./configure || Abort "error in Configure"
 make || Abort "error in Make"
-sudo make install || Abort "error in Install"
-hash -d nano
+Sudo make install || Abort "error in Install"
+hash nano
 
 exit 0
