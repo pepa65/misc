@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# buildnano - Build nano from git repo on Ubuntu
+# Required: coreutils(mkdir cd)
+#   git build-essential autoconf autopoint pkg-config libncursesw5-dev texinfo
+
+gitdir=~/git
+
+Abort(){ # $1:message
+	echo "ABORT: $1"
+	exit 1
+}
+
+[[ $- = *i* ]] && echo "Don't source, but run like: bash $BASH_SOURCE" &&
+	return 2
+
+# Install missing packages
+pkgs=$(dpkg -l) ins=
+for p in git build-essential autoconf autopoint pkg-config libncursesw5-dev \
+		texinfo
+do grep -q "^ii  $p " <<<$pkgs || ins+=" $p"; done
+[[ $ins ]] && ! sudo apt-get install $ins && Abort "need packages $ins"
+
+# Prepare git repo clone
+mkdir -p "$gitdir" || Abort "$gitdir not a directory"
+cd "$gitdir" || Abort "could not enter git directory $gitdir"
+trap 'cd -' EXIT QUIT
+
+# Pull when repo present already
+if [[ -d nano ]]
+then
+	cd nano || Abort "could not enter directory $gitdir/nano"
+	# Delete on unsuccessful pull
+	! git pull && cd .. && rm -rf -- nano
+fi
+[[ ! -d nano ]] && ! git clone "http://git.savannah.gnu.org/git/nano.git" &&
+	Abort "could not download the nano repo"
+
+cd nano
+./autogen.sh || Abort "error in Autogen"
+./configure || Abort "error in Configure"
+make || Abort "error in Make"
+sudo make install || Abort "error in Install"
+hash -d nano
+
+exit 0
