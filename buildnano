@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # buildnano - Build nano from git repo on Ubuntu
-# Required: coreutils(mkdir cd) sudo git
-#   build-essential autoconf autopoint pkg-config libncursesw5-dev texinfo
+# Required: coreutils(mkdir cd) git autoconf autopoint automake pkg-config
+#   gettext libncursesw5-dev groff[optional html-help] texinfo make gcc
+#   libmagic-dev[optional filetype detection]
 
 gitdir=~/git
 
@@ -28,8 +29,7 @@ fi
 
 # Install missing packages
 pkgs=$(dpkg -l) inst=
-for p in git build-essential autoconf autopoint pkg-config libncursesw5-dev \
-		texinfo
+for p in git auto{conf,point} pkg-config lib{ncursesw5,magic}-dev texinfo groff
 do grep -q "^ii  $p " <<<$pkgs || inst+=" $p"; done
 [[ $inst ]] && echo "Need to install $inst" &&
 	! Sudo apt-get install $inst && Abort "could not install packages $inst"
@@ -48,10 +48,15 @@ then
 fi
 [[ ! -d nano ]] && ! git clone "http://git.savannah.gnu.org/git/nano.git" &&
 	Abort "could not download the nano repo"
-
 cd nano
+
+# Needs autoconf autopoint
 ./autogen.sh || Abort "error in Autogen"
+
+# Needs make gcc libncursesw5-dev groff pkg-config
 ./configure || Abort "error in Configure"
+
+# Needs texinfo
 make || Abort "error in Make"
 Sudo make install || Abort "error in Install"
 hash nano
