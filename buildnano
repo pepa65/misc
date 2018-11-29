@@ -29,7 +29,8 @@ fi
 
 # Install missing packages
 pkgs=$(dpkg -l) inst=
-for p in git auto{conf,point} pkg-config lib{ncursesw5,magic}-dev texinfo groff
+for p in git autoconf autopoint pkg-config libncursesw5-dev libmagic-dev \
+		texinfo gettext groff
 do grep -q "^ii  $p " <<<$pkgs || inst+=" $p"; done
 [[ $inst ]] && echo "Need to install $inst" &&
 	! Sudo apt-get install $inst && Abort "could not install packages $inst"
@@ -47,13 +48,13 @@ then
 	! git pull && cd .. && rm -rf -- nano
 fi
 [[ ! -d nano ]] && ! git clone "http://git.savannah.gnu.org/git/nano.git" &&
-	Abort "could not download the nano repo"
+	Abort "could not download the nano git repo"
 cd nano
 
 # Needs autoconf autopoint
 ./autogen.sh || Abort "error in Autogen"
 
-# Needs make gcc libncursesw5-dev groff pkg-config
+# Needs make gcc libncursesw5-dev groff pkg-config gettext
 ./configure || Abort "error in Configure"
 
 # Needs texinfo
