@@ -53,7 +53,7 @@ sudo=
 if ((EUID))
 then
 	sudo=$(type -p sudo) ||
-		Abort "package sudo required to elevate privilege"
+		Abort "package sudo required to elevate privilege for installing"
 fi
 
 # Install missing packages
@@ -84,12 +84,14 @@ cd nano
 # Needs autoconf autopoint
 ./autogen.sh || Abort "error in Autogen"
 
-# Needs make gcc libncursesw5-dev groff pkg-config gettext
+# Needs gcc pkg-config libncursesw5-dev gettext (groff)
 ./configure ${conf[@]/#/--} || Abort "error in Configure"
 
-# Needs texinfo
+# Needs make texinfo
 make || Abort "error in Make"
-Sudo make install-strip || Abort "error in Install"
-hash nano
 
+# Needs make sudo
+Sudo make install-strip || Abort "error in Install"
+
+hash nano
 exit 0
