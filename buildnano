@@ -5,7 +5,36 @@
 #   gettext libncursesw5-dev groff[optional html-help] texinfo make gcc
 #   libmagic-dev[optional filetype detection]
 
-gitdir=~/git
+# Location of git repos, can be passed in environment variable GITDIR
+gitdir=${GITDIR:=~/git}
+
+# Configuration options to (un)comment-out
+conf=(
+	#disable-browser
+	#disable-color
+	disable-comment
+	disable-extra
+	disable-help
+	#disable-histories
+	disable-justify
+	#disable-libmagic
+	#disable-linenumbers
+	disable-mouse
+	#disable-multibuffer
+	#disable-nanorc
+	disable-operatingdir
+	disable-speller
+	#disable-tabcomp
+	#disable-wordcomp
+	disable-wrapping
+	#enable-tiny
+	#disable-wrapping-as-root
+	#disable-nls
+)
+
+# URL of nano git repo
+nanogit="http://git.savannah.gnu.org/git/nano.git"
+
 
 Abort(){ # $1:message
 	echo "ABORT: $1"
@@ -33,12 +62,12 @@ for p in git autoconf autopoint pkg-config libncursesw5-dev libmagic-dev \
 		texinfo gettext groff
 do grep -q "^ii  $p " <<<$pkgs || inst+=" $p"; done
 [[ $inst ]] && echo "Need to install $inst" &&
-	! Sudo apt-get install $inst && Abort "could not install packages $inst"
+	! Sudo apt-get install $inst && Abort "could not install packages:$inst"
 
 # Prepare git repo clone
+[[ ${gitdir:0:1} = / ]] || Abort "GITDIR not an absolute path: $gitdir"
 mkdir -p "$gitdir" || Abort "$gitdir not a directory"
 cd "$gitdir" || Abort "could not enter git directory $gitdir"
-trap 'cd -' EXIT QUIT
 
 # Pull when repo present already
 if [[ -d nano ]]
@@ -47,7 +76,8 @@ then
 	# Delete on unsuccessful pull
 	! git pull && cd .. && rm -rf -- nano
 fi
-[[ ! -d nano ]] && ! git clone "http://git.savannah.gnu.org/git/nano.git" &&
+cd "$gitdir"
+[[ ! -d nano ]] && ! git clone $nanogit &&
 	Abort "could not download the nano git repo"
 cd nano
 
@@ -55,11 +85,11 @@ cd nano
 ./autogen.sh || Abort "error in Autogen"
 
 # Needs make gcc libncursesw5-dev groff pkg-config gettext
-./configure || Abort "error in Configure"
+./configure ${conf[@]/#/--} || Abort "error in Configure"
 
 # Needs texinfo
 make || Abort "error in Make"
-Sudo make install || Abort "error in Install"
+Sudo make install-strip || Abort "error in Install"
 hash nano
 
 exit 0
