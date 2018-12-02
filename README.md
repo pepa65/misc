@@ -149,9 +149,11 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 * Required: go git coreutils(cd ls)
 
 ## buildnano
-**Build nano from git repo on Ubuntu**
+**Build nano from source (stable relase or git repo) on Ubuntu**
 
-* Required: coreutils(mkdir cd) git build-essential autoconf autopoint pkg-config libncursesw5-dev texinfo
+* Required: coreutils(mkdir cd mktemp rm) git+autoconf+autopoint+automake/wget[git/release] pkg-config gettext libncursesw5-dev groff[optional html-help] texinfo make gcc libmagic-dev[optional filetype detection]
+
+Usage: `buildnano [-g|--git]`
 
 ## healbitrot
 **Automatic check and self-healing for bitrot**
