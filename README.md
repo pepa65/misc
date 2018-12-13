@@ -149,7 +149,7 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 * Required: go git coreutils(cd ls)
 
 ## buildnano
-**Build nano from source (stable relase or git repo) on Ubuntu**
+**Build nano from source (release or git repo) on Ubuntu or Debian**
 
 * Required: coreutils(mkdir cd mktemp rm) git+autoconf+autopoint+automake/wget[git/release] pkg-config gettext libncursesw5-dev groff[optional html-help] texinfo make gcc libmagic-dev[optional filetype detection]
 

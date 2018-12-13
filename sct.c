@@ -16,7 +16,7 @@
 //     }
 //
 // Original license: Public domain, do as you wish.
-// Adapted to work on all screens by pepa65 <solusos@passchier.net>
+// Adapted to work on all screens by pepa65 <pepa65@passchier.net>
 // Modifications relicenced under GPLv3+
 
 #include <X11/Xlib.h>

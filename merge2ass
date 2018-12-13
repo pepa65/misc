@@ -34,7 +34,7 @@
 ## 0.9a 2012-04-27 added compatibility with SRT subtitles using
 ##    milliseconds precision (thanks juan!)
 ## 0.9b 2013-02-02 define encoding in ssa header (thanks mathieu!) jose1711@gmail.com
-## 0.9c 2016-12-15 pepa65 <solusos@passchier.net> restructured and cleaned up
+## 0.9c 2016-12-15 pepa65 <pepa65passchier.net> restructured and cleaned up
 ##
 ## Thanks to:
 ## - d.watzke for comments

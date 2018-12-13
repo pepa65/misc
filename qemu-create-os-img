@@ -34,7 +34,7 @@ Help(){
 		    <boot_size>:     $boot_size
 
 		Authors: Kamil Trzcinski (http://ayufan.eu)
-		         pepa65 <solusos@passchier.net> gitlab.com/pepa65/misc
+		         pepa65 <pepa65@passchier.net> gitlab.com/pepa65/misc
 		License: GPL-3+
 	EOF
 }
