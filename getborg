@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# getborg - Get borgbackup for Pi (armv7l) or PC (x86_64)
+# Required: wget sudo coreutils(mktemp rm mv chmod hash)
+
+# For the latest version, see: https://borg.bauerj.eu or
+#   https://github.com/borgbackup/borg/releases
+version='1.1.8'
+
+# Install location for borg binary
+bin=/usr/local/bin # Will override /usr/bin for the Ubuntu repo version
+
+urlpi="https://borg.bauerj.eu/borg-$version-armv6"
+urlpc="https://github.com/borgbackup/borg/releases/download/$version/borg-linux64"
+
+[[ $- = *i* ]] && echo "Don't source, but run like: bash $BASH_SOURCE" &&
+	return 1
+
+pi='armv7l' pc='x86_64' arch=$(uname -m)
+case $arch in
+	$pi) url=$urlpi ;;
+	$pc) url=$urlpc ;;
+	*) echo "Unknown hardware: $arch"
+		exit 2
+esac
+
+tmp=$(mktemp -d --tmpdir=$TMPDIR)
+! wget -qO "$tmp/borg" $url && echo "Problem downloading $url" && exit 3
+[[ -x $bin/borg ]] && borgv=$("$bin/borg" -V) &&
+	sudo mv "$bin/borg" "$bin/${borgv// /-}"
+sudo mv "$tmp/borg" "$bin"
+rm -rf -- "$tmp"
+sudo chmod +x "$bin/borg"
+hash -r
+echo "Borg version: $(borg -V)"
+
+exit 0

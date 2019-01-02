@@ -155,6 +155,11 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 
 Usage: `buildnano [-g|--git]`
 
+## getborg
+**Get borgbackup for Pi (armv7l) or PC (x86_64)**
+
+* Required: wget sudo coreutils(mktemp rm mv chmod hash)
+
 ## healbitrot
 **Automatic check and self-healing for bitrot**
 
