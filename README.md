@@ -271,3 +271,8 @@ ffpw.py [<options>]
 **Convert KeePassX xml export to pass store**
 
 Usage: `keepassx2pass.py keepassx.xml`
+
+## safetext
+**Sanitize potentially identifying invisible characters**
+
+* Default spelling lists included: `US.safetext` and `UK.safetext`

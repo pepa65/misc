@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+# -- coding: utf-8 --
+
+# safetext - Sanitize potentially identifying invisible characters
+# Adapted from https://github.com/DavidJacobson/SafeText
+# Inspired by https://www.zachaysan.com/writing/2017-12-30-zero-width-characters
+# Optional: *.<spellsuffix> files with country-specific spellings in the same directory
+#   (comes with: US.safetext and UK.safetext)
+
+import argparse
+import sys
+import os
+from glob import iglob
+
+sanesuffix = "sane"
+spellsuffix = "safetext"
+
+ZERO_WIDTH_CHARS = {
+	"SPACE": u'\u200b',
+	"NON-JOINER CODE POINT": u'\u200c',
+	"JOINER CODE POINT": u'\u200d',
+	"NO BREAK SPACE CODE POINT": u'\uFEFF',
+	"RIGHT LEFT MARK": u"\u200F",
+	"LEFT RIGHT MARK": u"\u200E",
+}
+NON_STANDARD_SPACES = {
+	"EN QUAD": u"\u2000",
+	"HAIR SPACE": u"\u200A",
+	"NARROW NO BREAK SPACE": u"\u202F",
+	"MEDIUM MATHEMATICAL SPACE": u"\u205F",
+	"EN SPACE": u"\u2002",
+	"EM SPACE": u"\u2003",
+	"THREE PER EM SPACE": u"\u2004",
+	"FOUR PER EM SPACE": u"\u2005",
+	"SIX PER EM SPACE": u"\u2006",
+	"FIGURE SPACE": u"\u2007",
+	"PUNCTUATION SPACE": u"\u2008",
+	"THIN SPACE": u"\u2009",
+	"<> (IS)": u"\u3000",
+}
+HOMOGLYPHS = { # From https://en.wikipedia.org/wiki/IDN_homograph_attack
+	"Cyrillic a": u"а",
+	"Cyrillic small b": u"ь",
+	"Cyrillic large b": u"Ъ",
+	"Cyrillic c": u"с",
+	"Cyrillic d": u"ԁ",
+	"Cyrillic e": u"е",
+	"Cyrillic small h": u"һ",
+	"Cyrillic large h": u"Һ",
+	"Cyrillic i": u"і",
+	"Cyrillic j": u"ј",
+	"Cyrillic o": u"о",
+	"Cyrillic p": u"р",
+	"Cyrillic s": u"ѕ",
+	"Cyrillic small v": u"ѵ",
+	"Cyrillic large v": u"Ѵ",
+	"Cyrillic x": u"х",
+	"Cyrillic y": u"у",
+	"Cyrillic A": u"А",
+	"Cyrillic small B": u"в",
+	"Cyrillic large B": u"В",
+	"Cyrillic small C": u"с",
+	"Cyrillic large C": u"С",
+	"Cyrillic E": u"Е",
+	"Cyrillic small F": u"ғ",
+	"Cyrillic large F": u"Ғ",
+	"Cyrillic small G": u"ԍ",
+	"Cyrillic large G": u"Ԍ",
+	"Cyrillic small H": u"н",
+	"Cyrillic large H": u"Н",
+	"Cyrillic I": u"І",
+	"Cyrillic J": u"Ј",
+	"Cyrillic small K": u"к",
+	"Cyrillic large K": u"К",
+	"Cyrillic small M": u"м",
+	"Cyrillic large M": u"М",
+	"Cyrillic small O": u"о",
+	"Cyrillic large O": u"О",
+	"Cyrillic P": u"Р",
+	"Cyrillic S": u"Ѕ",
+	"Cyrillic small T": u"т",
+	"Cyrillic large T": u"Т",
+	"Cyrillic X": u"Х",
+	"Cyrillic Y": u"У",
+	"Cyrillic 3": u"З",
+	"Cyrillic 4": u"Ч",
+	"Cyrillic 6": u"б",
+	"Greek c": u"ϲ",
+	"Greek i": u"ί",
+	"Greek o": u"ο",
+	"Greek p": u"ρ",
+	"Greek w": u"ω",
+	"Greek v": u"ν",
+	"Greek A": u"Α",
+	"Greek B": u"Β",
+	"Greek C": u"Ϲ",
+	"Greek E": u"Ε",
+	"Greek H": u"Η",
+	"Greek I": u"Ι",
+	"Greek J": u"Ϳ",
+	"Greek small K": u"Κ",
+	"Greek large K": u"κ",
+	"Greek small M": u"Μ",
+	"Greek large M": u"Ϻ",
+	"Greek N": u"Ν",
+	"Greek O": u"Ο",
+	"Greek T": u"Τ",
+	"Greek U": u"υ",
+	"Greek X": u"Χ",
+	"Greek Y": u"Υ",
+	"Greek Z": u"Ζ",
+	"Armenian g": u"ց",
+	"Armenian o": u"օ",
+	"Armenian j": u"յ",
+	"Armenian h": u"հ",
+	"Armenian n": u"ո",
+	"Armenian u": u"ս",
+	"Armenian q": u"զ",
+	"Armenian L": u"Լ",
+	"Armenian O": u"Օ",
+	"Armenian U": u"Ս",
+	"Armenian S": u"Տ",
+	"Armenian 2": u"Ձ",
+	"Armenian ALT 2": u"շ",
+	"Armenian 3": u"Յ",
+	"Armenian 4": u"վ",
+	"Hebrew i": "וֹ",
+	"Hebrew n": "ח",
+	"Hebrew O": "ס",
+	"Script i": u"í",
+}
+
+def underline(chars):
+	if windows:
+		return "'{}'".format(chars)
+	return '\033[4m' + chars + '\033[0m'
+
+def safe_windows_print(s):
+		try:
+			print(s)
+		except UnicodeEncodeError as e:
+			for c in s:
+				try:
+					print(c, end='')
+				except UnicodeEncodeError as d:
+					print('?', end='')
+
+parser = argparse.ArgumentParser(description="Sanitize potentially identifying invisible characters")
+parser.add_argument("input", metavar="I", help="Text file to be sanitized")
+args = parser.parse_args()
+infile = os.path.realpath(args.input)
+print(infile)
+
+country_dics = {}
+dir = os.path.dirname(os.path.realpath(__file__))
+os.chdir(dir)
+for dic in iglob("*."+spellsuffix):
+	country_dics.update({dic: []})
+	with open(dic, "r") as file:
+		lines = file.readlines()
+		for each in lines:
+			country_dics[dic].append(each.strip())
+
+windows = sys.platform == "win32"
+found = 0
+with open(infile, mode="r", encoding="UTF-8") as file:
+	lines = file.readlines()
+	for index, line in enumerate(lines):
+		display = line
+		for character in ZERO_WIDTH_CHARS:
+			if ZERO_WIDTH_CHARS[character] in line:
+				print("++ Found invisible {} on line {}".format(character.lower(), index+1))
+				display = display.replace(ZERO_WIDTH_CHARS[character], underline("*"))
+				line = line.replace(ZERO_WIDTH_CHARS[character], "")
+		for letter in HOMOGLYPHS:
+			if HOMOGLYPHS[letter] in line:
+				print("++ Found '{}' on line {}".format(letter, index+1))
+				display = display.replace(HOMOGLYPHS[letter], underline(HOMOGLYPHS[letter]))
+				line = line.replace(HOMOGLYPHS[letter], letter[-1])
+		for space in NON_STANDARD_SPACES:
+			if NON_STANDARD_SPACES[space] in line:
+				print("++ Found non-standard space on line {}".format(index+1))
+				display = display.replace(NON_STANDARD_SPACES[space], underline(" "))
+				line = line.replace(NON_STANDARD_SPACES[space], " ")
+		if display != line:  # Print modified line
+			found += 1
+			if windows:
+				safe_windows_print("   "+display.strip())
+			else:
+				print("   "+display.strip())
+		lines[index] = line  # Update list
+
+		for dic in country_dics:
+			for word in country_dics[dic]:
+				if word in line.lower():  # Normalize to lowercase
+					print("-- {} spelling of '{}' on line {}".format(dic.split(".")[0], word, index+1))
+
+if found > 0:
+	outfile = infile+"."+sanesuffix
+	plural = ""
+	if found > 1: plural="s"
+	print("++ {} line{} with invisible instances. Sanitized file: {}".format(found, plural, outfile))
+	file = open(outfile, mode="w", encoding="UTF-8")
+	for line in lines:
+		file.write(line)
+	file.close()
+else:
+	print("-- No invisible instances found")
