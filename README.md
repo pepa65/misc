@@ -202,15 +202,18 @@ a5toa4 [-c|--collate] <a5.pdf> [<a4.pdf>]
 * Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
 
 ## pdfslice
-**Make pdf from page ranges in a source document**
+**Make a pdf from a page range in a source document**
 
 Usage:
 ```
-pdfslice [-h|--help ] | <from> <to> <source.pdf> [<destination.pdf>]
-    where <from> and <to> are the first and last page number
-  -h/--help:  display this help text
+Usage:  $Self [-h|--help ] | <range> <in.pdf> [<out.pdf>]
+    Where <range> is:  [<from>],[<to>] | [<from>]+[<number>]
+      If <from> & <to> start with a minus sign they count from the back;
+        if omitted they default to first & last page;
+        <number> specifies the number of pages, if omitted defaults to 1.
+    -h/--help:  Just display this help text.
 ```
-* Required: pdfseparate pdfunite coreutils(mktemp cd)
+* Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm)
 
 ## bootctlu
 **Setting up and registering systemd_boot on Ubuntu**
