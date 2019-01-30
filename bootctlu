@@ -207,8 +207,7 @@ then
 	tmp=$(mktemp -d)
 	cd "$tmp"
 	wget -q "$memurl" || Echo "Can't download MemTest86" 10
-	tar xf ${memtesturl##*/}
-	v=$(echo Memtest86-$memver.iso) v=${v#*-} v=${v//.iso}
+	tar xf ${memurl##*/}
 	7z x Memtest86-$memver.iso EFI/BOOT >$off
 	memtest="$efi/EFI/memtest86"
 	((go)) && $sudo rm -rf -- "$memtest"
