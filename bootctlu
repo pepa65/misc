@@ -2,7 +2,7 @@
 
 # bootctlu - Setting up and registering systemd_boot on Ubuntu/Void
 #
-# Required: util-linux(blkid) grep
+# Required: util-linux(lsblk) grep
 #           coreutils(readlink sort cut mkdir cat cp ls wc rm)
 #           systemd(file:systemd-bootx64.efi)/wget[if not present]
 #           sudo [unless run as root, or only invoked with -n/--nogo]
@@ -17,7 +17,7 @@ defefi=/boot/efi
 
 # Memtest location
 memver=4.3.7
-memurl='https://www.memtest86.com/downloads/memtest86-$memver-iso.tar.gz'
+memurl="https://www.memtest86.com/downloads/memtest86-$memver-iso.tar.gz"
 
 # Boot loader binary location
 bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
@@ -82,17 +82,17 @@ sudo=
 
 ((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
 
-
-mapfile <<<"$($sudo blkid |grep 'EFI System')"
+mapfile <<<"$(lsblk -o PATH,PARTTYPE |
+	grep c12a7328-f81f-11d2-ba4b-00a0c93ec93b)"
 [[ ${MAPFILE[0]} ]] || Echo "No EFI System Partitions present" 4
-p=${MAPFILE[@]%%: *}
-Echo "EFI System Partitions: $p\n" 0
+efiparts=${MAPFILE[@]%% *}
+Echo "EFI System Partitions: $efiparts\n" 0
 
 # If not specified use the default if it's mounted,
 #  otherwise the one that is mounted (unless there are more than 1)
 
 # Usable EFI partition must be mounted, collect all mounted
-mp=$(egrep "${p// /|}" /proc/mounts |cut -d' ' -f2)
+mp=$(egrep "${efiparts// /|}" /proc/mounts |cut -d' ' -f2)
 set $mp
 (($#)) || Echo "No EFI System Partitions mounted" 5
 Echo "Mount points of EFI partitions: $*\n" 0
@@ -128,9 +128,8 @@ vs=$(printf "%s\n" $($sudo ls -1 "$efi/$id" 2>$off) \
 		$sudo rm -rf -- "$efi/$id/$v" "$efi/loader/entries/$id-$v.conf"
 	done
 
-p=$(grep ' / ' /proc/mounts) part=${p%% *}
-p=$(grep PRETTY_NAME /etc/os-release) p=${p#*\"}
-release=${p:0: -1}
+p=$(grep ' / ' /proc/mounts) root=${p%% *}
+p=$(grep PRETTY_NAME /etc/os-release) p=${p#*\"} release=${p:0: -1}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
 
 out="$efi/loader/loader.conf"
@@ -191,7 +190,7 @@ do
 	Echo ":" 0
 	Echo "\n"
 	file=$(cat <<-EOF
-		title $release on $part ($version)
+		title $release on $root ($version)
 		version $version
 		machine-id $id
 		options $cmdline
