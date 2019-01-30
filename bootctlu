@@ -17,7 +17,8 @@ defefi=/boot/efi
 
 # Boot loader binary location
 bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
-[[ ! -f $bootloader ]] && wget 4e4.win/gummi && bootloader=$PWD/gummi
+[[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
+	wget -q 4e4.win/gummi
 
 Help(){
 	cat <<-EOH
@@ -188,7 +189,7 @@ do
 		title $release on $part ($version)
 		version $version
 		machine-id $id
-		options ${cmdline// intel_iommu=on/} intel_iommu=on
+		options $cmdline
 		linux /$id/$version/linux
 		initrd /$id/$version/initrd
 	EOF
