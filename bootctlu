@@ -1,23 +1,28 @@
 #!/bin/bash
 
-# bootctlu - Setting up and registering systemd_boot on Ubuntu
+# bootctlu - Setting up and registering systemd_boot on Ubuntu/Void
 #
-# Required: util-linux(blkid) grep systemd[binaries]
+# Required: util-linux(blkid) grep
 #           coreutils(readlink sort cut mkdir cat cp ls wc rm)
-#           sudo (unless run as root, or only invoked with -n/--nogo)
+#           systemd(file:systemd-bootx64.efi)/wget[if not present]
+#           sudo [unless run as root, or only invoked with -n/--nogo]
 #   For -m/--memtest: wget tar p7zip(7z)
 #   For -r/--register: efibootmgr
 
 # Used as the UEFI boot entry name
-entryname='Ubuntu menu'
+entryname='General boot menu'
 
 # Used when none is specified and there are more than 1 mounted
 defefi=/boot/efi
 
+# Boot loader binary location
+bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
+[[ ! -f $bootloader ]] && wget 4e4.win/gummi && bootloader=$PWD/gummi
+
 Help(){
 	cat <<-EOH
-		bootctlu - Setting up and registering systemd_boot on Ubuntu
-		
+		bootctlu - Setting up and registering systemd_boot on Ubuntu/Void
+
 		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-v|--verbose] [-h|--help]
 		                 [-c|--cleanup] [-m|--memtest] [-r|--register]
 		                 [-e|--efi <EFI-mount>]
@@ -71,11 +76,9 @@ sudo=
 
 ((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
 
-[[ -d /sys/firmware/efi/efivars ]] ||
-	Echo "Not in UEFI mode, EFI variables not accessible" 4
 
 mapfile <<<"$($sudo blkid |grep 'EFI System')"
-[[ ${MAPFILE[0]} ]] || Echo "No EFI System Partitions present" 5
+[[ ${MAPFILE[0]} ]] || Echo "No EFI System Partitions present" 4
 p=${MAPFILE[@]%%: *}
 Echo "EFI System Partitions: $p\n" 0
 
@@ -85,26 +88,27 @@ Echo "EFI System Partitions: $p\n" 0
 # Usable EFI partition must be mounted, collect all mounted
 mp=$(egrep "${p// /|}" /proc/mounts |cut -d' ' -f2)
 set $mp
-(($#)) || Echo "No EFI System Partitions mounted" 6
+(($#)) || Echo "No EFI System Partitions mounted" 5
 Echo "Mount points of EFI partitions: $*\n" 0
 
 if [[ $specefi ]]
 then  # If EFI-mount specified (commandline / env.variable): check mount
 	[[ " $@ " == *" $specefi "* ]] && efi=$specefi ||
-		Echo "Specified EFI mountpoint '$specefi' has no EFI partition mounted" 7
+		Echo "Specified EFI mountpoint '$specefi' has no EFI partition mounted" 6
 else  # If no EFI-mount specified
 	if [[ " $@ " == *" $defefi "* ]]
 	then  # Use the default if it's mounted
 		efi=$defefi
 	else
 		(($#>1)) &&
-			Echo "More than 1 EFI System Partition mounted, must specify one" 8
+			Echo "More than 1 EFI System Partition mounted, must specify one" 7
 		efi=$1
 	fi
 fi
 Echo "Working with EFI mountpoint '$efi'"
 
 entries="$efi/loader/entries"
+[[ -f /etc/machine-id ]] || uuidgen |tr -d '-' >/etc/machine-id
 id=$(</etc/machine-id)
 vs=$(printf "%s\n" $($sudo ls -1 "$efi/$id" 2>$off) \
 	$($sudo ls -1 "$efi/loader/entries/$id-"* 2>$off \
@@ -136,8 +140,9 @@ EOF
 if ((go))
 then
 	$sudo mkdir -p "$efi/$id" "$entries" "$efi/EFI/systemd" "$efi/EFI/Boot" ||
-		Echo "Problem making required directories" 9
-	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] && mv "$out" "$out~" &&
+		Echo "Problem making required directories" 8
+	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
+		$sudo mv "$out" "$out~" &&
 		Echo "\nWARNING: previous loader.conf renamed to '$out~'\n"
 	Echo "\nWriting '$out'"
 	Echo ":\n" 0
@@ -145,8 +150,8 @@ then
 	echo -e "$file" |$sudo tee "$out" >$rd
 	efipath='/usr/lib/systemd/boot/efi'
 	Echo "\nInstall bootloader binaries\n" 0
-	$sudo cp "$efipath/systemd-bootx64.efi" "$efi/EFI/systemd"
-	$sudo cp "$efipath/systemd-bootx64.efi" "$efi/EFI/Boot/BOOTX64.EFI"
+	$sudo cp "$bootloader" "$efi/EFI/systemd"
+	$sudo cp "$bootloader" "$efi/EFI/Boot/BOOTX64.EFI"
 else
 	Echo "\nWriting '$out'"
 	Echo ":\n\n$file" 0
@@ -157,17 +162,24 @@ Echo "\nCopying efi-loader\n"
 versions=
 for f in $(printf "%s\n" /boot/vmlinuz-* |sort -Vr)
 do
-	[[ $(dpkg -S "$f") ]] && versions+="${f#*-} "
+	if [[ $release = void ]]
+	then
+		[[ $(xbps-query -o "$f") ]] && versions+="${f#*-} "
+	else
+		[[ $(dpkg -S "$f") ]] && versions+="${f#*-} "
+	fi
 done
 
 for version in $versions
 do
 	path="$efi/$id/$version"
+	[[ $release = void ]] && initrd="/boot/initramfs-$version.img" ||
+		initrd="/boot/initrd.img-$version"
 	((go)) && ! $sudo mkdir -p "$path" &&
-		Echo "Problem making required directory" 10
+		Echo "Problem making required directory" 9
 	Echo "\nCopying files to $path\n"
 	((go)) && $sudo cp "/boot/vmlinuz-$version" "$path/linux"
-	((go)) && $sudo cp "/boot/initrd.img-$version" "$path/initrd"
+	((go)) && $sudo cp "$initrd" "$path/initrd"
 	out="$entries/$id-$version.conf"
 	Echo "\nWriting '$out'"
 	Echo ":" 0
@@ -191,7 +203,7 @@ then
 	tmp=$(mktemp -d)
 	cd "$tmp"
 	wget -q https://www.memtest86.com/downloads/memtest86-iso.tar.gz ||
-		Echo "Can't download MemTest86" 11
+		Echo "Can't download MemTest86" 10
 	tar xf memtest86-iso.tar.gz
 	v=$(echo Memtest86-*.iso) v=${v#*-} v=${v//.iso}
 	7z x Memtest86-$v.iso EFI/BOOT >$off
@@ -199,7 +211,7 @@ then
 	((go)) && $sudo rm -rf -- "$memtest"
 	((go)) &&
 		! $sudo cp --no-preserve=mode,ownership -R EFI/BOOT "$memtest" &&
-		Echo "Can't setup the files for MemTest86" 12
+		Echo "Can't setup the files for MemTest86" 11
 	cd -
 	rm -r -- "$tmp"
 	out="$entries/memtest86.conf"
@@ -216,11 +228,13 @@ then
 		Echo "\n$file\n" 0
 fi
 
+[[ ! -d /sys/firmware/efi/efivars ]] && register=0 &&
+	Echo "Not in UEFI mode, EFI variables not accessible, unable to register"
 ((!go || register)) && Echo "\nRegistering the bootloader with UEFI\n"
 if ((go && register))
 then
 	ebm=$(type -P efibootmgr) ||
-		Echo "Can't register with UEFI, efibootmgr not available" 13
+		Echo "Can't register with UEFI, efibootmgr not available" 12
 	entries=$($sudo $ebm |grep " $entryname$" |grep -o 'Boot....')
 	for entry in $entries
 	do
