@@ -82,7 +82,7 @@ sudo=
 
 ((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
 
-mapfile <<<"$(lsblk -o KNAME,PARTTYPE |
+mapfile <<<"$($sudo lsblk -o KNAME,PARTTYPE |
 	grep c12a7328-f81f-11d2-ba4b-00a0c93ec93b)"
 [[ ${MAPFILE[0]} ]] || Echo "No EFI System Partitions present" 4
 p=(${MAPFILE[@]%% *}) efiparts=${p[@]/#//dev/}
