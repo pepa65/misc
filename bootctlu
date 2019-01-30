@@ -15,8 +15,13 @@ entryname='General boot menu'
 # Used when none is specified and there are more than 1 mounted
 defefi=/boot/efi
 
+# Memtest location
+memver=4.3.7
+memurl='https://www.memtest86.com/downloads/memtest86-$memver-iso.tar.gz'
+
 # Boot loader binary location
 bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
+
 [[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
 	wget -q 4e4.win/gummi
 
@@ -203,11 +208,10 @@ then
 	Echo "\nDownloading and extracting MemTest86...\n"
 	tmp=$(mktemp -d)
 	cd "$tmp"
-	wget -q https://www.memtest86.com/downloads/memtest86-iso.tar.gz ||
-		Echo "Can't download MemTest86" 10
-	tar xf memtest86-iso.tar.gz
-	v=$(echo Memtest86-*.iso) v=${v#*-} v=${v//.iso}
-	7z x Memtest86-$v.iso EFI/BOOT >$off
+	wget -q "$memurl" || Echo "Can't download MemTest86" 10
+	tar xf ${memtesturl##*/}
+	v=$(echo Memtest86-$memver.iso) v=${v#*-} v=${v//.iso}
+	7z x Memtest86-$memver.iso EFI/BOOT >$off
 	memtest="$efi/EFI/memtest86"
 	((go)) && $sudo rm -rf -- "$memtest"
 	((go)) &&
@@ -221,7 +225,7 @@ then
 	Echo "\n"
 	file=$(cat <<-EOF
 		title MemTest86
-		version $v
+		version $memver
 		efi /EFI/memtest86/BOOTX64.EFI
 	EOF
 	)
