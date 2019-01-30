@@ -82,10 +82,10 @@ sudo=
 
 ((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
 
-mapfile <<<"$(lsblk -o PATH,PARTTYPE |
+mapfile <<<"$(lsblk -o KNAME,PARTTYPE |
 	grep c12a7328-f81f-11d2-ba4b-00a0c93ec93b)"
 [[ ${MAPFILE[0]} ]] || Echo "No EFI System Partitions present" 4
-efiparts=${MAPFILE[@]%% *}
+p=(${MAPFILE[@]%% *}) efiparts=${p[@]/#//dev/}
 Echo "EFI System Partitions: $efiparts\n" 0
 
 # If not specified use the default if it's mounted,
@@ -93,20 +93,19 @@ Echo "EFI System Partitions: $efiparts\n" 0
 
 # Usable EFI partition must be mounted, collect all mounted
 mp=$(egrep "${efiparts// /|}" /proc/mounts |cut -d' ' -f2)
-set $mp
-(($#)) || Echo "No EFI System Partitions mounted" 5
-Echo "Mount points of EFI partitions: $*\n" 0
+[[ $mp ]] || Echo "No EFI System Partitions mounted" 5
+Echo "Mount points of EFI partitions: $mp\n" 0
 
 if [[ $specefi ]]
 then  # If EFI-mount specified (commandline / env.variable): check mount
-	[[ " $@ " == *" $specefi "* ]] && efi=$specefi ||
+	[[ " $mp " == *" $specefi "* ]] && efi=$specefi ||
 		Echo "Specified EFI mountpoint '$specefi' has no EFI partition mounted" 6
 else  # If no EFI-mount specified
-	if [[ " $@ " == *" $defefi "* ]]
+	if [[ " $mp " == *" $defefi "* ]]
 	then  # Use the default if it's mounted
 		efi=$defefi
 	else
-		(($#>1)) &&
+		[[ $mp == *$'\n'* ]] &&
 			Echo "More than 1 EFI System Partition mounted, must specify one" 7
 		efi=$1
 	fi
