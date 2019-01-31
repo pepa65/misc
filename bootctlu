@@ -111,19 +111,19 @@ else  # If no EFI-mount specified
 fi
 Echo "Working with EFI mountpoint '$efi'"
 
-entries="$efi/loader/entries"
+entries="$efi/loader/entries" iddir="$efi/$id"
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' >/etc/machine-id
 id=$(</etc/machine-id)
-vs=$(printf "%s\n" $($sudo ls -1 "$efi/$id" 2>$off) \
-	$($sudo ls -1 "$efi/loader/entries/$id-linux-"* 2>$off \
-	|sed -e "s@^$efi/loader/entries/$id-linux-@@" -e 's@.conf$@@') |sort -u)
+vs=$(printf "%s\n" $($sudo ls -1 "$iddir" 2>$off) \
+	$($sudo ls -1 "$entries/$id-linux-"* 2>$off \
+	|sed -e "s@^$entries/$id-linux-@@" -e 's@.conf$@@') |sort -u)
 [[ $vs ]] && Echo "\nIn EFI: ${vs//$'\n'/ }\n"
 
 ((cleanup)) &&
 	for v in $vs
 	do [[ ! -f /boot/vmlinuz-$v ]] &&
 		Echo "Removed from EFI: $v\n" && ((go)) &&
-		$sudo rm -rf -- "$efi/$id/$v" "$efi/loader/entries/$id-linux-$v.conf"
+		$sudo rm -rf -- "$iddir/$v" "$entries/$id-linux-$v.conf"
 	done
 
 p=$(grep ' / ' /proc/mounts) root=${p%% *}
@@ -142,7 +142,7 @@ EOF
 )
 if ((go))
 then
-	$sudo mkdir -p "$efi/$id" "$entries" "$efi/EFI/bootctlu" "$efi/EFI/Boot" ||
+	$sudo mkdir -p "$iddir" "$entries" "$efi/EFI/bootctlu" "$efi/EFI/Boot" ||
 		Echo "Problem making required directories" 8
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		$sudo mv "$out" "$out~" &&
@@ -152,7 +152,7 @@ then
 	Echo "\n"
 	echo -e "$file" |$sudo tee "$out" >$rd
 	Echo "\nInstall bootloader binaries\n" 0
-	$sudo cp "$bootloader" "$efi/EFI/bootctlu"
+	$sudo cp "$bootloader" "$efi/EFI/bootctlu/gummi.efi"
 	$sudo cp "$bootloader" "$efi/EFI/Boot/BOOTX64.efi"
 else
 	Echo "\nWriting '$out'"
@@ -174,7 +174,7 @@ done
 
 for version in $versions
 do
-	path="$efi/$id/$version"
+	path="$iddir/$version"
 	[[ $release = void ]] && initrd="/boot/initramfs-$version.img" ||
 		initrd="/boot/initrd.img-$version"
 	((go)) && ! $sudo mkdir -p "$path" &&
