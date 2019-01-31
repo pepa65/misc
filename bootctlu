@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# bootctlu - Setting up and registering systemd_boot on Ubuntu/Void
+# bootctlu - Setting up and registering gummiboot on Ubuntu/Void
 #
 # Required: util-linux(lsblk) grep
 #           coreutils(readlink sort cut mkdir cat cp ls wc rm)
@@ -26,7 +26,7 @@ gumurl='4e4.win/gummi' memurl='4e4.win/memtest.tgz' memver='8.1'
 
 Help(){
 	cat <<-EOH
-		bootctlu - Setting up and registering systemd_boot on Ubuntu/Void
+		bootctlu - Setting up and registering gummiboot on Ubuntu/Void
 
 		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-v|--verbose] [-h|--help]
 		                 [-c|--cleanup] [-m|--memtest] [-r|--register]
@@ -115,15 +115,15 @@ entries="$efi/loader/entries"
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' >/etc/machine-id
 id=$(</etc/machine-id)
 vs=$(printf "%s\n" $($sudo ls -1 "$efi/$id" 2>$off) \
-	$($sudo ls -1 "$efi/loader/entries/$id-"* 2>$off \
-	|sed -e "s@^$efi/loader/entries/$id-@@" -e 's@.conf$@@') |sort -u)
+	$($sudo ls -1 "$efi/loader/entries/$id-linux-"* 2>$off \
+	|sed -e "s@^$efi/loader/entries/$id-linux-@@" -e 's@.conf$@@') |sort -u)
 [[ $vs ]] && Echo "\nIn EFI: ${vs//$'\n'/ }\n"
 
 ((cleanup)) &&
 	for v in $vs
 	do [[ ! -f /boot/vmlinuz-$v ]] &&
 		Echo "Removed from EFI: $v\n" && ((go)) &&
-		$sudo rm -rf -- "$efi/$id/$v" "$efi/loader/entries/$id-$v.conf"
+		$sudo rm -rf -- "$efi/$id/$v" "$efi/loader/entries/$id-linux-$v.conf"
 	done
 
 p=$(grep ' / ' /proc/mounts) root=${p%% *}
@@ -135,14 +135,14 @@ file=$(cat <<-EOF
 	#auto-entries 0
 	#auto-firmware 0
 	#console-mode auto
-	default $id-*
+	default $id-linux-*
 	timeout 6
 	editor yes
 EOF
 )
 if ((go))
 then
-	$sudo mkdir -p "$efi/$id" "$entries" "$efi/EFI/systemd" "$efi/EFI/Boot" ||
+	$sudo mkdir -p "$efi/$id" "$entries" "$efi/EFI/bootctlu" "$efi/EFI/Boot" ||
 		Echo "Problem making required directories" 8
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		$sudo mv "$out" "$out~" &&
@@ -151,10 +151,9 @@ then
 	Echo ":\n" 0
 	Echo "\n"
 	echo -e "$file" |$sudo tee "$out" >$rd
-	efipath='/usr/lib/systemd/boot/efi'
 	Echo "\nInstall bootloader binaries\n" 0
-	$sudo cp "$bootloader" "$efi/EFI/systemd"
-	$sudo cp "$bootloader" "$efi/EFI/Boot/BOOTX64.EFI"
+	$sudo cp "$bootloader" "$efi/EFI/bootctlu"
+	$sudo cp "$bootloader" "$efi/EFI/Boot/BOOTX64.efi"
 else
 	Echo "\nWriting '$out'"
 	Echo ":\n\n$file" 0
@@ -183,7 +182,7 @@ do
 	Echo "\nCopying files to $path\n"
 	((go)) && $sudo cp "/boot/vmlinuz-$version" "$path/linux"
 	((go)) && $sudo cp "$initrd" "$path/initrd"
-	out="$entries/$id-$version.conf"
+	out="$entries/$id-linux-$version.conf"
 	Echo "\nWriting '$out'"
 	Echo ":" 0
 	Echo "\n"
@@ -203,7 +202,7 @@ done
 if ((memtest))
 then
 	Echo "\nDownloading and extracting MemTest86...\n"
-	memdir='EFI/memtest86'
+	memdir="$id/memtest86"
 	tmp=$(mktemp -d)
 	cd "$tmp"
 	wget -q "$memurl" || Echo "Can't download MemTest86" 10
@@ -213,7 +212,7 @@ then
 		Echo "Can't setup the files for MemTest86" 11
 	cd -
 	rm -r -- "$tmp"
-	out="$entries/memtest86.conf"
+	out="$entries/$id-memtest86.conf"
 	Echo "\nWriting '$out'"
 	Echo ":" 0
 	Echo "\n"
@@ -241,7 +240,7 @@ then
 		Echo "\nUEFI entry '$entry $entryname' removed" 0
 	done
 	echo
-	$sudo $ebm -c -l '\EFI\systemd\systemd-bootx64.efi' -L "$entryname" &&
+	$sudo $ebm -c -l '\EFI\bootctlu\gummi.efi' -L "$entryname" &&
 		Echo "\nSuccessfully registered $entryname\n" 0
 fi
 ((go && !register)) &&
