@@ -1,8 +1,8 @@
 #!/bin/bash
-
+set +vx
 # bootctlu - Setting up and registering gummiboot on Ubuntu/Void
 #
-# Required: util-linux(lsblk) grep
+# Required: util-linux(lsblk) grep sed
 #           coreutils(readlink sort cut mkdir cat cp ls wc rm)
 #           systemd(file:systemd-bootx64.efi)/wget[if not present]
 #           sudo [unless run as root, or only invoked with -n/--nogo]
@@ -10,7 +10,7 @@
 #   For -r/--register: efibootmgr
 
 # Used as the UEFI boot entry name
-entryname='General boot menu'
+menuname='General boot menu'
 
 # Used when none is specified and there are more than 1 mounted
 defefi=/boot/efi
@@ -43,7 +43,7 @@ Help(){
 	EOH
 }
 
-Echo(){ # $1: message, $2: errorcode (exit if non-zero!)
+Echo(){ # $1: message, $2: errorcode (exit if go and non-zero!)
 	# If errorcode is zero, only display the message when verbose is set
 	local m=$1
 	if [[ $2 ]]
@@ -87,23 +87,20 @@ mapfile -t <<<"$($sudo lsblk -o KNAME,PARTTYPE |
 p=(${MAPFILE[@]%% *}) efiparts=${p[@]/#//dev/}
 Echo "EFI System Partitions: $efiparts\n" 0
 
-# If not specified use the default if it's mounted,
-#  otherwise the one that is mounted (unless there are more than 1)
-
 # Usable EFI partition must be mounted, collect all mounted
 mp=$(egrep "${efiparts// /|}" /proc/mounts |cut -d' ' -f2)
 [[ $mp ]] || Echo "No EFI System Partitions mounted" 5
 Echo "Mount points of EFI partitions: $mp\n" 0
 
 if [[ $specefi ]]
-then  # If EFI-mount specified (commandline / env.variable): check mount
+then  # EFI-mount specified (commandline / env.variable): check if mounted
 	[[ " $mp " == *" $specefi "* ]] && efi=$specefi ||
 		Echo "Specified EFI mountpoint '$specefi' has no EFI partition mounted" 6
-else  # If no EFI-mount specified
+else  # No EFI-mount specified
 	if [[ " $mp " == *" $defefi "* ]]
-	then  # Use the default if it's mounted
+	then  # Use default if mounted
 		efi=$defefi
-	else
+	else  # Use the discovered one
 		[[ $mp == *$'\n'* ]] &&
 			Echo "More than 1 EFI System Partition mounted, must specify one" 7
 		efi=$1
@@ -111,25 +108,26 @@ else  # If no EFI-mount specified
 fi
 Echo "Working with EFI mountpoint '$efi'"
 
+# Get current entries
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' >/etc/machine-id
 id=$(</etc/machine-id)
 entries="$efi/loader/entries" iddir="$efi/$id"
-vs=$(printf "%s\n" $($sudo ls -1 "$iddir" 2>$off) \
+versions=$(printf "%s\n" \
+	$($sudo ls -1d "$iddir/linux-*" 2>$off |sed -e "s@^$iddir/linux-@@") \
 	$($sudo ls -1 "$entries/$id-linux-"* 2>$off \
 	|sed -e "s@^$entries/$id-linux-@@" -e 's@.conf$@@') |sort -u)
-[[ $vs ]] && Echo "\nIn EFI: ${vs//$'\n'/ }\n"
+[[ $versions ]] && Echo "\nIn EFI: ${versions//$'\n'/ }\n"
 
 ((cleanup)) &&
-	for v in $vs
+	for v in $versions
 	do [[ ! -f /boot/vmlinuz-$v ]] &&
 		Echo "Removed from EFI: $v\n" &&
-		((go)) && $sudo rm -rf -- "$iddir/$v" "$entries/$id-linux-$v.conf"
+		((go)) && $sudo rm -rf -- "$iddir/linux-$v" "$entries/$id-linux-$v.conf"
 	done
 
 p=$(grep ' / ' /proc/mounts) root=${p%% *}
 p=$(grep PRETTY_NAME /etc/os-release) p=${p#*\"} release=${p:0: -1}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
-
 out="$efi/loader/loader.conf"
 file=$(cat <<-EOF
 	#auto-entries 0
@@ -146,12 +144,12 @@ then
 		Echo "Problem making required directories" 8
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		$sudo mv "$out" "$out~" &&
-		Echo "\nWARNING: previous loader.conf renamed to '$out~'\n"
+		Echo "\nRenaming previous loader.conf to '$out~'\n" 0
 	Echo "\nWriting '$out'"
 	Echo ":\n" 0
 	Echo "\n"
 	echo -e "$file" |$sudo tee "$out" >$rd
-	Echo "\nInstall bootloader binaries\n" 0
+	Echo "\nInstalling bootloader binaries\n" 0
 	$sudo cp "$bootloader" "$efi/EFI/bootctlu/gummi.efi"
 	$sudo cp "$bootloader" "$efi/EFI/Boot/BOOTX64.efi"
 else
@@ -172,27 +170,27 @@ do
 	fi
 done
 
-for version in $versions
+for v in $versions
 do
-	path="$iddir/$version"
-	[[ $release = void ]] && initrd="/boot/initramfs-$version.img" ||
-		initrd="/boot/initrd.img-$version"
+	path="$iddir/linux-$v"
+	[[ $release = void ]] && initrd="/boot/initramfs-$v.img" ||
+		initrd="/boot/initrd.img-$v"
 	((go)) && ! $sudo mkdir -p "$path" &&
-		Echo "Problem making required directory" 9
+		Echo "Problem making directory $path" 9
 	Echo "\nCopying files to $path\n"
-	((go)) && $sudo cp "/boot/vmlinuz-$version" "$path/linux"
+	((go)) && $sudo cp "/boot/vmlinuz-$v" "$path/linux"
 	((go)) && $sudo cp "$initrd" "$path/initrd"
-	out="$entries/$id-linux-$version.conf"
+	out="$entries/$id-linux-$v.conf"
 	Echo "\nWriting '$out'"
 	Echo ":" 0
 	Echo "\n"
 	file=$(cat <<-EOF
-		title $release on $root ($version)
-		version $version
+		title $release on $root (linux-$v)
+		version $v
 		machine-id $id
 		options $cmdline
-		linux /$id/$version/linux
-		initrd /$id/$version/initrd
+		linux /$id/linux-$v/linux
+		initrd /$id/linux-$v/initrd
 	EOF
 	)
 	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
@@ -233,15 +231,15 @@ then
 	Echo "\nRegistering the bootloader with UEFI\n"
 	ebm=$(type -P efibootmgr) ||
 		Echo "Can't register with UEFI, efibootmgr not available" 13
-	entries=$($sudo $ebm |grep " $entryname$" |grep -o 'Boot....')
-	for entry in $entries
+	entries=$($sudo $ebm |grep " $menuname$" |grep -o 'Boot....')
+	for e in $entries
 	do
-		((go)) && $sudo $ebm -b ${entry:4:4} -B >$off
-		Echo "\nUEFI entry '$entry $entryname' removed" 0
+		((go)) && $sudo $ebm -b ${e:4:4} -B >$off
+		Echo "\nUEFI entry '$e $menuname' removed" 0
 	done
 	echo
-	((go)) && $sudo $ebm -c -l '\EFI\bootctlu\gummi.efi' -L "$entryname" &&
-		Echo "\nSuccessfully registered $entryname\n" 0
+	((go)) && $sudo $ebm -c -l '\EFI\bootctlu\gummi.efi' -L "$menuname" &&
+		Echo "\nSuccessfully registered $menuname\n" 0
 else
 	Echo "\nNot registering with UEFI, no -r/--register option given\n" 0
 fi
