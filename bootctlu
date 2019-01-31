@@ -15,15 +15,14 @@ entryname='General boot menu'
 # Used when none is specified and there are more than 1 mounted
 defefi=/boot/efi
 
-# Memtest location
-memver=4.3.7
-memurl="https://www.memtest86.com/downloads/memtest86-$memver-iso.tar.gz"
-
 # Boot loader binary location
 bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
 
+# Downloads
+gumurl='4e4.win/gummi' memurl='4e4.win/memtest.tgz' memver='8.1'
+
 [[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
-	wget -q 4e4.win/gummi
+	wget -q "$gumurl"
 
 Help(){
 	cat <<-EOH
@@ -204,15 +203,13 @@ done
 if ((memtest))
 then
 	Echo "\nDownloading and extracting MemTest86...\n"
+	memdir='EFI/memtest86'
 	tmp=$(mktemp -d)
 	cd "$tmp"
 	wget -q "$memurl" || Echo "Can't download MemTest86" 10
-	tar xf ${memurl##*/}
-	7z x Memtest86-$memver.iso EFI/BOOT >$off
-	memtest="$efi/EFI/memtest86"
-	((go)) && $sudo rm -rf -- "$memtest"
+	((go)) && $sudo mkdir -p "$efi/$memdir" && $sudo rm -rf -- "$efi/$memdir/*"
 	((go)) &&
-		! $sudo cp --no-preserve=mode,ownership -R EFI/BOOT "$memtest" &&
+		! $sudo tar xf memtest.tgz --no-same-owner -C "$efi/$memdir" &&
 		Echo "Can't setup the files for MemTest86" 11
 	cd -
 	rm -r -- "$tmp"
@@ -223,7 +220,7 @@ then
 	file=$(cat <<-EOF
 		title MemTest86
 		version $memver
-		efi /EFI/memtest86/BOOTX64.EFI
+		efi $memdir/BOOTX64.efi
 	EOF
 	)
 	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
