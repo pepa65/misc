@@ -111,9 +111,9 @@ else  # If no EFI-mount specified
 fi
 Echo "Working with EFI mountpoint '$efi'"
 
-entries="$efi/loader/entries" iddir="$efi/$id"
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' >/etc/machine-id
 id=$(</etc/machine-id)
+entries="$efi/loader/entries" iddir="$efi/$id"
 vs=$(printf "%s\n" $($sudo ls -1 "$iddir" 2>$off) \
 	$($sudo ls -1 "$entries/$id-linux-"* 2>$off \
 	|sed -e "s@^$entries/$id-linux-@@" -e 's@.conf$@@') |sort -u)
@@ -122,8 +122,8 @@ vs=$(printf "%s\n" $($sudo ls -1 "$iddir" 2>$off) \
 ((cleanup)) &&
 	for v in $vs
 	do [[ ! -f /boot/vmlinuz-$v ]] &&
-		Echo "Removed from EFI: $v\n" && ((go)) &&
-		$sudo rm -rf -- "$iddir/$v" "$entries/$id-linux-$v.conf"
+		Echo "Removed from EFI: $v\n" &&
+		((go)) && $sudo rm -rf -- "$iddir/$v" "$entries/$id-linux-$v.conf"
 	done
 
 p=$(grep ' / ' /proc/mounts) root=${p%% *}
@@ -226,25 +226,25 @@ then
 		Echo "\n$file\n" 0
 fi
 
-[[ ! -d /sys/firmware/efi/efivars ]] && register=0 &&
-	Echo "Not in UEFI mode, EFI variables not accessible, unable to register"
-((!go || register)) && Echo "\nRegistering the bootloader with UEFI\n"
-if ((go && register))
+if ((register))
 then
+	[[ ! -d /sys/firmware/efi/efivars ]] &&
+		Echo "Not in UEFI mode, no EFI variables, unable to register" 12
+	Echo "\nRegistering the bootloader with UEFI\n"
 	ebm=$(type -P efibootmgr) ||
-		Echo "Can't register with UEFI, efibootmgr not available" 12
+		Echo "Can't register with UEFI, efibootmgr not available" 13
 	entries=$($sudo $ebm |grep " $entryname$" |grep -o 'Boot....')
 	for entry in $entries
 	do
-		$sudo $ebm -b ${entry:4:4} -B >$off
+		((go)) && $sudo $ebm -b ${entry:4:4} -B >$off
 		Echo "\nUEFI entry '$entry $entryname' removed" 0
 	done
 	echo
-	$sudo $ebm -c -l '\EFI\bootctlu\gummi.efi' -L "$entryname" &&
+	((go)) && $sudo $ebm -c -l '\EFI\bootctlu\gummi.efi' -L "$entryname" &&
 		Echo "\nSuccessfully registered $entryname\n" 0
-fi
-((go && !register)) &&
+else
 	Echo "\nNot registering with UEFI, no -r/--register option given\n" 0
+fi
 
 ((go)) ||
 	Echo "\n### End of simulation, nothing actually copied/written/registered\n"
