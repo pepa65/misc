@@ -216,13 +216,13 @@ Usage:  $Self [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 * Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm)
 
 ## bootctlu
-**Setting up and registering systemd_boot on Ubuntu/Void**
+**Setting up and registering systemd_boot on Ubuntu/Void/Arch**
     
 Usage:
 ```
-bootctlu [-n|--nogo] [-q|--quiet] [-v|--verbose] [-h|--help]
+bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
          [-c|--cleanup] [-m|--memtest] [-r|--register]
-         [-e|--efi <EFI-mount>]
+         [-e|--esp <EFI-mount>]
     -h/--help:             Only display this help text.
     -n/--nogo:             No writing to the system at all.
     -q/--quiet:            Only fatal errors output to the terminal.
@@ -230,8 +230,8 @@ bootctlu [-n|--nogo] [-q|--quiet] [-v|--verbose] [-h|--help]
     -c/--cleanup:          Also remove no longer installed versions.
     -m/--memtest:          Also download and set up a MemTest86 entry.
     -r/--register:         Also register the efi-loader with UEFI.
-    -e/--efi <EFI-mount>:  EFI System Partition mountpoint, default:
-                           $defefi, can also be set in BOOTCTLU_EFI.
+    -e/--esp <EFI-mount>:  EFI System Partition mountpoint, default:
+                           /boot/efi, can also be set in BOOTCTLU_ESP.
 ```
 * Required: util-linux(blkid) grep coreutils(readlink sort cut mkdir cat cp ls wc rm) systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar p7zip(7z). For -r/--register: efibootmgr.
 

@@ -1,19 +1,19 @@
 #!/bin/bash
 set +vx
-# bootctlu - Setting up and registering gummiboot on Ubuntu/Void
+# bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 #
 # Required: util-linux(lsblk) grep sed
-#           coreutils(readlink sort cut mkdir cat cp ls wc rm)
+#           coreutils(readlink sort cut mkdir cat cp ls wc rm cd)
 #           systemd(file:systemd-bootx64.efi)/wget[if not present]
-#           sudo [unless run as root, or only invoked with -n/--nogo]
+#           sudo[unless run as root, or only invoked with -n/--nogo]
 #   For -m/--memtest: wget tar p7zip(7z)
 #   For -r/--register: efibootmgr
 
 # Used as the UEFI boot entry name
-menuname='General boot menu'
+menuname='Main boot menu'
 
 # Used when none is specified and there are more than 1 mounted
-defefi=/boot/efi
+defesp=/boot/efi
 
 # Boot loader binary location
 bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
@@ -21,16 +21,13 @@ bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
 # Downloads
 gumurl='4e4.win/gummi' memurl='4e4.win/memtest.tgz' memver='8.1'
 
-[[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
-	wget -q "$gumurl"
-
 Help(){
 	cat <<-EOH
-		bootctlu - Setting up and registering gummiboot on Ubuntu/Void
+		bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 
-		Usage:  bootctlu [-n|--nogo] [-q|--quiet] [-v|--verbose] [-h|--help]
+		Usage:  bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
 		                 [-c|--cleanup] [-m|--memtest] [-r|--register]
-		                 [-e|--efi <EFI-mount>]
+		                 [-e|--esp <EFI-mount>]
 		        -h/--help:             Only display this help text.
 		        -n/--nogo:             No writing to the system at all.
 		        -q/--quiet:            Only fatal errors output to the terminal.
@@ -38,8 +35,8 @@ Help(){
 		        -c/--cleanup:          Also remove no longer installed versions.
 		        -m/--memtest:          Also download and set up a MemTest86 entry.
 		        -r/--register:         Also register the efi-loader with UEFI.
-		        -e/--efi <EFI-mount>:  EFI System Partition mountpoint, default:
-		                               $defefi, can also be set in BOOTCTLU_EFI.
+		        -e/--esp <EFI-mount>:  EFI System Partition mountpoint, default:
+		                               $defesp, can also be set in BOOTCTLU_ESP.
 	EOH
 }
 
@@ -54,17 +51,17 @@ Echo(){ # $1: message, $2: errorcode (exit if go and non-zero!)
 	((quiet)) || echo -ne "$m"
 }
 
-specefi=$BOOTCTLU_EFI off=/dev/null
-go=1 quiet=0 rd=$off verbose=0 cleanup=0 register=0 memtest=0 efi=
+specesp=$BOOTCTLU_ESP off=/dev/null
+go=1 quiet=0 rd=$off verbose=0 cleanup=0 register=0 memtest=0 esp=
 while (($#))
 do
 	case $1 in
 	-n|--nogo) go=0 ;;
 	-q|--quiet) quiet=1 ;;
 	-v|--verbose) verbose=1 rd=/dev/stdout ;;
-	-e|--efi) [[ ${2%%/*} ]] && Echo "Mountpoint '$2' must start with /" 1
-		[[ $specefi ]] && Echo "WARNING: overriding BOOTCTLU_EFI with '$2'"
-		specefi=$2
+	-e|--esp) [[ ${2%%/*} ]] && Echo "Mountpoint '$2' must start with /" 1
+		[[ $specesp ]] && Echo "WARNING: overriding BOOTCTLU_ESP with '$2'"
+		specesp=$2
 		shift ;;
 	-c|--cleanup) cleanup=1 ;;
 	-m|--memtest) memtest=1 ;;
@@ -78,57 +75,61 @@ done
 sudo=
 ((EUID)) && ! sudo=$(type -P sudo) &&
 	Echo "Need to escalate privilege, but sudo not present" 3
-
 ((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
 
+# Get EFI System Partitions
 mapfile -t <<<"$($sudo lsblk -o KNAME,PARTTYPE |
 	grep c12a7328-f81f-11d2-ba4b-00a0c93ec93b)"
 [[ ${MAPFILE[0]} ]] || Echo "No EFI System Partitions present" 4
-p=(${MAPFILE[@]%% *}) efiparts=${p[@]/#//dev/}
-Echo "EFI System Partitions: $efiparts\n" 0
+p=(${MAPFILE[@]%% *}) esps=${p[@]/#//dev/}
+Echo "EFI System Partitions: $esps\n" 0
 
 # Usable EFI partition must be mounted, collect all mounted
-mp=$(egrep "${efiparts// /|}" /proc/mounts |cut -d' ' -f2)
+mp=$(egrep "${esps// /|}" /proc/mounts |cut -d' ' -f2)
 [[ $mp ]] || Echo "No EFI System Partitions mounted" 5
 Echo "Mount points of EFI partitions: $mp\n" 0
 
-if [[ $specefi ]]
+# Pick EFI mountpoint
+if [[ $specesp ]]
 then  # EFI-mount specified (commandline / env.variable): check if mounted
-	[[ " $mp " == *" $specefi "* ]] && efi=$specefi ||
-		Echo "Specified EFI mountpoint '$specefi' has no EFI partition mounted" 6
+	[[ " $mp " == *" $specesp "* ]] && esp=$specesp ||
+		Echo "Specified EFI mountpoint '$specesp' has no EFI partition mounted" 6
 else  # No EFI-mount specified
-	if [[ " $mp " == *" $defefi "* ]]
+	if [[ " $mp " == *" $defesp "* ]]
 	then  # Use default if mounted
-		efi=$defefi
+		esp=$defesp
 	else  # Use the discovered one
 		[[ $mp == *$'\n'* ]] &&
 			Echo "More than 1 EFI System Partition mounted, must specify one" 7
-		efi=$1
+		esp=$1
 	fi
 fi
-Echo "Working with EFI mountpoint '$efi'"
+Echo "Working with EFI mountpoint '$esp'"
 
-# Get current entries
+# Get current boot entries
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' >/etc/machine-id
 id=$(</etc/machine-id)
-entries="$efi/loader/entries" iddir="$efi/$id"
+entries="$esp/loader/entries" iddir="$esp/$id"
 versions=$(printf "%s\n" \
 	$($sudo ls -1d "$iddir/linux-*" 2>$off |sed -e "s@^$iddir/linux-@@") \
 	$($sudo ls -1 "$entries/$id-linux-"* 2>$off \
 	|sed -e "s@^$entries/$id-linux-@@" -e 's@.conf$@@') |sort -u)
 [[ $versions ]] && Echo "\nIn EFI: ${versions//$'\n'/ }\n"
 
+# Compare current boot entries with present kernel binaries for cleanup
 ((cleanup)) &&
-	for v in $versions
-	do [[ ! -f /boot/vmlinuz-$v ]] &&
-		Echo "Removed from EFI: $v\n" &&
-		((go)) && $sudo rm -rf -- "$iddir/linux-$v" "$entries/$id-linux-$v.conf"
+	for kernel in /boot/vmlinuz-*
+	do v=$($sudo file "$kernel" |grep -o ' version [^ ]*') v=${v# version }
+		[[ " $v " == ' '$versions' ' ]] && Echo "Removed from EFI: $v\n" &&
+			((go)) && $sudo rm -rf -- "$iddir/linux-$v" "$entries/$id-linux-$v.conf"
 	done
 
 p=$(grep ' / ' /proc/mounts) root=${p%% *}
-p=$(grep PRETTY_NAME /etc/os-release) p=${p#*\"} release=${p:0: -1}
+[[ -f /etc/os-release ]] && p=$(grep PRETTY_NAME /etc/os-release) ||
+	p=$(grep DISTRIB_DESCRIPTION /etc/lsb-release)
+p=${p#*\"} release=${p:0: -1}
 cmdline=$(cut -d' ' -f2- /proc/cmdline)
-out="$efi/loader/loader.conf"
+out="$esp/loader/loader.conf"
 file=$(cat <<-EOF
 	#auto-entries 0
 	#auto-firmware 0
@@ -140,7 +141,9 @@ EOF
 )
 if ((go))
 then
-	$sudo mkdir -p "$iddir" "$entries" "$efi/EFI/bootctlu" "$efi/EFI/Boot" ||
+	[[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
+		wget -q "$gumurl"
+	$sudo mkdir -p "$iddir" "$entries" "$esp/EFI/bootctlu" "$esp/EFI/Boot" ||
 		Echo "Problem making required directories" 8
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		$sudo mv "$out" "$out~" &&
@@ -150,8 +153,8 @@ then
 	Echo "\n"
 	echo -e "$file" |$sudo tee "$out" >$rd
 	Echo "\nInstalling bootloader binaries\n" 0
-	$sudo cp "$bootloader" "$efi/EFI/bootctlu/gummi.efi"
-	$sudo cp "$bootloader" "$efi/EFI/Boot/BOOTX64.efi"
+	$sudo cp "$bootloader" "$esp/EFI/bootctlu/gummi.efi"
+	$sudo cp "$bootloader" "$esp/EFI/Boot/BOOTX64.EFI"
 else
 	Echo "\nWriting '$out'"
 	Echo ":\n\n$file" 0
@@ -204,9 +207,9 @@ then
 	tmp=$(mktemp -d)
 	cd "$tmp"
 	wget -q "$memurl" || Echo "Can't download MemTest86" 10
-	((go)) && $sudo mkdir -p "$efi/$memdir" && $sudo rm -rf -- "$efi/$memdir/*"
+	((go)) && $sudo mkdir -p "$esp/$memdir" && $sudo rm -rf -- "$esp/$memdir/*"
 	((go)) &&
-		! $sudo tar xf memtest.tgz --no-same-owner -C "$efi/$memdir" &&
+		! $sudo tar xf memtest.tgz --no-same-owner -C "$esp/$memdir" &&
 		Echo "Can't setup the files for MemTest86" 11
 	cd -
 	rm -r -- "$tmp"
