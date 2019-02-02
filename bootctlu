@@ -2,7 +2,7 @@
 set +vx
 # bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 #
-# Required: util-linux(lsblk) grep coreutils(sort cut mkdir cat cp ls rm cd)
+# Required: util-linux(lsblk) grep coreutils(sort cut mkdir cat cp s rm cd)
 #           systemd(file:systemd-bootx64.efi)/wget[if not present]
 #           sudo[unless run as root, or only invoked with -n/--nogo]
 #   For -m/--memtest: wget tar
@@ -103,7 +103,7 @@ else  # No EFI-mount specified
 fi
 Echo "Working with EFI mountpoint '$esp'"
 
-# Write loader confguration
+# Initialize and prepare loader confguration
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' >/etc/machine-id
 id=$(</etc/machine-id)
 entries="$esp/loader/entries" iddir="$esp/$id"
@@ -123,7 +123,7 @@ file=$(cat <<-EOF
 EOF
 )
 
-# Install bootloader binary
+# Install bootloader binary and loader configuration
 if ((go))
 then
 	[[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
@@ -151,7 +151,7 @@ fi
 ((go)) && $sudo rm -rf -- "$iddir"/linux-* "$entries/$id-linux-"*.conf
 
 # Making new entries for each kernel binary
-for kernel in /boot/vmlinuz-*
+for kernel in $(ls -l /boot/vmlinuz-* |sort -Vr)
 do
 	version=${kernel#/boot/vmlinuz-}
 	[[ $release = void || $release = Artix || ${release%% *} = Arch ]] &&
