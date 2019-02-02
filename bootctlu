@@ -49,7 +49,7 @@ Echo(){ # $1: message, $2: errorcode (exit if go and non-zero!)
 }
 
 specesp=$BOOTCTLU_ESP off=/dev/null
-go=1 quiet=0 rd=$off verbose=0 cleanup=0 register=0 memtest=0 esp=
+go=1 quiet=0 rd=$off verbose=0 register=0 memtest=0 esp=
 while (($#))
 do
 	case $1 in
@@ -60,7 +60,6 @@ do
 		[[ $specesp ]] && Echo "WARNING: overriding BOOTCTLU_ESP with '$2'"
 		specesp=$2
 		shift ;;
-	-c|--cleanup) cleanup=1 ;;
 	-m|--memtest) memtest=1 ;;
 	-r|--register) register=1 ;;
 	-h|--help) Help && exit 0 ;;
@@ -151,7 +150,7 @@ fi
 ((go)) && $sudo rm -rf -- "$iddir"/linux-* "$entries/$id-linux-"*.conf
 
 # Making new entries for each kernel binary
-for kernel in $(printf "%s\n" /boot/vmlinuz-* |sort -Vr)
+for kernel in /boot/vmlinuz-*
 do
 	version=${kernel#/boot/vmlinuz-}
 	[[ $release = void || $release = Artix || ${release%% *} = Arch ]] &&
