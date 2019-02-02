@@ -151,7 +151,7 @@ fi
 ((go)) && $sudo rm -rf -- "$iddir"/linux-* "$entries/$id-linux-"*.conf
 
 # Making new entries for each kernel binary
-for kernel in $(ls -l /boot/vmlinuz-* |sort -Vr)
+for kernel in $(printf "%s\n" /boot/vmlinuz-* |sort -Vr)
 do
 	version=${kernel#/boot/vmlinuz-}
 	[[ $release = void || $release = Artix || ${release%% *} = Arch ]] &&
