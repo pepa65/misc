@@ -2,11 +2,10 @@
 set +vx
 # bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 #
-# Required: util-linux(lsblk) grep sed
-#           coreutils(readlink sort cut mkdir cat cp ls wc rm cd)
+# Required: util-linux(lsblk) grep coreutils(sort cut mkdir cat cp ls rm cd)
 #           systemd(file:systemd-bootx64.efi)/wget[if not present]
 #           sudo[unless run as root, or only invoked with -n/--nogo]
-#   For -m/--memtest: wget tar p7zip(7z)
+#   For -m/--memtest: wget tar
 #   For -r/--register: efibootmgr
 
 # Used as the UEFI boot entry name
@@ -26,13 +25,11 @@ Help(){
 		bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 
 		Usage:  bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
-		                 [-c|--cleanup] [-m|--memtest] [-r|--register]
-		                 [-e|--esp <EFI-mount>]
+		                 [-m|--memtest] [-r|--register] [-e|--esp <EFI-mount>]
 		        -h/--help:             Only display this help text.
 		        -n/--nogo:             No writing to the system at all.
 		        -q/--quiet:            Only fatal errors output to the terminal.
 		        -v/--verbose:          Show more detail of the actions.
-		        -c/--cleanup:          Also remove no longer installed versions.
 		        -m/--memtest:          Also download and set up a MemTest86 entry.
 		        -r/--register:         Also register the efi-loader with UEFI.
 		        -e/--esp <EFI-mount>:  EFI System Partition mountpoint, default:
@@ -106,24 +103,10 @@ else  # No EFI-mount specified
 fi
 Echo "Working with EFI mountpoint '$esp'"
 
-# Get current boot entries
+# Write loader confguration
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' >/etc/machine-id
 id=$(</etc/machine-id)
 entries="$esp/loader/entries" iddir="$esp/$id"
-versions=$(printf "%s\n" \
-	$($sudo ls -1d "$iddir/linux-*" 2>$off |sed -e "s@^$iddir/linux-@@") \
-	$($sudo ls -1 "$entries/$id-linux-"* 2>$off \
-	|sed -e "s@^$entries/$id-linux-@@" -e 's@.conf$@@') |sort -u)
-[[ $versions ]] && Echo "\nIn EFI: ${versions//$'\n'/ }\n"
-
-# Compare current boot entries with present kernel binaries for cleanup
-((cleanup)) &&
-	for kernel in /boot/vmlinuz-*
-	do v=$($sudo file "$kernel" |grep -o ' version [^ ]*') v=${v# version }
-		[[ " $v " == ' '$versions' ' ]] && Echo "Removed from EFI: $v\n" &&
-			((go)) && $sudo rm -rf -- "$iddir/linux-$v" "$entries/$id-linux-$v.conf"
-	done
-
 p=$(grep ' / ' /proc/mounts) root=${p%% *}
 [[ -f /etc/os-release ]] && p=$(grep PRETTY_NAME /etc/os-release) ||
 	p=$(grep DISTRIB_DESCRIPTION /etc/lsb-release)
@@ -139,6 +122,8 @@ file=$(cat <<-EOF
 	editor yes
 EOF
 )
+
+# Install bootloader binary
 if ((go))
 then
 	[[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
@@ -159,47 +144,43 @@ else
 	Echo "\nWriting '$out'"
 	Echo ":\n\n$file" 0
 	Echo "\n"
+	Echo "\nInstalling bootloader binaries\n" 0
 fi
-Echo "\nCopying efi-loader\n"
 
-versions=
-for f in $(printf "%s\n" /boot/vmlinuz-* |sort -Vr)
-do
-	if [[ $release = void ]]
-	then
-		[[ $(xbps-query -o "$f") ]] && versions+="${f#*-} "
-	else
-		[[ $(dpkg -S "$f") ]] && versions+="${f#*-} "
-	fi
-done
+# Remove all linux entries for the current machine
+((go)) && $sudo rm -rf -- "$iddir"/linux-* "$entries/$id-linux-"*.conf
 
-for v in $versions
+# Making new entries for each kernel binary
+for kernel in /boot/vmlinuz-*
 do
-	path="$iddir/linux-$v"
-	[[ $release = void ]] && initrd="/boot/initramfs-$v.img" ||
-		initrd="/boot/initrd.img-$v"
-	((go)) && ! $sudo mkdir -p "$path" &&
-		Echo "Problem making directory $path" 9
-	Echo "\nCopying files to $path\n"
-	((go)) && $sudo cp "/boot/vmlinuz-$v" "$path/linux"
-	((go)) && $sudo cp "$initrd" "$path/initrd"
-	out="$entries/$id-linux-$v.conf"
+	version=${kernel#/boot/vmlinuz-}
+	[[ $release = void || $release = Artix || ${release%% *} = Arch ]] &&
+		initrd="/boot/initramfs-$version.img" ||
+		initrd="/boot/initrd.img-$version"
+	entry="$iddir/linux-$version"
+	((go)) && ! $sudo mkdir -p "$entry" &&
+		Echo "Problem making directory $entry" 9
+	Echo "\nCopying files to $entry\n"
+	((go)) && $sudo cp "$kernel" "$entry/linux"
+	((go)) && $sudo cp "$initrd" "$entry/initrd"
+	out="$entries/$id-linux-$version.conf"
 	Echo "\nWriting '$out'"
 	Echo ":" 0
 	Echo "\n"
 	file=$(cat <<-EOF
-		title $release on $root (linux-$v)
-		version $v
+		title $release on $root (linux-$version)
+		version $version
 		machine-id $id
 		options $cmdline
-		linux /$id/linux-$v/linux
-		initrd /$id/linux-$v/initrd
+		linux /$id/linux-$version/linux
+		initrd /$id/linux-$version/initrd
 	EOF
 	)
 	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
 		Echo "\n$file\n" 0
 done
 
+# Downloading and installing memtest86
 if ((memtest))
 then
 	Echo "\nDownloading and extracting MemTest86...\n"
@@ -227,6 +208,7 @@ then
 		Echo "\n$file\n" 0
 fi
 
+# Register the bootloader binary with UEFI
 if ((register))
 then
 	[[ ! -d /sys/firmware/efi/efivars ]] &&
@@ -235,10 +217,10 @@ then
 	ebm=$(type -P efibootmgr) ||
 		Echo "Can't register with UEFI, efibootmgr not available" 13
 	entries=$($sudo $ebm |grep " $menuname$" |grep -o 'Boot....')
-	for e in $entries
+	for entry in $entries
 	do
-		((go)) && $sudo $ebm -b ${e:4:4} -B >$off
-		Echo "\nUEFI entry '$e $menuname' removed" 0
+		((go)) && $sudo $ebm -b ${entry:4:4} -B >$off
+		Echo "\nUEFI entry '$entry $menuname' removed" 0
 	done
 	echo
 	((go)) && $sudo $ebm -c -l '\EFI\bootctlu\gummi.efi' -L "$menuname" &&
