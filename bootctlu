@@ -11,6 +11,9 @@ set +vx
 # Used as the UEFI boot entry name
 menuname='Main boot menu'
 
+# Timeout for bootmenu (seconds)
+timeout=6
+
 # Used when none is specified and there are more than 1 mounted
 defesp=/boot/efi
 
@@ -117,7 +120,7 @@ file=$(cat <<-EOF
 	#auto-firmware 0
 	#console-mode auto
 	default $id-linux-*
-	timeout 6
+	timeout $timeout
 	editor yes
 EOF
 )
@@ -222,7 +225,7 @@ then
 		Echo "\nUEFI entry '$entry $menuname' removed" 0
 	done
 	echo
-	((go)) && $sudo $ebm -c -l '\EFI\bootctlu\gummi.efi' -L "$menuname" &&
+	((go)) && $sudo $ebm -c -t $timeout -l '\EFI\bootctlu\gummi.efi' -L "$menuname" &&
 		Echo "\nSuccessfully registered $menuname\n" 0
 else
 	Echo "\nNot registering with UEFI, no -r/--register option given\n" 0
