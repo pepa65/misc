@@ -100,7 +100,7 @@ else  # No EFI-mount specified
 	else  # Use the discovered one
 		[[ $mp == *$'\n'* ]] &&
 			Echo "More than 1 EFI System Partition mounted, must specify one" 7
-		esp=$1
+		esp=$mp
 	fi
 fi
 Echo "Working with EFI mountpoint '$esp'"
@@ -113,7 +113,7 @@ p=$(grep ' / ' /proc/mounts) root=${p%% *}
 [[ -f /etc/os-release ]] && p=$(grep PRETTY_NAME /etc/os-release) ||
 	p=$(grep DISTRIB_DESCRIPTION /etc/lsb-release)
 p=${p#*\"} release=${p:0: -1}
-cmdline=$(cut -d' ' -f2- /proc/cmdline)
+p=$(</proc/cmdline) cmdline="root=${p#* root=}"
 out="$esp/loader/loader.conf"
 file=$(cat <<-EOF
 	#auto-entries 0
@@ -156,7 +156,8 @@ fi
 for kernel in /boot/vmlinuz-*
 do
 	version=${kernel#/boot/vmlinuz-}
-	[[ $release = void || $release = Artix || ${release%% *} = Arch ]] &&
+	shopt -s extglob
+	[[ $release = @(void|Artix|Antergos Linux|Arch Linux) ]] &&
 		initrd="/boot/initramfs-$version.img" ||
 		initrd="/boot/initrd.img-$version"
 	entry="$iddir/linux-$version"
