@@ -231,7 +231,7 @@ bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
     -e/--esp <EFI-mount>:  EFI System Partition mountpoint, default:
                            /boot/efi, can also be set in BOOTCTLU_ESP.
 ```
-* Required: util-linux(lsblk) grep coreutils(sort cut mkdir cat cp ls rm cd) systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar. For -r/--register: efibootmgr.
+* Required: util-linux(lsblk) grep coreutils(sort cut mkdir cat cp ls rm cd) sed systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar. For -r/--register: efibootmgr.
 
 ## ypass
 **GUI for 'pass' the standard unix password manager**
