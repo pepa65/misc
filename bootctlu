@@ -113,7 +113,7 @@ p=$(grep ' / ' /proc/mounts) root=${p%% *}
 [[ -f /etc/os-release ]] && p=$(grep PRETTY_NAME /etc/os-release) ||
 	p=$(grep DISTRIB_DESCRIPTION /etc/lsb-release)
 p=${p#*\"} release=${p:0: -1}
-cmdline=$(sed 's@initrd=[^ ]*@@' /proc/cmdline)
+cmdline=$(sed 's@initrd=[^ ]*@@g' /proc/cmdline)
 out="$esp/loader/loader.conf"
 file=$(cat <<-EOF
 	#auto-entries 0
