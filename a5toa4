@@ -7,57 +7,66 @@ set +vx
 Usage(){ # $1: code for exit
 	cat <<-EOS
 		a5toa4 - Print an A5 size document on A4 for booklet folding
-		USAGE: a5toa4 [-c|--collate] <a5.pdf> [<a4.pdf>]
+		USAGE: a5toa4 [-s|--split] [-v|--verbose] <a5.pdf> [<a4.pdf>]
 		  Print the resulting A4 document on a single-sided printer by:
 		  - printing the even pages
 		  - flipping the whole bundle of sheets over
 		  - printing the odd pages
 		  Or print it on a full-duplex printer.
-		  If -c or --collate is given, the printing can be done by:
+		  If -s or --split is given, the printing can be done by:
 		  - printing pages 1..n/2
 		  - flipping the whole bundle of sheets over
 		  - printing pages n/2+1..n
-		  (For more than 1 copy, select 'Collate' before printing.)
-		-h/--help:  display this help text
+		  (For more than 1 copy, select 'Collate' before printing!)
+		-v/--verbose:  verbose processing output
+		-h/--help:     display this help text
 	EOS
 	[[ $1 ]] && exit $1
 }
 
 # process commandline
-(($#)) || Usage 1
-[[ $1 = -h || $1 = --help ]] && Usage 0
-in=
-half=0
-[[ $1 = -c || $1 = --collate ]] && half=1 && shift
-[[ $1 ]] && in=$1 && shift
-[[ $1 = -c || $1 = --collate ]] && half=1 && shift
-[[ ! -f $in ]] && echo "ABORT: filename of A5 sized pdf required, no file: '$in'" &&
-	Usage 2
-out=$(basename "$in")
-[[ ${in: -6:6} = "A5.pdf" ]] && out="${out%A5.pdf}A4.pdf" || out="${out%.pdf}A4.pdf"
-[[ $1 ]] && out=$1 && shift
-[[ $1 = -h || $1 = --half ]] && half=1 && shift
-[[ $1 ]] && echo "ABORT: unrecognized option: '$1'" &&
-	Usage 3
-
-missing=
-for cmd in psselect pdf2ps ps2pdf psnup
-do type -P $cmd &>/dev/null || missing+=" $cmd"
+split=0 verbose=0 in= out= stdout=/dev/null
+while (($#))
+do
+	case $1 in
+	-h|--help) Usage 0 ;;
+	-s|--split) split=1 ;;
+	-v|--verbose) verbose=1 stdout=/dev/stdout ;;
+	*) [[ $out ]] && echo "Too many arguments" && Usage 1
+		[[ $in ]] && out=$1 || in=$1
+		[[ ! -f $in ]] &&
+			echo "Filename of A5 sized pdf required, not a file: '$in'" &&
+			Usage 2
+	esac
+	shift
 done
-[[ $missing ]] &&
-	echo "Missing commands:$missing, install ghostscript/psutils" &&
+[[ -z $in ]] && "No filename for A5 sized pdf given" && Usage 3
+if [[ -z $out ]]
+then
+	out=$(basename "$in")
+	[[ ${in: -6:6} = "A5.pdf" ]] &&
+		out="${out%A5.pdf}A4.pdf" ||
+		out="${out%.pdf}A4.pdf"
+fi
+
+missingcmd=
+for cmd in psselect pdf2ps ps2pdf psnup
+do type -P $cmd &>/dev/null || missingcmd+=" $cmd"
+done
+[[ $missingcmd ]] &&
+	echo "Missing commands:$missingcmd, install ghostscript/psutils" &&
 	exit 4
 
-echo "Convert to A5 pdf to ps..."
+((verbose)) && echo "Convert to A5 pdf to ps..."
 tmp=$(mktemp -d)
 pdf2ps "$in" "$tmp/a5.ps" 2>/dev/null
 
-echo "Convert A5 ps to A4..."
+((verbose)) && echo "Convert A5 ps to A4..."
 cd "$tmp"
 
 # Get number of pages
 p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
-((!p)) && echo "ABORT: no pages found" && rm -r "$tmp" && exit 5
+((!p)) && echo "No pages found in $in" && rm -r "$tmp" && exit 5
 
 # p: # of A5-pages; n: full [multiple of 4] # of A5-pages; s: # of A4-sheets
 ((n=p,r=p%4)) && ((r=4-r,n+=r))
@@ -76,9 +85,9 @@ do
 done
 r=${range[@]} r=${r// /,}
 
-if ((half && s>1))
+if ((split && s>1))
 then # Half requested and more than 1 sheet
-	# Make half-flip range: reverse odd pairs + reverse even pairs:
+	# Make split-flip range: reverse odd pairs + reverse even pairs:
 	#  [p>4 i=n..-4..0] i-3,i-2 ... i-1,i ...
 	i=n odd= even=
 	while ((i>3))
@@ -91,27 +100,30 @@ then # Half requested and more than 1 sheet
 fi
 
 # Put the A5 pages on A4
-psselect -p $r a5.ps a5c.ps
-PAPERSIZE=a4 psnup -2 -Pa5 -pa4 a5c.ps a4.ps
+psselect -p $r a5.ps a5c.ps &>"$stdout"
+PAPERSIZE=a4 psnup -2 -Pa5 -pa4 a5c.ps a4.ps &>"$stdout"
 #pstops -pA4 "2:0L(21cm,0cm)+1L(21cm,14.85cm)" a5c.ps a4.ps
 
-cd -
-echo "Convert A4 ps to pdf..."
-PAPERSIZE=a4 ps2pdf "$tmp/a4.ps" "$out"
+cd - >/dev/null
+((verbose)) && echo "Convert A4 ps to pdf..."
+PAPERSIZE=a4 ps2pdf "$tmp/a4.ps" "$out" &>"$stdout"
 rm -r -- "$tmp"
 
-echo "All done! Now print the booklet '$out' by:"
-if ((half))
+if ((verbose))
 then
-	echo "- printing pages 1-$s"
-	echo "- flipping the whole bundle of sheets over"
-	echo "- printing pages $((s+1))-$((s+s))"
-else
-	echo "- printing the even pages"
-	echo "- flipping the whole bundle of sheets over"
-	echo "- printing the odd pages"
-	echo "Or by printing the document with a full-duplex printer."
+	echo "All done! Now print the booklet '$out' by:"
+	if ((split))
+	then
+		echo "- printing pages 1-$s"
+		echo "- flipping the whole bundle of sheets over"
+		echo "- printing pages $((s+1))-$((s+s))"
+	else
+		echo "- printing the even pages"
+		echo "- flipping the whole bundle of sheets over"
+		echo "- printing the odd pages"
+		echo "Or by printing the document with a full-duplex printer."
+	fi
+	echo "(For more than 1 copy, select 'Collate' before printing.)"
 fi
-echo "(For more than 1 copy, select 'Collate' before printing.)"
 
 exit 0

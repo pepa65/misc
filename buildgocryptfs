@@ -1,11 +1,15 @@
 #!/bin/bash
 
 # buildgocryptfs - Build gocryptfs
+# Usage: buildgocryptfs [-n|--new-go]
+#   -n/--new-go:  force the installation of go even if one is present
+#
 # Required: go coreutils(ls) pkg-config
 #   Or (to install go): wget sudo tar coreutils(mktemp mv rm)
-# GOZ can be set to a different go-relase-archive
+# GO_ARCH can be set to a different go-relase-archive
 # When TMPDIR is set, it is used for the temporary directory
 
+gover=1.11.5
 goloc=/usr/local # Install location for the go tree
 bin=/usr/local/bin # Install location for gocryptfs binary
 
@@ -14,21 +18,24 @@ Abort(){ # $1:message
 	exit 1
 }
 
+newgo=0
+[[ $1 = -n || $1 = --new-go ]] && newgo=1
+
 # Try to install go if not found in PATH
-if ! go=$(type -p go)
+if ((newgo)) || ! go=$(type -p go)
 then
 	arch=$(uname -m)
-	[[ $GOZ ]] && goz=$GOZ ||
+	[[ $GO_ARCH ]] && go_arch=$GO_ARCH ||
 		case $arch in # Check for latest version: https://golang.org/dl/
-			armv7l) goz=go1.11.2.linux-armv6l.tar.gz ;;
-			x86_64) goz=go1.11.2.linux-amd64.tar.gz ;;
+			armv7l) go_arch=go$gover.linux-armv6l.tar.gz ;;
+			x86_64) go_arch=go$gover.linux-amd64.tar.gz ;;
 			*) Abort "manually select the right go release for $arch"
 		esac
 	tmp=$(mktemp -d --tmpdir=$TMPDIR)
 	trap "rm -rf -- '$tmp'" QUIT EXIT
-	wget -qO "$tmp/$goz" "https://dl.google.com/go/$goz" ||
+	wget -qO "$tmp/$go_arch" "https://dl.google.com/go/$go_arch" ||
 		Abort "could not download go and it's not in PATH"
-	tar xf "$tmp/$goz" -C "$tmp" || Abort "could not unpack $goz to $tmp"
+	tar xf "$tmp/$go_arch" -C "$tmp" || Abort "error unpacking $go_arch to $tmp"
 	# Move install directory if it exists already
 	[[ -d $goloc/go ]] && ! sudo mv "$goloc/go" "$goloc/$go_old$RANDOM" &&
 		Abort "could not move $goloc/go out of the way"

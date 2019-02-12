@@ -221,17 +221,17 @@ Usage:  $Self [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 Usage:
 ```
 bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
-         [-m|--memtest] [-r|--register] [-e|--esp <EFI-mount>]
+         [-e|--esp <EFI-mount>] [-m|--memtest] [-r|--register]
     -h/--help:             Only display this help text.
     -n/--nogo:             No writing to the system at all.
     -q/--quiet:            Only fatal errors output to the terminal.
     -v/--verbose:          Show more detail of the actions.
-    -m/--memtest:          Also download and set up a MemTest86 entry.
-    -r/--register:         Also register the efi-loader with UEFI.
     -e/--esp <EFI-mount>:  EFI System Partition mountpoint, default:
                            /boot/efi, can also be set in BOOTCTLU_ESP.
+    -m/--memtest:          Also download and set up a MemTest86 entry.
+    -r/--register:         Also register the efi-loader with UEFI.
 ```
-* Required: util-linux(lsblk) grep coreutils(sort cut mkdir cat cp ls rm cd) sed systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar. For -r/--register: efibootmgr.
+* Required: util-linux(lsblk) coreutils(tee sort cut mkdir cat cp ls rm cd) grep sed systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar. For -r/--register: efibootmgr.
 
 ## ypass
 **GUI for 'pass' the standard unix password manager**
