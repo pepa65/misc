@@ -181,23 +181,27 @@ healbitrot [-h|--help] [<dir>...]
 See the file for instructions on how to compile and use.
 
 ## a5toa4
-**Print an A5 size document on A4 for booklet folding**
+**Print an A5 document on A4 size pages for booklet folding**
 Usage:
 ```
-a5toa4 [-c|--collate] <a5.pdf> [<a4.pdf>]
+a5toa4 [<Options>] <a5.pdf> [<a4.pdf>]
+    Options:  -h/--help:                  Display this help text
+              -v/--verbose:               Verbose output of processing steps
+              -s/--split & -r/--reverse:  See below
     Print the resulting A4 document on a single-sided printer by:
-      - printing the even pages
-      - flipping the whole bundle of sheets over
-      - printing the odd pages
-    Or print it on a full-duplex printer.
-
-    If -c or --collate is given, the printing can be done by:
-      - printing pages 1..n/2
-      - flipping the whole bundle of sheets over
-      - printing pages n/2+1..n
-      (For more than 1 copy, select 'Collate' before printing.)
-
-    -h/--help:  display this help text
+      1. Printing all the even pages.
+      2. Reinserting the stack of printed pages in such a way that the blank
+         sides will now be used to print the rest of the pages in step 3.
+      3. Printing all the odd pages.
+    If -s/--split is given, the printing can be done by:
+      1. Printing the first half of the N pages, from 1 to N/2.
+      2. See step 2 above.
+      3. Printing the second half of the N pages, from N/2+1 to N.
+    If -r/--reverse is given, the order of printing in step 3 is reversed, as
+      appropriate for normal full-duplex printing (not the whole stack of
+      papers gets flipped, just individual pages automatically).
+    For more than 1 copy, be sure to select COLLATE before printing!
+    For printing on Letter size paper, select FIT TO PAGE before printing!
 ```
 * Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
 

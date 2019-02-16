@@ -6,32 +6,38 @@ set +vx
 
 Usage(){ # $1: code for exit
 	cat <<-EOS
-		a5toa4 - Print an A5 size document on A4 for booklet folding
-		USAGE: a5toa4 [-s|--split] [-v|--verbose] <a5.pdf> [<a4.pdf>]
-		  Print the resulting A4 document on a single-sided printer by:
-		  - printing the even pages
-		  - flipping the whole bundle of sheets over
-		  - printing the odd pages
-		  Or print it on a full-duplex printer.
-		  If -s or --split is given, the printing can be done by:
-		  - printing pages 1..n/2
-		  - flipping the whole bundle of sheets over
-		  - printing pages n/2+1..n
-		  (For more than 1 copy, select 'Collate' before printing!)
-		-v/--verbose:  verbose processing output
-		-h/--help:     display this help text
+		a5toa4 - Print an A5 document on A4 size pages for booklet folding
+		Usage: a5toa4 [<Options>] <a5.pdf> [<a4.pdf>]
+		Options:  -h/--help:                  Display this help text
+		          -v/--verbose:               Verbose output of processing steps
+		          -s/--split & -r/--reverse:  See below
+		Print the resulting A4 document on a single-sided printer by:
+		  1. Printing all the even pages.
+		  2. Reinserting the stack of printed pages in such a way that the blank
+		     sides will now be used to print the rest of the pages in step 3.
+		  3. Printing all the odd pages.
+		If -s/--split is given, the printing can be done by:
+		  1. Printing the first half of the N pages, from 1 to N/2.
+		  2. See step 2 above.
+		  3. Printing the second half of the N pages, from N/2+1 to N.
+		If -r/--reverse is given, the order of printing in step 3 is reversed, as
+		  appropriate for normal full-duplex printing (not the whole stack of
+		  papers gets flipped, just individual pages automatically).
+		For more than 1 copy, be sure to select COLLATE before printing!
+		For printing on Letter size paper, select FIT TO PAGE before printing!
 	EOS
 	[[ $1 ]] && exit $1
 }
 
 # process commandline
-split=0 verbose=0 in= out= stdout=/dev/null
+verbose=0 split=0 reverse=0 in= out= stdout=/dev/null
 while (($#))
 do
 	case $1 in
 	-h|--help) Usage 0 ;;
-	-s|--split) split=1 ;;
 	-v|--verbose) verbose=1 stdout=/dev/stdout ;;
+	-s|--split) split=1 ;;
+	-r|--reverse) reverse=1 ;;
 	*) [[ $out ]] && echo "Too many arguments" && Usage 1
 		[[ $in ]] && out=$1 || in=$1
 		[[ ! -f $in ]] &&
@@ -40,7 +46,7 @@ do
 	esac
 	shift
 done
-[[ -z $in ]] && "No filename for A5 sized pdf given" && Usage 3
+[[ -z $in ]] && echo "No filename for A5 sized pdf given" && Usage 3
 if [[ -z $out ]]
 then
 	out=$(basename "$in")
@@ -57,57 +63,67 @@ done
 	echo "Missing commands:$missingcmd, install ghostscript/psutils" &&
 	exit 4
 
-((verbose)) && echo "Convert to A5 pdf to ps..."
+((verbose)) && echo "Convert A5 pdf to ps..."
 tmp=$(mktemp -d)
-pdf2ps "$in" "$tmp/a5.ps" 2>/dev/null
-
-((verbose)) && echo "Convert A5 ps to A4..."
-cd "$tmp"
+trap "rm -r -- '$tmp'" EXIT QUIT
+! pdf2ps "$in" "$tmp/a5.ps" && echo "Problem converting $in" && exit 5
 
 # Get number of pages
+cd "$tmp"
 p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
-((!p)) && echo "No pages found in $in" && rm -r "$tmp" && exit 5
+((!p)) && echo "No pages found in $in" && exit 6
 
-# p: # of A5-pages; n: full [multiple of 4] # of A5-pages; s: # of A4-sheets
+# p: number pages in A5 document; n: full number of A5-pages (multiple of 4)
 ((n=p,r=p%4)) && ((r=4-r,n+=r))
+# s: number of A4-sheets; m: number of A4 page sides
 ((s=n/4,m=n/2))
-
-# Make normal duplex range: n,1 2,n-1 (-2,+2 +2,-2)
-range=()
-((a=n,b=1,c=2,d=n-1))
-while ((b<m))
-do
-	((a>p)) && range+=(_) || range+=($a)
-	((b>p)) && range+=(_) || range+=($b)
-	((c>p)) && range+=(_) || range+=($c)
-	((d>p)) && range+=(_) || range+=($d)
-	((a-=2,b+=2,c+=2,d-=2))
+i=0
+while ((i++<n))
+do ((i>p)) && range+='_ ' || range+="$i "
 done
-r=${range[@]} r=${r// /,}
 
-if ((split && s>1))
-then # Half requested and more than 1 sheet
-	# Make split-flip range: reverse odd pairs + reverse even pairs:
-	#  [p>4 i=n..-4..0] i-3,i-2 ... i-1,i ...
-	i=n odd= even=
-	while ((i>3))
-	do # lower all indexes by 1 for zero-based array
-		odd+="${range[i-4]} ${range[i-3]} "
-		even+="${range[i-2]} ${range[i-1]} "
-		((i-=4))
+# Normal full-duplex range: n,1 2,n-1 (-2,+2 +2,-2)
+# Reverse full-duplex range: n,1 n/2,n/2+1 (-2,+2 -2,+2)
+i=0 range=($range) nor= rev=
+((na=n,nb=1,nc=2,nd=n-1,ra=n,rb=1,rc=n/2,rd=n/2+1))
+while ((nb<m))
+do  # lower all indexes by 1 for zero-based array
+	nor+="${range[na-1]} ${range[nb-1]} ${range[nc-1]} ${range[nd-1]} "
+	rev+="${range[ra-1]} ${range[rb-1]} ${range[rc-1]} ${range[rd-1]} "
+	((na-=2,nb+=2,nc+=2,nd-=2,ra-=2,rb+=2,rc-=2,rd+=2))
+done
+nor=${nor% } rev=${rev% }
+((reverse)) && r=$rev || r=$nor
+
+if ((s>1 && split))
+then  # Split requested and more than 1 sheet
+	# Take the odd A4 pages and then the even A4 pages
+	i=0 odd= even= na=($nor) ra=($rev)
+	while ((i<n))
+	do
+		odd+="${na[i]} ${na[i+1]} "
+		even+="${na[i+2]} ${na[i+3]} "
+		reven+="${ra[i+2]} ${ra[i+3]} "
+		((i+=4))
 	done
-	r=$odd${even%?} r=${r// /,}
+	snor=$odd${even% }
+	srev=$odd${reven% }
+	((reverse)) && r=$srev || r=$snor
 fi
 
 # Put the A5 pages on A4
-psselect -p $r a5.ps a5c.ps &>"$stdout"
-PAPERSIZE=a4 psnup -2 -Pa5 -pa4 a5c.ps a4.ps &>"$stdout"
+((verbose)) && echo "Convert A5 ps to A4..."
+r=${r// /,}
+! psselect -p $r a5.ps a5c.ps &>"$stdout" &&
+	echo "Reordering failed" && exit 7
+! PAPERSIZE=a4 psnup -2 -Pa5 -pa4 a5c.ps a4.ps &>"$stdout" &&
+	echo "Conversion A5 to A4 failed" && exit 8
 #pstops -pA4 "2:0L(21cm,0cm)+1L(21cm,14.85cm)" a5c.ps a4.ps
 
 cd - >/dev/null
 ((verbose)) && echo "Convert A4 ps to pdf..."
-PAPERSIZE=a4 ps2pdf "$tmp/a4.ps" "$out" &>"$stdout"
-rm -r -- "$tmp"
+! PAPERSIZE=a4 ps2pdf "$tmp/a4.ps" "$out" &>"$stdout" &&
+	echo "Conversion A4 ps to pdf failed" && exit 9
 
 if ((verbose))
 then
@@ -115,15 +131,15 @@ then
 	if ((split))
 	then
 		echo "- printing pages 1-$s"
-		echo "- flipping the whole bundle of sheets over"
-		echo "- printing pages $((s+1))-$((s+s))"
+		echo "- reinserting the stack of sheets for printing the blank sides"
+		echo "- printing pages $((s+1))-$((s+s)) (REVERSE if needed by printer!)"
 	else
+		echo "printing the document with a full-duplex printer, or:"
 		echo "- printing the even pages"
-		echo "- flipping the whole bundle of sheets over"
-		echo "- printing the odd pages"
-		echo "Or by printing the document with a full-duplex printer."
+		echo "- reinserting the stack of sheets for printing the blank sides"
+		echo "- printing the odd pages (REVERSE if needed by printer!)"
 	fi
-	echo "(For more than 1 copy, select 'Collate' before printing.)"
+	echo "For more than 1 copy, select COLLATE before printing!"
 fi
 
 exit 0
