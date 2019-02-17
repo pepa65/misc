@@ -1,5 +1,5 @@
 #!/bin/bash
-set -vx
+set +vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
 ## Required: gocryptfs(http://github/com/rfjakob/gocryptfs) fuse grep procps
 ##   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync)
@@ -19,7 +19,7 @@ run=""
 ##   can be overridden with $MGCFS_PLAIN
 plain=0
 ## Logfile for gocryptfs operations
-log=/tmp/gocryptfs.log
+log="$HOME/gocryptfs.log"
 
 Help(){
 	cat <<-EOS
@@ -144,6 +144,7 @@ dn="$dir/$name"
 type -P gocryptfs >/dev/null ||
 	Abort "Install gocryptfs from http://github.com/rfjakob/gocryptfs first!"
 
+trap "[[ -s '$log' ]] || rm -f -- '$log'" EXIT QUIT
 if ((init))
 then
 	[[ $dir ]] ||
