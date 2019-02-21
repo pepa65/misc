@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# keepassxml2json - Convert KeePassX xml export to json for Ironclad
+# Usage: keepassxml2json [-d|--debug] <in.xml> <out.json>
+# Required: grep sed coreutils(tail tr cd mv rm ls)
+
+# Recipe:
+# Only import the first (only) group, remove all after '</group>'
+# (remove the whole Backup group).
+# Strip lines: 1.DOCTYPE, 2.database, 3.group, 4.(group)title, 5.icon
+# Remove all lines with: icon/creation/lastaccess/lastmod/expire-items
+# Replace: entry-tags with {}, title/username/url-items, comment->notes,
+#          password->[passwords], br->\n, '"'->'\"', tab->\t
+# Add: empty email-item + [tags]-item
+
+debug=0
+[[ $1 = -d || $1 = --debug ]] && debug=1 && shift
+[[ -z $1 || ! -f $1 ]] && echo "Need KeePassX xml file" && exit 1
+in=$(readlink -e "$1")
+[[ $2 = -d || $2 = --debug ]] && debug=1 && shift
+[[ $2 ]] && out=$2 || out=$in.json
+[[ $3 = -d || $3 = --debug ]] && debug=1
+
+Grepv(){ # $1:filter
+	((debug)) && echo "grep -v $1 f$Zi$Ci >f$Zo$Co"
+	grep -v "$1" f$Zi$Ci >f$Zo$Co
+	((++Ci>9)) && Zi=
+	((++Co>9)) && Zo=
+}
+
+Sed(){ # $1:action
+	((debug)) && echo "sed $1 f$Zi$Ci >f$Zo$Co"
+	sed "$1" f$Zi$Ci >f$Zo$Co
+	((++Ci>9)) && Zi=
+	((++Co>9)) && Zo=
+}
+
+tmp=$(mktemp -d)
+cd "$tmp"
+((debug)) || trap "cd - >/dev/null; rm -r '$tmp'" EXIT QUIT
+
+Zi=0 Zo=0 Ci=1 Co=2
+echo '[' >f01
+tail +6 "$in" >>f01
+Sed '/<\/group>/,$d'
+Grepv '^   <icon>0</icon>$'
+Grepv '^   <creation>.*</creation>$'
+Grepv '^   <lastaccess>.*</lastaccess>$'
+Grepv '^   <lastmod>.*</lastmod>$'
+Grepv '^   <expire>.*</expire>$'
+Sed 's@^  <entry>@{@'
+Sed 's@^  </entry>@},@'
+Sed 's@<br/>@\\n@g'
+Sed 's@"@\\"@g'
+Sed 's@\t@\\t@g'
+Sed 's@^   <title>\(.*\)</title>@"title":"\1",@'
+Sed 's@^   <username>\(.*\)</username>@"username":"\1",@'
+Sed 's@^   <password>\(.*\)</password>@"passwords":["\1"],@'
+Sed 's@^   <url>\(.*\)</url>@"url": "\1","email":"","tags":[""],@'
+Sed 's@^   <comment>\(.*\)</comment>@"notes":"\1"@'
+Sed '$ s@.$@]@'
+
+cd - >/dev/null
+((debug)) || trap "rm -r '$tmp'" EXIT QUIT
+((debug)) && tr -d '\n\r' <"$tmp/f$Zi$Ci" >"$out" ||
+	mv "$tmp/f$Zi$Ci" "$out"
+((debug)) && ls -AFlR "$tmp"
+
+exit 0

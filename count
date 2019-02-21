@@ -1,8 +1,9 @@
 #!/bin/bash
 
-## count - count character occurrences in file
-## Usage: count <file> [-s]  # -s: sort by code point instead of frequency
-## Required: uni2ascii sed coreutils(uniq)
+# count - Count character occurrences in file
+# Usage: count [-c|--codepoint] <file>
+#        -c/--codepoint:  sort by code point instead of frequency
+# Required: uni2ascii sed coreutils(uniq)
 
 f=1
 [[ $1 = "-s" ]] && f=0 && shift
@@ -20,7 +21,7 @@ uni2ascii -psaU "$1" |\
 		sed -e 's/\\u/\nu/g' |sed '/^$/d' |\
 		## Sort and count unique first 5 characters
 		sort |uniq -c -w5 |\
-		## Replace whitespace with one tab and fill in the decimal and hexadecimal values:
+		## Replace whitespace by 1 tab + fill in the decimal & hexadecimal values:
 		sed -e 's/\W+/\t/g' -e "$f1" |\
 		## Convert 0xHHHH unicode points to UTF-8 as <Uhhhh>, and sort
 		ascii2uni -aE |eval "$f2"
