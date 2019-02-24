@@ -279,6 +279,13 @@ ffpw.py [<options>]
 
 Usage: `keepassx2pass.py keepassx.xml`
 
+## keepassxml2json
+**Convert KeePassX xml export to json for Ironclad**
+
+Usage: `keepassxml2json [-d|--debug] <in.xml> <out.json>`
+
+* Required: grep sed coreutils(tail tr cd mv rm ls)
+
 ## safetext
 **Sanitize potentially identifying invisible characters**
 
