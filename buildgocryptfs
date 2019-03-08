@@ -1,10 +1,10 @@
 #!/bin/bash
-
+set +vx
 # buildgocryptfs - Build gocryptfs
 # Usage: buildgocryptfs [-n|--new-go]
 #   -n/--new-go:  force the installation of go even if one is present
 #
-# Required: go coreutils(ls) pkg-config
+# Required: go coreutils(ls) pkg-config libssl-dev
 #   Or (to install go): wget sudo tar coreutils(mktemp mv rm)
 # GO_ARCH can be set to a different go-relase-archive
 # When TMPDIR is set, it is used for the temporary directory
@@ -19,12 +19,23 @@ Abort(){ # $1:message
 	exit 1
 }
 
-newgo=0
+Sudo(){ # $1:prompt $2-$:command
+	local prompt="Privileges required"
+	[[ $1 ]] && prompt+=" $1:" || prompt+=':'
+	shift
+	((EUID)) && ! sudo=$(type -p sudo) &&
+		Abort "privileges required but 'sudo' not available"
+	$sudo -nv &>/dev/null || echo "$prompt"
+	$sudo $@
+}
+
+newgo=0 sudo=
 [[ $1 = -n || $1 = --new-go ]] && newgo=1
 
 # Try to install go if not found in PATH
 if ((newgo)) || ! go=$(type -p go)
 then
+	echo "Installing go $gover"
 	arch=$(uname -m)
 	[[ $GO_ARCH ]] && go_arch=$GO_ARCH ||
 		case $arch in
@@ -40,14 +51,15 @@ then
 	# Move install directory if it exists already
 	if [[ -d $goloc/go ]]
 	then
-		ls /root &>/dev/null || echo "Privileges required to move old go directory"
-		! sudo mv "$goloc/go" "$goloc/$go_old$RANDOM" &&
+		! Sudo "to move old go directory" mv "$goloc/go" "$goloc/$go_old$RANDOM" &&
 			Abort "could not move $goloc/go out of the way"
 	fi
-	ls /root &>/dev/null || echo "Privileges required to install go directory"
-	sudo mv "$tmp/go" "$goloc" || Abort "could not move $tmp/go to $goloc"
+	Sudo "to install go directory" mv "$tmp/go" "$goloc" ||
+		Abort "could not move $tmp/go to $goloc"
+	grep -q ":$goloc/go/bin:" <<<":$PATH:" || echo "Add to PATH: $goloc/go/bin"
 	export PATH="$goloc/go/bin:$PATH"
-	echo "Set in .bashrc: export GOROOT='$goloc/go' GOPATH='~/go'"
+	[[ $GOROOT ]] || echo "Set in .bashrc: export GOROOT='$goloc/go'"
+	[[ $GOPATH ]] || echo "Set in .bashrc: export GOPATH='~/go'"
 	export GOROOT="$goloc/go" GOPATH=~/go
 	go="$goloc/go/bin/go"
 fi
@@ -57,7 +69,6 @@ repo=$("$go" env GOPATH)/src/$git
 "$go" get -d -u $git
 "$repo/build.bash"
 # "$repo/test.bash"
-ls /root &>/dev/null || echo "Privileges required to install gocryptfs"
-sudo cp "$repo/gocryptfs" "$bin" && echo "gocryptfs installed in $bin"
+Sudo "to install gocryptfs" cp "$repo/gocryptfs" "$bin" && echo "gocryptfs installed in $bin"
 
 exit 0
