@@ -47,9 +47,10 @@ then
 fi
 
 # Install gocryptfs
-"$go" get -d github.com/rfjakob/gocryptfs
-"$("$go" env GOPATH)/src/github.com/rfjakob/gocryptfs/build.bash"
-# "$("$go" env GOPATH)/src/github.com/rfjakob/gocryptfs/test.bash"
-sudo cp gocryptfs "$bin" && echo "gocryptfs installed in $bin"
+repo=$("$go" env GOPATH)/src/github.com/rfjakob/gocryptfs
+"$go" get -du github.com/rfjakob/gocryptfs
+"$repo/build.bash"
+# "$repo/test.bash"
+sudo cp "$repo/gocryptfs "$bin" && echo "gocryptfs installed in $bin"
 
 exit 0
