@@ -9,9 +9,10 @@
 # GO_ARCH can be set to a different go-relase-archive
 # When TMPDIR is set, it is used for the temporary directory
 
-gover=1.11.5
-goloc=/usr/local # Install location for the go tree
-bin=/usr/local/bin # Install location for gocryptfs binary
+gover=1.12  # Check for latest version: https://golang.org/dl/
+goloc=/usr/local  # Install location for the go tree
+bin=/usr/local/bin  # Install location for gocryptfs binary
+git=github.com/rfjakob/gocryptfs
 
 Abort(){ # $1:message
 	echo "ABORT: $1"
@@ -26,7 +27,7 @@ if ((newgo)) || ! go=$(type -p go)
 then
 	arch=$(uname -m)
 	[[ $GO_ARCH ]] && go_arch=$GO_ARCH ||
-		case $arch in # Check for latest version: https://golang.org/dl/
+		case $arch in
 			armv7l) go_arch=go$gover.linux-armv6l.tar.gz ;;
 			x86_64) go_arch=go$gover.linux-amd64.tar.gz ;;
 			*) Abort "manually select the right go release for $arch"
@@ -37,8 +38,13 @@ then
 		Abort "could not download go and it's not in PATH"
 	tar xf "$tmp/$go_arch" -C "$tmp" || Abort "error unpacking $go_arch to $tmp"
 	# Move install directory if it exists already
-	[[ -d $goloc/go ]] && ! sudo mv "$goloc/go" "$goloc/$go_old$RANDOM" &&
-		Abort "could not move $goloc/go out of the way"
+	if [[ -d $goloc/go ]]
+	then
+		ls /root &>/dev/null || echo "Privileges required to move old go directory"
+		! sudo mv "$goloc/go" "$goloc/$go_old$RANDOM" &&
+			Abort "could not move $goloc/go out of the way"
+	fi
+	ls /root &>/dev/null || echo "Privileges required to install go directory"
 	sudo mv "$tmp/go" "$goloc" || Abort "could not move $tmp/go to $goloc"
 	export PATH="$goloc/go/bin:$PATH"
 	echo "Set in .bashrc: export GOROOT='$goloc/go' GOPATH='~/go'"
@@ -47,10 +53,11 @@ then
 fi
 
 # Install gocryptfs
-repo=$("$go" env GOPATH)/src/github.com/rfjakob/gocryptfs
-"$go" get -du github.com/rfjakob/gocryptfs
+repo=$("$go" env GOPATH)/src/$git
+"$go" get -d -u $git
 "$repo/build.bash"
 # "$repo/test.bash"
-sudo cp "$repo/gocryptfs "$bin" && echo "gocryptfs installed in $bin"
+ls /root &>/dev/null || echo "Privileges required to install gocryptfs"
+sudo cp "$repo/gocryptfs" "$bin" && echo "gocryptfs installed in $bin"
 
 exit 0
