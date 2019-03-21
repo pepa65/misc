@@ -34,15 +34,15 @@ Wallpaper(){  # $1: imagefile
 	then
 		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/image-path --set "$1" 2>/dev/null
 		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null
-	elif type -P feh >/dev/null
+	elif type -p feh >/dev/null
 	then feh --bg-fill "$1"
-	elif type -P nitrogen >/dev/null
+	elif type -p nitrogen >/dev/null
 	then nitrogen --set-zoom-fill "$1"
-	elif type -P bgs >/dev/null
+	elif type -p bgs >/dev/null
 	then bgs "$1"
-	elif type -P hsetroot >/dev/null
+	elif type -p hsetroot >/dev/null
 	then hsetroot -fill "$1"
-	elif type -P habak >/dev/null
+	elif type -p habak >/dev/null
 	then habak -mS "$1"
 	elif [[ $(uname) = "Darwin" ]]
 	then osascript -e "Tell 'Finder' to set desktop picture to POSIX file '${1/#\~/$HOME}'"
@@ -53,7 +53,7 @@ Wallpaper(){  # $1: imagefile
 
 Main(){
 	[[ $1 = -h || $1 = --help ]] && Help
-	! type -P wget >/dev/null && echo "ERROR: wget required" && return 1
+	! type -p wget >/dev/null && echo "ERROR: wget required" && return 1
 	pause=0
 	[[ $1 = "-p" ]] && pause=1 && shift
 	[[ $1 ]] && proj=$1 && shift
@@ -63,7 +63,7 @@ Main(){
 	# default is the first element, random the last
 	p=(mercator peters rectangular random)
 	printf '%s\n' ${p[@]} |grep -q "^$proj$" || proj=$p  ## if not found: default
-	[[ $proj = random ]] && proj=${p[$((RANDOM%(${#p[@]-1)}))]}
+	[[ $proj = random ]] && proj=${p[$((RANDOM%(${#p[@]}-1)))]}
 
 	dir=/tmp
 	pic=$dir/earthwallpaperlive.jpg
@@ -78,7 +78,7 @@ Main(){
 	sleep 1
 
 	# For peters cut 26 pixels from top and bottom
-	[[ $proj = peters ]] && type -P convert >/dev/null &&
+	[[ $proj = peters ]] && type -p convert >/dev/null &&
 		convert "$pic" +repage -trim -fuzz 90% +repage "$pic"
 
 	Wallpaper "$pic" >/dev/null
