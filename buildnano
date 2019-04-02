@@ -38,7 +38,7 @@ gitdir=${GITDIR:=~/git}
 nanogit="http://git.savannah.gnu.org/git/nano.git"
 
 # URL of latest release
-nanosrc="https://nano-editor.org/dist/latest/nano-3.2.tar.xz"
+nanosrc="https://nano-editor.org/dist/latest/nano-4.0.tar.xz"
 
 # Required packages
 req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff"
