@@ -62,5 +62,6 @@ echo "<br><br><br><br><br>" >>"$out2"
 # Finalize out3
 echo "a:$n:{$o3}" |gzip --no-name |tail -c +11 |head -c -8 >"$out3.gz"
 echo -n "<?php /* $(base64 -w 0 "$out3.gz") */ ?>" >"$out3"
+rm "$out3.gz"
 
 exit 0
