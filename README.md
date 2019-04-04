@@ -290,3 +290,13 @@ Usage: `keepassxml2json [-d|--debug] <in.xml> <out.json>`
 **Sanitize potentially identifying invisible characters**
 
 * Default spelling lists included: `US.safetext` and `UK.safetext`
+
+## savedio
+**Export saved.io links through the API into a json file, and convert it into 3 formats:
+- A 'Netscape.html' file (supposedly) importable by Shaarli
+- An encoded php-array that Shaarli uses as internal storage 'datastore.php'
+- An html5 page with links**
+
+* Required: wget date jq gzip coreutils(base64 head tail)
+
+* Environment variables: SAVEDIO_KEY SAVEDIO_DEVKEY SAVEDIO_DIR

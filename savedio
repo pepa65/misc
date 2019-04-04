@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# savedio - Export saved.io links through the API into a json file,
+#   and convert it into 3 formats:
+# - A 'Netscape.html' file (supposedly) importable by Shaarli
+# - An encoded php-array that Shaarli uses as internal storage 'datastore.php'
+# - An html5 page with links
+# Required: wget date jq gzip coreutils(base64 head tail)
+
+# Fill in here or use environment variables SAVEDIO_KEY/DEVKEY/DIR
+key=
+devkey=
+dir=
+
+api='https://devapi.saved.io/bookmarks'
+key=${SAVEDIO_KEY:-$key}
+devkey=${SAVEDIO_DEVKEY:-$devkey}
+dir=${SAVEDIO_DIR:-$dir}
+limit=500
+api='https://devapi.saved.io/bookmarks'
+in=$dir/savedio.json
+out1=$dir/Netscape.html
+out2=$dir/savedio.html
+out3=$dir/Shaarli-datastore.php
+
+wget -qO "$in" "$api?key=$key&devkey=$devkey&limit=$limit"
+
+# Start out1:Netscape.html
+cat <<-EOH >"$out1"
+	<!DOCTYPE NETSCAPE-Bookmark-file-1>
+	<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+	<!-- This is an automatically generated file.
+	     It will be read and overwritten.
+	     Do Not Edit! -->
+	<TITLE>Links</TITLE>
+	<H1>Shaarli $(date -R)</H1>\n<DL><p>
+EOH
+
+# Start out2: General html link page
+echo -e "<!DOCTYPE html>\n<title>saved.io</title>" >"$out2"
+
+n=0 t='    ' t2=$t$t t3=$t$t2 t4=$t$t3 t5=$t$t4 o3=
+while read id
+do
+	read title
+	read date
+	read url
+	[[ ${url:0:8} = '"http://' ]] || url='"http://'${url:1}
+	bid=${id:1:-1} btitle=${title:1:-1} bdate=${date:1:-1} burl=${url:1:-1}
+	echo "<DT><A HREF=$url ADD_DATE=\"$(date -d "$bdate" +%s)\" PRIVATE=\"1\" TAGS=\"\">$btitle</A>" >>"$out1"
+	echo "<a href=$url>$btitle ($bdate)</a><br>" >>"$out2"
+	o3+="i:$n;a:9:{s:2:\"id\";i:$((n++));s:5:\"title\";s:${#btitle}:$title;s:3:\"url\";s:${#burl}:$url;s:11:\"description\";s:0:\"\";s:7:\"private\";i:1;s:7:\"created\";O:8:\"DateTime\":3:{s:4:\"date\";s:26:\"$bdate.000000\";s:13:\"timezone_type\";i:3;s:8:\"timezone\";s:12:\"Asia/Bangkok\";}s:7:\"updated\";N;s:4:\"tags\";s:0:\"\";s:8:\"shorturl\";s:${#bid}:$id;}"
+done <<<"$(jq -s -c 'sort|reverse|.[][]|.bk_id,.bk_title,.bk_date,.bk_url' "$in")"
+
+# End out1
+echo "</DL><p>" >>"$out1"
+
+# End out2
+echo "<br><br><br><br><br>" >>"$out2"
+
+# Finalize out3
+echo "a:$n:{$o3}" |gzip --no-name |tail -c +11 |head -c -8 >"$out3.gz"
+echo -n "<?php /* $(base64 -w 0 "$out3.gz") */ ?>" >"$out3"
+
+exit 0
