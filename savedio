@@ -12,10 +12,11 @@ key=
 devkey=
 dir=
 
-api='https://devapi.saved.io/bookmarks'
 key=${SAVEDIO_KEY:-$key}
 devkey=${SAVEDIO_DEVKEY:-$devkey}
 dir=${SAVEDIO_DIR:-$dir}
+! [[ $key && $devkey && $dir ]] && echo "ABORT: Missing variables" && exit 1
+
 limit=500
 api='https://devapi.saved.io/bookmarks'
 in=$dir/savedio.json
