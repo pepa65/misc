@@ -38,7 +38,7 @@ gitdir=${GITDIR:=~/git}
 nanogit="http://git.savannah.gnu.org/git/nano.git"
 
 # URL of latest release
-nanosrc="https://nano-editor.org/dist/latest/nano-4.0.tar.xz"
+nanosrcdir="https://nano-editor.org/dist/latest"
 
 # Required packages
 req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff"
@@ -105,10 +105,14 @@ else
 	tmpdir=$(readlink -e "$tmpdir") here=$PWD
 	trap "cd '$here'; rm -rf -- '$tmpdir'" QUIT EXIT
 	cd "$tmpdir" || Abort "could not enter directory $tmpdir"
-	wget -q "$nanosrc" || Abort "could not download nano source archive"
-	file=${nanosrc##*/}
+	wget -q "$nanosrcdir/ChangeLog" ||
+		Abort "could not download nano changelog"
+	ver=$(head -1 ChangeLog) ver=${ver##* v} ver=${ver%:}
+	wget -q "$nanosrcdir/nano-$ver.tar.xz" ||
+		Abort "could not download nano source archive"
+	file="nano-$ver.tar.xz"
 	tar xf "$file" || Abort "could not unpack $file"
-	dir=${file%.tar.?z}
+	dir="nano-$ver"
 	cd "$dir" || Abort "could not enter directory $tmpdir/$dir"
 fi
 
