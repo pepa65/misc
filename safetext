@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -- coding: utf-8 --
 """
-safetext - Sanitize potentially identifying invisible characters
+safetext - Sanitize potentially identifying 'fingerprinting' characters
 Optional: files with country-specific spellings in the same directory
   (comes with: US.safetext and UK.safetext)
 Adapted from https://github.com/DavidJacobson/SafeText
@@ -197,7 +197,8 @@ for line in fileinput.input(args.file):
 
 plural = ""
 if found != 1: plural="s"
-err("+++ Found {} line{} with invisible instances\n".format(found, plural))
+err("+++ Found {} line{} with potentially 'fingerprinting' characters\n".
+		format(found, plural))
 
 if not args.notext: print(out.strip())
 if found: sys.exit(1)
