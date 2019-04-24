@@ -56,7 +56,7 @@ Main(){
 	## Check kernel images and commandline patterns against installed packages
 	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'  ## Installed packages sed pattern
 	ipkg=$(dpkg -l | tail -n +6 |sed "$sedpkg")  ## Installed packages
-	sedsf=$(sed 's@ @ -e @g' <<<' '$sf)  ## Sed pattern for superfluous kernels
+	sedsf=$(sed 's@^@ -e @g' <<<' '$sf)  ## Sed pattern for superfluous kernels
 	[[ $sf ]] && pkgsf=$(grep $sedsf <<<"$ipkg")  ## Superfluous packages
 	if [[ $pkgsf ]]
 	then  ## Superflous kernels installed as packages
