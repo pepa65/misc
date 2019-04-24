@@ -153,6 +153,7 @@ else:
 
 
 country_dics = {}
+cwd = os.getcwd()
 dir = os.path.dirname(os.path.realpath(__file__))
 os.chdir(dir)
 for dic in iglob("*."+spellsuffix):
@@ -161,6 +162,7 @@ for dic in iglob("*."+spellsuffix):
 		lines = file.readlines()
 		for each in lines:
 			country_dics[dic].append(each.strip())
+os.chdir(cwd)
 
 found, i, out = 0, 0, ""
 for line in fileinput.input(args.file):
@@ -168,18 +170,18 @@ for line in fileinput.input(args.file):
 	display = line
 	for character in ZERO_WIDTH_CHARS:
 		if ZERO_WIDTH_CHARS[character] in line:
-			err("---Found invisible {} on line {}:".format(character.lower(), i))
+			err("--- Found invisible {} on line {}:".format(character.lower(), i))
 			display = display.replace(ZERO_WIDTH_CHARS[character], underline("*"))
 			line = line.replace(ZERO_WIDTH_CHARS[character], "")
 	for letter in HOMOGLYPHS:
 		if HOMOGLYPHS[letter] in line:
-			err("---Found '{}' on line {}:".format(letter, i))
+			err("--- Found '{}' on line {}:".format(letter, i))
 			display = display.replace(HOMOGLYPHS[letter],
 					underline(HOMOGLYPHS[letter]))
 			line = line.replace(HOMOGLYPHS[letter], letter[-1])
 	for space in NON_STANDARD_SPACES:
 		if NON_STANDARD_SPACES[space] in line:
-			err("---Found non-standard space on line {}:".format(i))
+			err("--- Found non-standard space on line {}:".format(i))
 			display = display.replace(NON_STANDARD_SPACES[space], underline(" "))
 			line = line.replace(NON_STANDARD_SPACES[space], " ")
 	if display != line:
@@ -190,12 +192,12 @@ for line in fileinput.input(args.file):
 	for dic in country_dics:
 		for word in country_dics[dic]:
 			if word in line.lower():
-				err("---{} spelling of '{}' on line {}:".
+				err("--- {} spelling of '{}' on line {}:".
 						format(dic.split(".")[0], word, i))
 
 plural = ""
 if found != 1: plural="s"
-err("+++Found {} line{} with invisible instances\n".format(found, plural))
+err("+++ Found {} line{} with invisible instances\n".format(found, plural))
 
 if not args.notext: print(out.strip())
 if found: sys.exit(1)
