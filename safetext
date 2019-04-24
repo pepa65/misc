@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 # -- coding: utf-8 --
-
-# safetext - Sanitize potentially identifying invisible characters
-# Adapted from https://github.com/DavidJacobson/SafeText
-# Inspired by https://www.zachaysan.com/writing/2017-12-30-zero-width-characters
-# Optional: *.<spellsuffix> files with country-specific spellings in the same directory
-#   (comes with: US.safetext and UK.safetext)
+"""
+safetext - Sanitize potentially identifying invisible characters
+Optional: files with country-specific spellings in the same directory
+  (comes with: US.safetext and UK.safetext)
+Adapted from https://github.com/DavidJacobson/SafeText
+"""
 
 import argparse
 import sys
 import os
+import fileinput
 from glob import iglob
 
-sanesuffix = "sane"
+version = 'safetext 0.1'
 spellsuffix = "safetext"
 
 ZERO_WIDTH_CHARS = {
@@ -131,25 +132,25 @@ HOMOGLYPHS = { # From https://en.wikipedia.org/wiki/IDN_homograph_attack
 }
 
 def underline(chars):
-	if windows:
-		return "'{}'".format(chars)
 	return '\033[4m' + chars + '\033[0m'
 
-def safe_windows_print(s):
-		try:
-			print(s)
-		except UnicodeEncodeError as e:
-			for c in s:
-				try:
-					print(c, end='')
-				except UnicodeEncodeError as d:
-					print('?', end='')
+def err(s):
+	print(s, file=sys.stderr)
 
-parser = argparse.ArgumentParser(description="Sanitize potentially identifying invisible characters")
-parser.add_argument("input", metavar="I", help="Text file to be sanitized")
-args = parser.parse_args()
-infile = os.path.realpath(args.input)
-print(infile)
+parser = argparse.ArgumentParser(add_help=False,
+		description="Sanitize potentially identifying invisible characters")
+parser.add_argument("--notext", "-n", action='store_true',
+		help="Don't display sanitized text")
+parser.add_argument("--help", "-h", action="help", help="Show this help text")
+parser.add_argument("--version", "-V", action="version",
+		version=version, help="Display version")
+if sys.stdin.isatty():
+	parser.add_argument("file", nargs='?', help="Input file to sanitize")
+	args = parser.parse_args()
+else:
+	args = parser.parse_args()
+	args.file = '/dev/stdin'
+
 
 country_dics = {}
 dir = os.path.dirname(os.path.realpath(__file__))
@@ -161,48 +162,41 @@ for dic in iglob("*."+spellsuffix):
 		for each in lines:
 			country_dics[dic].append(each.strip())
 
-windows = sys.platform == "win32"
-found = 0
-with open(infile, mode="r", encoding="UTF-8") as file:
-	lines = file.readlines()
-	for index, line in enumerate(lines):
-		display = line
-		for character in ZERO_WIDTH_CHARS:
-			if ZERO_WIDTH_CHARS[character] in line:
-				print("++ Found invisible {} on line {}".format(character.lower(), index+1))
-				display = display.replace(ZERO_WIDTH_CHARS[character], underline("*"))
-				line = line.replace(ZERO_WIDTH_CHARS[character], "")
-		for letter in HOMOGLYPHS:
-			if HOMOGLYPHS[letter] in line:
-				print("++ Found '{}' on line {}".format(letter, index+1))
-				display = display.replace(HOMOGLYPHS[letter], underline(HOMOGLYPHS[letter]))
-				line = line.replace(HOMOGLYPHS[letter], letter[-1])
-		for space in NON_STANDARD_SPACES:
-			if NON_STANDARD_SPACES[space] in line:
-				print("++ Found non-standard space on line {}".format(index+1))
-				display = display.replace(NON_STANDARD_SPACES[space], underline(" "))
-				line = line.replace(NON_STANDARD_SPACES[space], " ")
-		if display != line:  # Print modified line
-			found += 1
-			if windows:
-				safe_windows_print("   "+display.strip())
-			else:
-				print("   "+display.strip())
-		lines[index] = line  # Update list
+found, i, out = 0, 0, ""
+for line in fileinput.input(args.file):
+	i += 1
+	display = line
+	for character in ZERO_WIDTH_CHARS:
+		if ZERO_WIDTH_CHARS[character] in line:
+			err("---Found invisible {} on line {}:".format(character.lower(), i))
+			display = display.replace(ZERO_WIDTH_CHARS[character], underline("*"))
+			line = line.replace(ZERO_WIDTH_CHARS[character], "")
+	for letter in HOMOGLYPHS:
+		if HOMOGLYPHS[letter] in line:
+			err("---Found '{}' on line {}:".format(letter, i))
+			display = display.replace(HOMOGLYPHS[letter],
+					underline(HOMOGLYPHS[letter]))
+			line = line.replace(HOMOGLYPHS[letter], letter[-1])
+	for space in NON_STANDARD_SPACES:
+		if NON_STANDARD_SPACES[space] in line:
+			err("---Found non-standard space on line {}:".format(i))
+			display = display.replace(NON_STANDARD_SPACES[space], underline(" "))
+			line = line.replace(NON_STANDARD_SPACES[space], " ")
+	if display != line:
+		found += 1
+		err(display.strip())
+	out += line
 
-		for dic in country_dics:
-			for word in country_dics[dic]:
-				if word in line.lower():  # Normalize to lowercase
-					print("-- {} spelling of '{}' on line {}".format(dic.split(".")[0], word, index+1))
+	for dic in country_dics:
+		for word in country_dics[dic]:
+			if word in line.lower():
+				err("---{} spelling of '{}' on line {}:".
+						format(dic.split(".")[0], word, i))
 
-if found > 0:
-	outfile = infile+"."+sanesuffix
-	plural = ""
-	if found > 1: plural="s"
-	print("++ {} line{} with invisible instances. Sanitized file: {}".format(found, plural, outfile))
-	file = open(outfile, mode="w", encoding="UTF-8")
-	for line in lines:
-		file.write(line)
-	file.close()
-else:
-	print("-- No invisible instances found")
+plural = ""
+if found != 1: plural="s"
+err("+++Found {} line{} with invisible instances\n".format(found, plural))
+
+if not args.notext: print(out.strip())
+if found: sys.exit(1)
+else: sys.exit(0)
