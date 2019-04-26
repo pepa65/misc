@@ -5,7 +5,7 @@
 
 # For the latest version, see: https://borg.bauerj.eu or
 #   https://github.com/borgbackup/borg/releases
-version='1.1.8'
+version='1.1.9'
 
 # Install location for borg binary
 bin=/usr/local/bin # Will override /usr/bin for the Ubuntu repo version
