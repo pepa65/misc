@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# xran - Arranging 2 screens with different pixel densities next to each other
+
+xran(){ # $1:scale $2:offset from bottom $3:left $4:right $5:width $6:height
+	# parameter defaults
+	local defaults=(1 0 HDMI-1 eDP-1 1920 1080) n=0 p=0 i d l f
+	pl1(){ echo "xrandr --output $left --scale 1x1 --mode ${width}x$height"\
+			"--fb $((width*m/f+width))x$height --pos 0x0";}
+	prs(){ echo "xrandr --output $right --scale ${s}x$s --mode ${width}x$height"\
+			"--pos ${width}x$((height-height*m/f-offset))";}
+	pls(){ echo "xrandr --output $left --scale ${s}x$s --mode ${width}x$height"\
+			"--fb $((width*m/f+width))x$((height*m/f)) --pos 0x0";}
+	pr1(){ echo "xrandr --output $right --scale 1x1 --mode ${width}x$height"\
+			"--pos $((width*m/f))x$((height*m/f-height-offset))";}
+
+	while (($#)); do [[ $1 = -p ]] && p=1 || defaults[n++]=$1; shift; done
+	read scale offset left right width height <<<"${defaults[@]}"
+	i=${scale%%.*} d=${scale##*.} l=${#d} f=$((10**l))
+	if [[ -z $i || $i = 0 ]]
+	then # Scale small one down
+		s=0.$d m=$d
+		((p)) && pl1 || eval $(pl1)
+		((p)) && prs || eval $(prs)
+	else # Scale big one up
+		s=$i.$d m=$i$d
+ 		((p)) && pls || eval $(pls)
+ 		((p)) && pr1 || eval $(pr1)
+	fi
+}
+
+xran "$@"
