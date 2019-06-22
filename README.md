@@ -306,3 +306,7 @@ Usage: `keepassxml2json [-d|--debug] <in.xml> <out.json>`
 * Required: wget date jq gzip coreutils(base64 head tail)
 
 * Environment variables: SAVEDIO_KEY SAVEDIO_DEVKEY SAVEDIO_DIR
+
+## noiseclean
+**Filter out noise based on sample**
+* Required: ffmpeg(ffmpeg ffprobe) sox
