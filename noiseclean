@@ -1,0 +1,75 @@
+#!/bin/bash
+# noiseclean - Filter out noise based on sample
+# Required: ffmpeg(ffmpeg ffprobe) sox
+# After https://github.com/yonilevy/noiseclean
+
+Usage(){
+	cat <<-EOH >&2
+		noiseclean - Filter out noise based on sample
+		Usage: noiseclean <in> <out> [<sensitivity> [<noisedata>]]"
+		  <noisedata>: <starttime> <length (seconds)> [<samplefile>]"
+		  Defaults: <sensitivity>:0.21, <noisedata>:first half second of <in>"
+		Abort: wrong number of arguments"
+	EOH
+	exit 1
+}
+
+audioformat=wav
+
+# Requirements
+(($#<2 || $#==4 || $#>6)) && Usage
+! type -p ffmpeg >/dev/null && echo "Abort: 'ffmpeg' not found" && exit 2
+! type -p sox >/dev/null && echo "Abort: 'sox' not found" && exit 3
+[[ ! -e $1 ]] && echo "Abort: '$1' not found" && exit 4
+[[ -e $2 ]] && read -p "File '$2' exists, overwrite? [y/N]: " yn || yn=y
+[[ ! ${yn:0:1} = y ]] && echo "Abort: not overwriting '$2'" && exit 5
+
+! ffprobe=$(ffprobe -v warning -show_streams "$1") &&
+	echo "Abort: inputfile '$1' not recognized as video or audio" &&
+	exit 6
+
+inB=${1##*/} inE=${inB##*.} vid=0
+[[ $ffprobe =~ codec_type=video ]] && type=video || type=audio
+[[ $ffprobe =~ channel_layout=mono ]] && layout='-c 1' || layout=
+
+sens=0.21 sampleStart=0:0 sampleEnd=0:0.5 sample=$1
+if [[ $3 ]]
+then
+	sens=$3
+	if [[ $4 ]]
+	then
+		start=$4 length=$5
+		if [[ $6 ]]
+		then
+			sample=$6
+			[[ ! -e $6 ]] && echo "Abort: file not found: $6" && exit 7
+		fi
+	fi
+fi
+
+echo "Denoising $type: '$1'  Output: '$2'"
+echo "Sample: '$sample'  Start: $start  Length: $length  Sensitivity: $sens"
+tmpinvid="/tmp/noiseclean_tmpin.$inE"
+tmpinaud="/tmp/noiseclean_tmpin.$audioformat"
+tmpsampleaud="/tmp/noiseclean_sample.$audioformat"
+tmpprofile="/tmp/noiseclean_sample.prof"
+tmpoutaud="/tmp/noiseclean_tmpout.$audioformat"
+
+if [[ $type = video ]]
+then
+	ffmpeg -v warning -y -i "$1" -qscale:v 0 -vcodec copy -an "$tmpinvid"
+	ffmpeg -v warning -y -i "$1" -qscale:a 0 "$tmpinaud"
+else
+	ffmpeg -v warning -y -i "$1" "$tmpinaud"
+fi
+
+ffmpeg -v warning -y -i "$sample" -vn -ss "$start" -t "$length" "$tmpsampleaud"
+sox $layout "$tmpsampleaud" -n noiseprof "$tmpprofile"
+sox "$tmpinaud" "$tmpoutaud" noisered "$tmpprofile" "$sens"
+
+[[ $type = video ]] &&
+	ffmpeg -v warning -y -i "$tmpoutaud" -i "$tmpinvid" -vcodec copy \
+		-qscale:v 0 -qscale:a 0 "$2" ||
+	ffmpeg -v warning -y -i "$tmpoutaud" "$2"
+
+exit 0

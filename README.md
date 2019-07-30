@@ -37,10 +37,18 @@ Usage: `count <file> [-s]`
 Usage: `rmkernels`
 
 ## xran
-**Arranging 2 screens with different pixel densities next to each other**
+**Arranging 2 screens with different pixel densities beside each other**
 
-Usage: `xran [scale [offset [left [right [ width [height]]]]]]`
-    `defaults: 1 0 HDMI-1 eDP-1 1920 1080`
+Usage:
+```
+xran [-h|-n] [<scale>[<offset>[<left>[<right>[<width>[<height>]]]]]]
+  -h|--help:  Display this help text
+  -n|--norun|-p|--print:  No execution, just displaying xrandr commands
+  Default parameters: 1 0 HDMI-1 eDP-1 1920 1080
+    <scale> > 1 scales up the left hand screen, < 1 scales it down
+    <offset>: from bottom of the left screen
+    <left>/<right>: names of the displays
+```
 
 ## backup
 **back up a list of files and directories**
@@ -226,20 +234,23 @@ Usage:  $Self [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 * Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm)
 
 ## bootctlu
-**Setting up and registering systemd_boot on Ubuntu/Void/Arch**
+**Setting up and registering gummiboot on Ubuntu/Void/Arch**
 
 Usage:
 ```
 bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
-         [-e|--esp <EFI-mount>] [-m|--memtest] [-r|--register]
-    -h/--help:             Only display this help text.
-    -n/--nogo:             No writing to the system at all.
-    -q/--quiet:            Only fatal errors output to the terminal.
-    -v/--verbose:          Show more detail of the actions.
-    -e/--esp <EFI-mount>:  EFI System Partition mountpoint, default:
-                           /boot/efi, can also be set in BOOTCTLU_ESP.
-    -m/--memtest:          Also download and set up a MemTest86 entry.
-    -r/--register:         Also register the efi-loader with UEFI.
+         [-i|--imgdir <images dir>] [-e|--esp <EFI-mount>]
+         [-m|--memtest] [-r|--register]
+    -h/--help:                 Only display this help text.
+    -n/--nogo:                 No writing to the system at all.
+    -q/--quiet:                Only fatal errors output to the terminal.
+    -v/--verbose:              Show more detail of the actions.
+    -i/--imgdir <images dir>:  Kernel & initrd images directory, default:
+                               /boot, overrides BOOTCTLU_IMGDIR.
+    -e/--esp <EFI-mount>:      EFI System Partition mountpoint, default:
+                               /boot/efi, overrides BOOTCTLU_ESP.
+    -m/--memtest:              Also download and set up a MemTest86 entry.
+    -r/--register:             Also register the efi-loader with UEFI.
 ```
 * Required: util-linux(lsblk) coreutils(tee sort cut mkdir cat cp ls rm cd) grep sed systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar. For -r/--register: efibootmgr.
 
@@ -306,3 +317,7 @@ Usage: `keepassxml2json [-d|--debug] <in.xml> <out.json>`
 * Required: wget date jq gzip coreutils(base64 head tail)
 
 * Environment variables: SAVEDIO_KEY SAVEDIO_DEVKEY SAVEDIO_DIR
+
+## noiseclean
+**Filter out noise based on sample**
+* Required: ffmpeg(ffmpeg ffprobe) sox

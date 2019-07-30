@@ -14,10 +14,13 @@ menuname='Main boot menu'
 # Timeout for bootmenu (seconds)
 timeout=6
 
-# Used when none is specified and there are more than 1 mounted
+# Default directory for kernel initrd images
+defimgdir=/boot
+
+# ESP directory: used when none specified and more than 1 is mounted
 defesp=/boot/efi
 
-# Boot loader binary location
+# Boot loader binary file
 bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
 
 # Downloads
@@ -28,15 +31,18 @@ Help(){
 		bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 
 		Usage:  bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
-		                 [-e|--esp <EFI-mount>][-m|--memtest] [-r|--register]
-		    -h/--help:                Only display this help text.
-		    -n/--nogo:                No writing to the system at all.
-		    -q/--quiet:               Only fatal errors output to the terminal.
-		    -v/--verbose:             Show more detail of the actions.
-		    -e/--esp <EFI-mount>:     EFI System Partition mountpoint, default:
-		                              $defesp, can also be set in BOOTCTLU_ESP.
-		    -m/--memtest:             Also download and set up a MemTest86 entry.
-		    -r/--register:            Also register the efi-loader with UEFI.
+		                 [-i|--imgdir <images dir>] [-e|--esp <EFI-mount>]
+		                 [-m|--memtest] [-r|--register]
+		    -h/--help:                 Only display this help text.
+		    -n/--nogo:                 No writing to the system at all.
+		    -q/--quiet:                Only fatal errors output to the terminal.
+		    -v/--verbose:              Show more detail of the actions.
+		    -i/--imgdir <images dir>:  Kernel & initrd images directory, default:
+		                               $defimgdir, overrides BOOTCTLU_IMGDIR.
+		    -e/--esp <EFI-mount>:      EFI System Partition mountpoint, default:
+		                               $defesp, overrides BOOTCTLU_ESP.
+		    -m/--memtest:              Also download and set up a MemTest86 entry.
+		    -r/--register:             Also register the efi-loader with UEFI.
 	EOH
 }
 
@@ -51,7 +57,7 @@ Echo(){ # $1: message, $2: errorcode (exit if go and non-zero!)
 	((quiet)) || echo -ne "$m"
 }
 
-specesp=$BOOTCTLU_ESP off=/dev/null
+imgdir=$defimgdir specesp=$BOOTCTLU_ESP off=/dev/null
 go=1 quiet=0 rd=$off verbose=0 register=0 memtest=0 esp=
 while (($#))
 do
@@ -59,6 +65,10 @@ do
 	-n|--nogo) go=0 ;;
 	-q|--quiet) quiet=1 ;;
 	-v|--verbose) verbose=1 rd=/dev/stdout ;;
+	-i|--imgdir) [[ $BOOTCTLU_IMGDIR ]] &&
+			Echo "WARNING: overriding BOOTCTLU_IMGDIR with '$2'"
+		imgdir=$2
+		shift ;;
 	-e|--esp) [[ ${2%%/*} ]] && Echo "Mountpoint '$2' must start with /" 1
 		[[ $specesp ]] && Echo "WARNING: overriding BOOTCTLU_ESP with '$2'"
 		specesp=$2
@@ -103,7 +113,7 @@ else  # No EFI-mount specified
 		esp=$mp
 	fi
 fi
-Echo "Working with EFI mountpoint '$esp'"
+Echo "Copying images from $imgdir into EFI mountpoint $esp"
 
 # Initialize and prepare loader confguration
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' |$sudo tee /etc/machine-id
@@ -153,17 +163,17 @@ fi
 ((go)) && $sudo rm -rf -- "$iddir"/linux-* "$entries/$id-linux-"*.conf
 
 # Making new entries for each kernel binary
-for kernel in /boot/vmlinuz-*
+for kernel in $imgdir/vmlinuz-*
 do
-	version=${kernel#/boot/vmlinuz-}
+	version=${kernel#$imgdir/vmlinuz-}
 	shopt -s extglob
 	[[ $release = @(void|Artix|Antergos Linux|Arch Linux) ]] &&
-		initrd="/boot/initramfs-$version.img" ||
-		initrd="/boot/initrd.img-$version"
+		initrd=$imgdir/boot/initramfs-$version.img ||
+		initrd=$imgdir/initrd.img-$version
 	entry="$iddir/linux-$version"
 	((go)) && ! $sudo mkdir -p "$entry" &&
 		Echo "Problem making directory $entry" 9
-	Echo "\nCopying files to $entry\n"
+	Echo "\nCopying images to $entry\n"
 	((go)) && $sudo cp "$kernel" "$entry/linux"
 	((go)) && $sudo cp "$initrd" "$entry/initrd"
 	out="$entries/$id-linux-$version.conf"
