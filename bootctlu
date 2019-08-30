@@ -151,7 +151,7 @@ then
 	echo -e "$file" |$sudo tee "$out" >$rd
 	Echo "\nInstalling bootloader binaries\n" 0
 	$sudo cp "$bootloader" "$esp/EFI/bootctlu/gummi.efi"
-	$sudo cp "$bootloader" "$esp/EFI/Boot/BOOTX64.EFI"
+	$sudo cp "$bootloader" "$esp/EFI/BOOT/BOOTX64.EFI"
 else
 	Echo "\nWriting '$out'"
 	Echo ":\n\n$file" 0
