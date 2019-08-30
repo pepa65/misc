@@ -34,11 +34,11 @@ Xran(){ # $1:scale $2:offset from bottom $3:left $4:right $5:width $6:height
 			case $1 in
 				-h|--help) Help; return ;;
 				-n|-p|--norun|--print) p=1 ;;
-				*) [[ ! $1 =~ ^-?[0-9.]*$ ]] &&
-						echo "Non-numeric argument: $1" && return ||
+				*) #[[ ! $1 =~ ^-?[0-9.]*$ ]] &&
+						#echo "Non-numeric argument: $1" && return ||
 						defaults[n++]=$1
 					s=${1//[-0-9]} s=${#s}
-					((s>1)) && echo "More than one decimal point: $1" && return
+					#((s>1)) && echo "More than one decimal point: $1" && return
 					[[ ${1:0:1} = - && ! $n = 2 ]] &&
 						echo "Argument cannot be negative: $1" && return
 			esac

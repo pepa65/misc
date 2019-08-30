@@ -303,6 +303,16 @@ Usage: `keepassxml2json [-d|--debug] <in.xml> <out.json>`
 
 * Required: grep sed coreutils(tail tr cd mv rm ls)
 
+## tpm
+**Terminal Password Manager (uses standard 'pass' database)**
+* Copyright: **2013-2016 Sören Tempel, 2019 pepa65**
+* License: **GPL3+**
+
+Usage: 'tpm <command> <entry>'
+    command: help / show / insert / delete
+
+* Environment variables: **TPM_DIR TPM_KEY**
+
 ## safetext
 **Sanitize potentially identifying invisible characters**
 

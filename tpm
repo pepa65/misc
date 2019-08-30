@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# tpm - Terminal Password Manager (uses standard 'pass' database)
+# Copyright (C) 2013-2016 Sören Tempel, GPL3+
+# Usage: tpm <command> <entry>
+#   command: help / show / insert / delete
+# Environment variables: TPM_DIR TPM_KEY
+
+umask 077
+
+# Variables
+Gpg_opts="--quiet --yes --batch"
+: ${TPM_DIR:=$HOME/.password-store}
+Keyfile=$TPM_DIR/.gpg-id
+[[ -r $Keyfile && -z $TPM_KEY ]] && read -r TPM_KEY <"$Keyfile"
+
+Abort(){
+	c='<command>'
+	[[ $2 ]] && c=$2
+	echo "tpm - Terminal Password Manager (uses standard 'pass' database)"
+	echo "Usage:  tpm $c <entry>" >&2
+	[[ $2 ]] || echo "    command:  help / show / insert / delete"
+	[[ $1 ]] && echo "$1" >&2
+	exit 1
+}
+
+Gpg(){
+	[[ $TPM_KEY ]] &&
+		gpg2 $Gpg_opts --recipient "$TPM_KEY" "$@" ||
+		gpg2 $Gpg_opts --default-recipient-self "$@"
+}
+
+Show(){
+	local path=$TPM_DIR/$1.gpg
+	[[ -z $1 ]] && Abort "Missing entry" show
+	[[ ! -e $path ]] && Abort "Requested entry doesn't exist" show
+	Gpg --decrypt "$path" 2>/dev/null
+}
+
+Insert(){
+	[[ -z $1 ]] && Abort "Missing entry" insert
+	local path=$TPM_DIR/$1.gpg password
+	[[ -e $path ]] && Abort "Entry already exists, remove it first" insert
+	[[ -t 0 ]] && echo "Password for '$1': " && stty -echo
+  IFS= read -r password
+	[[ -t 0 ]] && stty echo && echo
+	[[ -z $password ]] && Abort "No password entered" insert
+	mkdir -p "${path%/*}"
+	echo "$password" |Gpg --encrypt --output "$path"
+}
+
+Delete(){
+	local path=$TPM_DIR/$1.gpg
+	[[ -z $1 ]] && Abort "Missing entry" delete
+	[[ ! -e $path ]] && Abort "Requested entry doesn't exist" delete
+	read -p "Enter to delete '$1', Ctrl-C to abort "
+	echo "'$1' deleted"
+	rm -f -- "$path"
+}
+
+# Parse input
+(($#>2)) && Abort "Maximum of 2 arguments allowed"
+[[ $1 ]] || Abort "Command line arguments missing"
+case $1 in
+	-s|--show|s|show) Show "$2" ;;
+	-i|--insert|i|insert) Insert "$2" ;;
+	-d|--delete|d|delete) Delete "$2" ;;
+	-h|--help|h|help) Abort ;;
+	*) Abort "Unknown command: $1" ;;
+esac

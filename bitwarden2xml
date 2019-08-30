@@ -4,7 +4,7 @@
 #  database=[group[<title>,icon=0,entry=[title=<name>,<username>,<password>,<url>,<comment>,<creation?>,<lastaccess?>,<lastmod?>,expire=Never]..]..]
 #  (<comment>: <br/> for \n, &lt; for <, &amp; for &; <?>: yyyy-mo-ddThh:mi:ss)
 # Required: csvtool
-# Usage: bitwarden2xml bitwarden.csv >keepassx.kpt
+# Usage: bitwarden2xml bitwarden.csv >keepassx.xml
 
 [[ ! -f $1 || ! ${1: -4} = .csv ]] && echo "Need .csv file from Bitwarden" && exit 1
 input=$(<"$1")$'\xd' out=&1

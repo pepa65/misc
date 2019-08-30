@@ -5,7 +5,7 @@
 #   git+autoconf+autopoint+automake/wget[git/release]
 #   pkg-config gettext libncursesw5-dev groff[optional html-help]
 #   texinfo make gcc libmagic-dev[optional filetype detection]
-# Usage: buildnano [-g|--git]
+# Usage: buildnano [version|-g|--git]
 #   -g/--git: build from current git HEAD (not stable release version)
 
 # Configuration options to (un)comment-out
@@ -67,8 +67,13 @@ fi
 git=0
 if [[ $1 ]]
 then
-	[[ $1 = -g || $1 = --git ]] && git=1 req+=" git autoconf autopoint" ||
-		Abort "argument can only be -g/--git"
+	if [[ $1 = -g || $1 = --git ]]
+	then git=1 req+=" git autoconf autopoint"
+	else
+		[[ $1 =~ ^[45]\.[0-9]$ ]] &&
+			ver=$1 ||
+			Abort "argument can only be -g/--git or version; bad version: $1"
+	fi
 else
 	req+=" wget"
 fi
@@ -107,9 +112,9 @@ else
 	cd "$tmpdir" || Abort "could not enter directory $tmpdir"
 	wget -q "$nanosrcdir/ChangeLog" ||
 		Abort "could not download nano changelog"
-	ver=$(head -1 ChangeLog) ver=${ver##* v} ver=${ver%:}
+	[[ $ver ]] || ver=$(head -1 ChangeLog) ver=${ver##* v} ver=${ver%:}
 	wget -q "$nanosrcdir/nano-$ver.tar.xz" ||
-		Abort "could not download nano source archive"
+		Abort "could not download nano source archive version $ver"
 	file="nano-$ver.tar.xz"
 	tar xf "$file" || Abort "could not unpack $file"
 	dir="nano-$ver"
@@ -128,5 +133,6 @@ make || Abort "error in Make"
 # Needs make sudo
 Sudo make install-strip || Abort "error in Install"
 hash nano
+echo "Installed $(nano -V)"
 
 exit 0
