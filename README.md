@@ -37,17 +37,17 @@ Usage: `count <file> [-s]`
 Usage: `rmkernels`
 
 ## xran
-**Arranging 2 screens with different pixel densities beside each other**
+**Arrange 2 screens with different pixel densities beside each other**
 
 Usage:
 ```
-xran [-h|-n] [<scale>[<offset>[<left>[<right>[<width>[<height>]]]]]]
-  -h|--help:  Display this help text
-  -n|--norun|-p|--print:  No execution, just displaying xrandr commands
-  Default parameters: 1 0 HDMI-1 eDP-1 1920 1080
-    <scale> > 1 scales up the left hand screen, < 1 scales it down
-    <offset>: from bottom of the left screen
-    <left>/<right>: names of the displays
+xran [-h|-f] [<ldisp> [<rdisp> [<lperc> [<rperc> [<offset>]]]]]
+      -h|--help:   Just display this help text
+      -f|--force:  Execute the xrandr command (otherwise just display it)
+    Default parameters:  eDP-1 HDMI-1 100 100 0  (used when '-' is specified)
+      <ldisp>, <rdisp>:  Names of the left and right displays
+      <lperc>, <rperc>:  Scaling of left and right display in percentage
+      <offset>:          Vertical shift (negative: right display is lower)
 ```
 
 ## backup
