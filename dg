@@ -1,0 +1,20 @@
+#!/bin/bash
+# dg - Extended dig
+# Usage: dg[x] <domain> [<dnsrecordtype>]
+#   When called as something else than 'dg' then subdomains get probed
+
+subdomains=('*' www mail smtp pop imap blog en ftp ssh login webmail)
+
+[[ $0 = dg ]] && dig +nocmd "$1" +noall +answer "${2:-any}" && exit $?
+
+dig +nocmd "$1" +noall +answer "${2:-any}"
+wild_ips=$(dig +short "*.$1" "${2:-any}" |tr '\n' '|')
+wild_ips=${wild_ips%|}
+
+for sub in ${subdomains[@]}
+do dig +nocmd "$sub.$1" +noall +answer "${2:-any}"
+done |grep -vE "$wild_ips"
+
+dig +nocmd "*.$1" +noall +answer "${2:-any}"
+
+exit 0

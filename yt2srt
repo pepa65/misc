@@ -1,0 +1,33 @@
+#!/bin/bash
+# yt2srt - Convert YouTube subtitles to .srt
+
+in=$1 out=${in%.txt}.srt
+
+[[ ! -f $in ]] &&
+	echo "First argument must be the file with the youtube subtitles" && exit 1
+echo "Output file: $out"
+[[ -f $out ]] &&
+	echo "It will be overwritten unless cancelled" &&
+	read -p "Press Ctrl-C to cancel, or Enter to continue " &&
+	>"$out"
+
+time=() text=() n=0
+while read line
+do
+	if [[ $line =~ ^[0-5][0-9]:[0-5][0-9]$ ]]
+	then
+		((n++))
+		time+=("$line")
+		read line
+		text+=("'$line'")
+ fi
+done <"$in"
+
+for i in ${!text[@]}
+do
+	end=${time[$i+1]}
+	[[ -z $end ]] && end="59:59"
+	echo -e "$i\n00:${time[$i]},000 --> 00:$end,000\n${text[$i]}\n" >>"$out"
+done
+
+exit 0

@@ -19,7 +19,7 @@ Help(){
 
 Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 	# parameter defaults (no parameters: help)
-	local n=0 force=0 ld=eDP-1 rd=HDMI-1 lp=70 rp=110 vo=+0 top
+	local n=0 force=0 ld=eDP-1 rd=HDMI-1 lp=70 rp=110 vo=+260 top
 	local ldset=0 rdset=0 lpset=0 rpset=0 voset=0
 	Pr(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 		local rx=$((1920*$3/100)) lpos rpos lp rp
