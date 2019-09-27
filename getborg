@@ -10,7 +10,7 @@ version=${BORG_VERSION:-1.1.10}
 # Install location for borg binary
 bin=/usr/local/bin # Will override /usr/bin for the Ubuntu repo version
 
-urlpi="https://borg.bauerj.eu/borg-$version-armv6"
+urlpi="https://dl.bintray.com/borg-binary-builder/borg-binaries/borg-$version-armv6"
 urlpc="https://github.com/borgbackup/borg/releases/download/$version/borg-linux64"
 
 [[ $- = *i* ]] && echo "Don't source, but run like: bash $BASH_SOURCE" &&
