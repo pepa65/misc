@@ -2,25 +2,32 @@
 
 # xran - Arrange 2 screens with different pixel densities beside each other
 
+config=$HOME/.xran
+
 Help(){
 	cat <<-EOH
 		xran - Arrange 2 screens with different pixel densities beside each other
-		Usage: xran [-h|-f] [<ldisp> [<rdisp>]] [<lperc> [<rperc>]] [+|-<offset>]
-		  -h|--help:   Just display this help text
-		  -f|--force:  Execute the xrandr command (otherwise just display it)
+		Usage: xran [-h|-n] [<lD> [<rD>]] [<lS> [<rS>]] [+|-<vO>] [[-s] <sN>]
 		Default parameters:  eDP-1 HDMI-1 70 110 +0  (used when not specified)
-		  <ldisp>, <rdisp>:  Names of the left and right displays, must start with
-		                     alphabetical character.
-		  <lperc>, <rperc>:  Scaling of left and right display in whole percentages
-		  +|-<offset>:       Vertical alignment of the top edge of the screens,
-		                     must have '+' or '-' (positive: left display is lower)
+		  <lD>, <rD>:  Names of the left and right displays, must start with
+		                alphabetical character.
+		  <lS>, <rS>:  Scaling of left and right display in whole percentages.
+		  +|-<vO>:     Vertical alignment offset of the top edge of the screens,
+	                  must start with '+'/'-' (positive: left display is lower).
+		  -s <sN>:     Save the scheme name as <sN>; when <sN> is the only argument
+		                (-n is allowed), then run the scheme if saved.
+		  -n|--norun:  Don't run the xrandr command (just display the commandline).
+		  -h|--help:   Just display this help text.
+		The configfile for storing saved schemes is: $config
 	EOH
+	exit 0
 }
 
 Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 	# parameter defaults (no parameters: help)
-	local n=0 force=0 ld=eDP-1 rd=HDMI-1 lp=70 rp=110 vo=+260 top
-	local ldset=0 rdset=0 lpset=0 rpset=0 voset=0
+	local n=0 run=1 ld=eDP-1 rd=HDMI-1 lp=70 rp=110 vo=+260 top saving=
+	local ldset=0 rdset=0 lpset=0 rpset=0 voset=0 scheme= find
+
 	Pr(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 		local rx=$((1920*$3/100)) lpos rpos lp rp
 		(($3<100)) && lp=.$3 || lp=${3:0:1}.${3:1}
@@ -32,49 +39,73 @@ Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 		echo -n " --fb 3840x2160 --pos $lpos --primary --output $2 --auto"
 		echo " --scale ${rp}x$rp --mode 1920x1080 --pos $rpos"
 	}
+
 	while (($#))
 	do
 		case $1 in
-			-h|--help) Help; return ;;
-			-f) force=1 ;;
+			-h|--help) Help ;;
+			-n) run=0 ;;
+			-s) shift
+				scheme=$1
+				[[ ! ${scheme:0:1} =~ ^[a-zA-Z]$ ]] &&
+					echo "Scheme must start with and alphabetic character: '$scheme'" &&
+						exit 3
+				[[ $scheme == *" "* ]] &&
+					echo "Scheme cannot have a space: '$scheme'" && exit 4 ;;
 			[a-zA-Z]*)
 				if ((ldset))
 				then
 					((rdset)) &&
-						echo "Can't configure more than 2 displays: $1" && return 1 ||
+						echo "Can't configure more than 2 displays: '$1'" && exit 5 ||
 						rd=$1 rdset=1
-				else ld=$1 ldset=1
+				else ldorscheme=$1 ldset=1
 				fi ;;
 			[0-9]*)
 				if ((lpset))
 				then
 					((rpset)) &&
-						echo "More than 2 percentages given: $1" && return 2 ||
+						echo "More than 2 percentages given: '$1'" && exit 6 ||
 						rp=$1 rpset=1
 				else lp=$1 lpset=1
 				fi ;;
 			[+-][0-9]*)((voset)) &&
-					echo "More that 1 offset specified: $1" && return 3 ||
+					echo "More that 1 offset specified: '$1'" && exit 7 ||
 					vo=$1 voset=1 ;;
-			*) echo "Unrecognized argument: $1" && return 4
+			*) echo "Unrecognized argument: '$1'" && exit 8
 		esac
 		shift
 	done
+
+	if [[ -z $scheme ]] && ((ldset && !rdset && !lpset && !voset))
+	then # Find the scheme in the config file
+		[[ ! -f $config ]] && >"$config"
+		while read
+		do # Pick the latest added scheme
+			set -- $REPLY
+			[[ $1 = $ldorscheme ]] && ld=$2 rd=$3 lp=$4 rp=$5 vo=$6
+		done <"$config"
+		[[ -z $vo ]] && echo "Scheme '$find' not found in $config" && exit 9
+	else
+		((ldset)) && ld=$ldorscheme
+	fi
+
 	[[ ! $lp =~ ^[0-9]*$ ]] &&
-		echo "Percentage for leftscale can only be numeric: $lp" &&
-		return 5
+		echo "Percentage for leftscale can only be numeric: '$lp'" && exit 10
 	[[ ! $rp =~ ^[0-9]*$ ]] &&
-		echo "Percentage for rightscale can only be numeric: $rp" &&
-		return 6
+		echo "Percentage for rightscale can only be numeric: '$rp'" && exit 11
 	[[ ! $vo =~ ^[-+][0-9]*$ ]] &&
-		echo "Offset must be a signed integer: $offset" && return 7
+		echo "Offset must be a signed integer: '$offset'" && exit 12
 	((vo>0)) && top="$vo pixels higher"
 	((vo<0)) && top="$vo pixels lower"
 	((vo==0)) && top="at the same height"
-	echo "Display $ld at $lp% on the left side and $rd at $rp% on right side with the top edge $top"
-	((force)) &&
-		eval $(Pr $ld $rd $lp $rp $vo) && echo "Done" ||
+
+	[[ $scheme ]] && saving="Saving as '$scheme': " &&
+		echo "$scheme $ld $rd $lp $rp $vo" >>"$config"
+	echo "$saving\"Display $ld at $lp% on the left side and"
+	echo " $rd at $rp% on right side with the top edge $top\""
+	((run)) && eval $(Pr $ld $rd $lp $rp $vo) && echo "Done" ||
 		Pr $ld $rd $lp $rp $vo
+	exit 0
 }
 
 Xran "$@"
