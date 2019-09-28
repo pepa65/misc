@@ -6,10 +6,12 @@ set +vx
 #
 # Required: go coreutils(ls) pkg-config libssl-dev
 #   Or (to install go): wget sudo tar coreutils(mktemp mv rm)
-# GO_ARCH can be set to a different go-relase-archive
-# When TMPDIR is set, it is used for the temporary directory
+# Environment variables:
+#   If GO_OS is not set to the OS, 'linux' will be used.
+#   If GO_ARCH (architecture) is not set, 'amd64' or 'armv6l' will be used.
+#   If GO_VERSION is not set to a specific go version, the latest is used.
+#   When TMPDIR is set, it is used for the temporary directory
 
-gover=1.12  # Check for latest version: https://golang.org/dl/
 goloc=/usr/local  # Install location for the go tree
 bin=/usr/local/bin  # Install location for gocryptfs binary
 git=github.com/rfjakob/gocryptfs
@@ -35,19 +37,22 @@ newgo=0 sudo=
 # Try to install go if not found in PATH
 if ((newgo)) || ! go=$(type -p go)
 then
-	echo "Installing go $gover"
-	arch=$(uname -m)
-	[[ $GO_ARCH ]] && go_arch=$GO_ARCH ||
-		case $arch in
-			armv7l) go_arch=go$gover.linux-armv6l.tar.gz ;;
-			x86_64) go_arch=go$gover.linux-amd64.tar.gz ;;
-			*) Abort "manually select the right go release for $arch"
-		esac
+	os=${GO_OS:-linux}
+	[[ $(uname -m) = armv7l ]] && arch=armv6l || arch=amd64
+	: ${arch:=$GO_ARCH}
+	ver=$GO_VERSION
+	[[ -z $ver ]] &&
+		url=$(wget -qO- "https://golang.org/dl" |grep -o \
+			"https://dl\.google\.com/go/go[^>]*\.$os-$arch\.tar\.gz" |head -1) \
+		ver=${url%.$os-$arch.tar.gz} ver=${ver#https://dl.google.com/go/go}
+	gover="go$ver.$os-$arch.tar.gz"
+	url="https://dl.google.com/go/$gover"
+	echo "Installing go $ver on $arch $os"
 	tmp=$(mktemp -d --tmpdir=$TMPDIR)
 	trap "rm -rf -- '$tmp'" QUIT EXIT
-	wget -qO "$tmp/$go_arch" "https://dl.google.com/go/$go_arch" ||
-		Abort "could not download go and it's not in PATH"
-	tar xf "$tmp/$go_arch" -C "$tmp" || Abort "error unpacking $go_arch to $tmp"
+	wget -qO "$tmp/$gover" "$url" ||
+		Abort "go not in PATH and could not download it"
+	tar xf "$tmp/$gover" -C "$tmp" || Abort "error unpacking $gover to $tmp"
 	# Move install directory if it exists already
 	if [[ -d $goloc/go ]]
 	then
