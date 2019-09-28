@@ -184,7 +184,15 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 ## buildgocryptfs
 **Build gocryptfs**
 
-* Required: go git coreutils(cd ls)
+Usage: `buildgocryptfs [-n|--new-go]`
+    `-n`/`--new-go`:  force the installation of go even if one is present
+* Required: go coreutils(ls) pkg-config libssl-dev [to install go: wget sudo tar coreutils(mktemp mv rm tail)]
+
+* Environment variables:
+ - If GO_OS is not set to the OS, 'linux' will be used.
+ - If GO_ARCH (architecture) is not set, 'amd64' or 'armv6l' will be used.
+ - If GO_VERSION is not set to a specific go version, the latest is used.
+ - When TMPDIR is set, it is used for the temporary directory
 
 ## ypass
 **GUI for 'pass' the standard unix password manager**

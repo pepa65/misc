@@ -5,7 +5,7 @@ set +vx
 #   -n/--new-go:  force the installation of go even if one is present
 #
 # Required: go coreutils(ls) pkg-config libssl-dev
-#   Or (to install go): wget sudo tar coreutils(mktemp mv rm)
+#   Or (to install go): wget sudo tar coreutils(mktemp mv rm tail)
 # Environment variables:
 #   If GO_OS is not set to the OS, 'linux' will be used.
 #   If GO_ARCH (architecture) is not set, 'amd64' or 'armv6l' will be used.
