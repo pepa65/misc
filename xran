@@ -1,22 +1,24 @@
 #!/bin/bash
 
 # xran - Arrange 2 screens with different pixel densities beside each other
+# Required: xrandr
 
 config=$HOME/.xran
+modex=1920 modey=1080
 
 Help(){
 	cat <<-EOH
 		xran - Arrange 2 screens with different pixel densities beside each other
-		Usage: xran [-h|-n] [<lD> [<rD>]] [<lS> [<rS>]] [+|-<vO>] [[-s] <sN>]
-		Default parameters:  eDP-1 HDMI-1 75 110 +260  (used when not specified)
-		  <lD>, <rD>:  Names of the left and right displays, must start with
-		                alphabetical character.
-		  <lS>, <rS>:  Scaling of left and right display in whole percentages;
-		                if rS is zero, it is turned off.
-		  +|-<vO>:     Vertical alignment offset of the top edge of the screens,
+		       The mode used for both screens is: $mode
+		Usage: xran [-h|-n] [:<lD> [:<rD>]] [<lP> [<rP>]] [+|-<O>] [-s][<S>]
+		Starting parameters:  :eDP-1 :HDMI-1 100 100 +0  (when no default set yet)
+		  <lD>, <rD>:  Names of the left and right Displays, preceded by ':'.
+		  <lP>, <rP>:  Scaling of left and right display in whole Percentages;
+		                if <rP> is zero, the right-hand side display is turned off.
+		  +|-<O>:      Vertical alignment Offset of the top edge of the screens,
 	                  must start with '+'/'-' (positive: left display is lower).
-		  -s <sN>:     Save the scheme name as <sN>; when <sN> is the only argument
-		                (-n is allowed), then run the scheme if saved.
+		  -s [<S>]:    Save as scheme <S>; load <S> when no -s is given. When no
+		                <S> is given, the default scheme is used (loaded/saved).
 		  -n|--norun:  Don't run the xrandr command (just display the commandline).
 		  -h|--help:   Just display this help text.
 		The configfile for storing saved schemes is: $config
@@ -24,13 +26,8 @@ Help(){
 	exit 0
 }
 
-Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
-	# parameter defaults (no parameters: help)
-	local n=0 run=1 ld=eDP-1 rd=HDMI-1 lp=75 rp=110 vo=+260 top saving=
-	local ldset=0 rdset=0 lpset=0 rpset=0 voset=0 scheme= find
-
 	Pr(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
-		local rx=$((1920*$3/100)) lpos rpos lp rp
+		local rx=$((modex*$3/100)) lpos rpos lp rp
 		(($3<100)) && lp=.$3 || lp=${3:0:1}.${3:1}
 		(($4<100)) && rp=.$4 || rp=${4:0:1}.${4:1}
 		(($5<0)) &&
@@ -38,14 +35,18 @@ Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 			lpos="0x$5" rpos="${rx}x0"
 		if (($4))
 		then
-			echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode 1920x1080"
-			echo -n " --fb 3840x2160 --pos $lpos --primary --output $2 --auto"
-			echo " --scale ${rp}x$rp --mode 1920x1080 --pos $rpos"
+			echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode $mode"
+			echo -n " --fb $dmode --pos $lpos --primary --output $2 --auto"
+			echo " --scale ${rp}x$rp --mode $mode --pos $rpos"
 		else # Only one screen
-			echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode 1920x1080"
-			echo " --fb 3840x2160 --pos $lpos --primary --output $2 --off"
+			echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode $mode"
+			echo " --pos $lpos --primary --output $2 --off"
 		fi
 	}
+
+Xran(){ # $@: commandline arguments
+	local ld= rd= lp= rp= vo= scheme= save= top="at the same height"
+	local n=0 run=1 found=0 mode=${modex}x$modey dmode=$((2*modex))x$((2*modey))
 
 	while (($#))
 	do
@@ -53,71 +54,106 @@ Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 			-h|--help) Help ;;
 			-n) run=0 ;;
 			-s) shift
-				scheme=$1
-				[[ ! ${scheme:0:1} =~ ^[@a-zA-Z]$ ]] &&
-					echo "Start scheme with @ or alphabetic character: '$scheme'" &&
-						exit 3
-				[[ $scheme == *" "* ]] &&
-					echo "Scheme cannot have a space: '$scheme'" && exit 4 ;;
-			[a-zA-Z]*)
-				if ((ldset))
+				[[ $save ]] && echo "Too many -s options" && exit 1
+				[[ ${1:0:1} != [a-zA-Z] ]] && save=@ && continue
+				save=$1 ;;
+			[a-zA-Z]*) [[ $scheme ]] && echo "Too many schemes: '$1'" && exit 2
+				scheme=$1 ;;
+			:[a-zA-Z]*)
+				if [[ $ld ]]
 				then
-					((rdset)) &&
-						echo "Can't configure more than 2 displays: '$1'" && exit 5 ||
-						rd=$1 rdset=1
-				else ldorscheme=$1 ldset=1
+					[[ $rd ]] && echo "Too many display names: '$1'" && exit 3
+					rd=${1:1}
+				else ld=${1:1}
 				fi ;;
 			[0-9]*)
-				if ((lpset))
+				if [[ $lp ]]
 				then
-					((rpset)) &&
-						echo "More than 2 percentages given: '$1'" && exit 6 ||
-						rp=$1 rpset=1
-				else lp=$1 lpset=1
+					[[ $rp ]] && echo "Too many percentages given: '$1'" && exit 4
+					rp=$1
+				else lp=$1
 				fi ;;
-			[+-][0-9]*)((voset)) &&
-					echo "More that 1 offset specified: '$1'" && exit 7 ||
-					vo=$1 voset=1 ;;
-			*) echo "Unrecognized argument: '$1'" && exit 8
+			[+-][0-9]*) [[ $vo ]] && echo "Too many offsets: '$1'" && exit 5
+				vo=$1 ;;
+			*) echo "Unrecognized argument: '$1'" && exit 6
 		esac
 		shift
 	done
 
-	if [[ -z $scheme ]] && ((ldset && !rdset && !lpset && !voset))
-	then # Find the scheme in the config file
-		[[ ! -f $config ]] &&
-			echo "# The last one of a scheme name is the active one" >"$config"
+	# Check scheme names
+	set -- $save
+	(($#>1)) && echo "No whitespace allowed in scheme: '$save'" && exit 7
+	set -- $scheme
+	(($#>1)) && echo "No whitespace allowed in scheme: '$scheme'" && exit 8
+
+	# Load scheme from config
+	if [[ -f $config ]]
+	then
+		[[ $scheme ]] || scheme=@
 		while read
 		do # Pick the latest added scheme
 			set -- $REPLY
-			[[ $1 = $ldorscheme ]] && ld=$2 rd=$3 lp=$4 rp=$5 vo=$6
+			if [[ $1 = $scheme ]]
+			then # Only assign the unassigned parameters
+				[[ $ld ]] || ld=$2
+				[[ $rd ]] || rd=$3
+				[[ $lp ]] || lp=$4
+				[[ $rp ]] || rp=$5
+				[[ $vo ]] || vo=$6
+				found=1
+			fi
 		done <"$config"
-		[[ -z $vo ]] && echo "Scheme '$find' not found in $config" && exit 9
+		((!found)) && [[ $scheme != @ ]] &&
+			echo "Scheme '$scheme' not found in $config" && exit 9
 	else
-		((ldset)) && ld=$ldorscheme
+		[[ $scheme ]] &&
+			echo "Can't load scheme '$scheme' from missing config file: $config" &&
+		exit 10
 	fi
 
+
+	# Assign unassigned parameters with start values
+	[[ $ld ]] || ld=eDP-1
+	[[ $rd ]] || rd=HDMI-1
+	[[ $lp ]] || lp=100
+	[[ $rp ]] || rp=100
+	[[ $vo ]] || vo=+0
+
+	# Check parameters
+	set -- $ld
+	(($#>1)) && echo "No whitespace allowed in display name: '$ld'" && exit 11
+	set -- $rd
+	(($#>1)) && echo "No whitespace allowed in display name: '$rd'" && exit 12
 	[[ ! $lp =~ ^[0-9]*$ ]] &&
-		echo "Percentage for leftscale can only be numeric: '$lp'" && exit 10
+		echo "Percentage for leftscale can only be numeric: '$lp'" && exit 13
 	[[ ! $rp =~ ^[0-9]*$ ]] &&
-		echo "Percentage for rightscale can only be numeric: '$rp'" && exit 11
+		echo "Percentage for rightscale can only be numeric: '$rp'" && exit 14
 	[[ ! $vo =~ ^[-+][0-9]*$ ]] &&
-		echo "Offset must be a signed integer: '$offset'" && exit 12
+		echo "Offset must be a signed integer: '$offset'" && exit 15
 	((vo>0)) && top="$vo pixels higher"
 	((vo<0)) && top="$vo pixels lower"
-	((vo==0)) && top="at the same height"
 
-	[[ $scheme ]] && saving="Saving as '$scheme': " &&
-		echo "$scheme $ld $rd $lp $rp $vo" >>"$config"
+	# Save the parameters to the config file
+	if [[ $save ]]
+	then
+		[[ $save = @ ]] && saving="Saving as default: " ||
+			saving="Saving as '$save': "
+		[[ -f $config ]] ||
+			echo "# The last of a scheme name is dominant; '@' is default" >"$config"
+		echo "$save $ld $rd $lp $rp $vo" >>"$config"
+	fi
+
+	# Display the explanation
 	((rp)) &&
 		echo "$saving\"Display $ld at $lp% on the left side and" &&
 		echo " $rd at $rp% on right side with the top edge $top\"" ||
 		echo "$saving\"Single display $ld at $lp%\""
 
+	# Build the xrandr commandline and execute if desired
 	((run)) && eval $(Pr $ld $rd $lp $rp $vo) && echo "Done" ||
 		Pr $ld $rd $lp $rp $vo
-
-	exit 0
 }
 
 Xran "$@"
+
+exit 0

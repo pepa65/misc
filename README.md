@@ -36,18 +36,19 @@ Usage: `count <file> [-s]`
 
 Usage:
 ```
-xran [-h|-n] [<lD> [<rD>]] [<lP> [<rP>]] [+|-<vO>] [[-s] <sN>]
-    Default parameters:  eDP-1 HDMI-1 70 110 +0  (used when not specified).
-      <lD>, <rD>:  Names of the left and right displays, must start with an
-                    alphabetical character.
-      <lS>, <rS>:  Scaling of left and right display in whole percentages.
-      +|-<vO>:     Vertical alignment offset of the top edge of the screens,
-                    must start with '+'/'-' (positive: left display is lower).
-      -s <sN>:     Save the scheme name as <sN>; when <sN> is the only argument
-                    (-n is allowed), then run the scheme if saved.
-      -n|--norun:  Don't run the xrandr command (just display the commandline).
-      -h|--help:   Just display this help text.
-    The configfile for storing saved schemes is: ~/.xran
+xran [-h|-n] [:<lD> [:<rD>]] [<lP> [<rP>]] [+|-<O>] [-s][<S>]
+  Starting parameters:  :eDP-1 :HDMI-1 100 100 +0  (when no default set yet)
+    <lD>, <rD>:  Names of the left and right Displays, preceded by ':'.
+    <lP>, <rP>:  Scaling of left and right display in whole Percentages;
+                  if <rP> is zero, the right-hand side display is turned off.
+    +|-<O>:      Vertical alignment Offset of the top edge of the screens,
+                  must start with '+'/'-' (positive: left display is lower).
+    -s [<S>]:    Save as scheme <S>; load <S> when no -s is given. When no
+                  <S> is given, the default scheme is used (loaded/saved).
+    -n|--norun:  Don't run the xrandr command (just display the commandline).
+    -h|--help:   Just display this help text.
+  The configfile for storing saved schemes is: ~/.xran
+  The mode used for both screens is: 1920x1080
 ```
 
 ## backup
