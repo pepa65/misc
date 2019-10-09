@@ -11,7 +11,8 @@ Help(){
 		Default parameters:  eDP-1 HDMI-1 75 110 +260  (used when not specified)
 		  <lD>, <rD>:  Names of the left and right displays, must start with
 		                alphabetical character.
-		  <lS>, <rS>:  Scaling of left and right display in whole percentages.
+		  <lS>, <rS>:  Scaling of left and right display in whole percentages;
+		                if rS is zero, it is turned off.
 		  +|-<vO>:     Vertical alignment offset of the top edge of the screens,
 	                  must start with '+'/'-' (positive: left display is lower).
 		  -s <sN>:     Save the scheme name as <sN>; when <sN> is the only argument
@@ -35,9 +36,15 @@ Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 		(($5<0)) &&
 			lpos="0x0" rpos="${rx}x${5:1}" ||
 			lpos="0x$5" rpos="${rx}x0"
-		echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode 1920x1080"
-		echo -n " --fb 3840x2160 --pos $lpos --primary --output $2 --auto"
-		echo " --scale ${rp}x$rp --mode 1920x1080 --pos $rpos"
+		if (($4))
+		then
+			echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode 1920x1080"
+			echo -n " --fb 3840x2160 --pos $lpos --primary --output $2 --auto"
+			echo " --scale ${rp}x$rp --mode 1920x1080 --pos $rpos"
+		else # Only one screen
+			echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode 1920x1080"
+			echo " --fb 3840x2160 --pos $lpos --primary --output $2 --off"
+		fi
 	}
 
 	while (($#))
@@ -47,8 +54,8 @@ Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 			-n) run=0 ;;
 			-s) shift
 				scheme=$1
-				[[ ! ${scheme:0:1} =~ ^[a-zA-Z]$ ]] &&
-					echo "Scheme must start with and alphabetic character: '$scheme'" &&
+				[[ ! ${scheme:0:1} =~ ^[@a-zA-Z]$ ]] &&
+					echo "Start scheme with @ or alphabetic character: '$scheme'" &&
 						exit 3
 				[[ $scheme == *" "* ]] &&
 					echo "Scheme cannot have a space: '$scheme'" && exit 4 ;;
@@ -78,7 +85,8 @@ Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 
 	if [[ -z $scheme ]] && ((ldset && !rdset && !lpset && !voset))
 	then # Find the scheme in the config file
-		[[ ! -f $config ]] && >"$config"
+		[[ ! -f $config ]] &&
+			echo "# The last one of a scheme name is the active one" >"$config"
 		while read
 		do # Pick the latest added scheme
 			set -- $REPLY
@@ -101,10 +109,14 @@ Xran(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 
 	[[ $scheme ]] && saving="Saving as '$scheme': " &&
 		echo "$scheme $ld $rd $lp $rp $vo" >>"$config"
-	echo "$saving\"Display $ld at $lp% on the left side and"
-	echo " $rd at $rp% on right side with the top edge $top\""
+	((rp)) &&
+		echo "$saving\"Display $ld at $lp% on the left side and" &&
+		echo " $rd at $rp% on right side with the top edge $top\"" ||
+		echo "$saving\"Single display $ld at $lp%\""
+
 	((run)) && eval $(Pr $ld $rd $lp $rp $vo) && echo "Done" ||
 		Pr $ld $rd $lp $rp $vo
+
 	exit 0
 }
 

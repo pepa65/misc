@@ -1,8 +1,10 @@
 #!/bin/bash
 set +vx
-# buildgocryptfs - Build gocryptfs
-# Usage: buildgocryptfs [-n|--new-go]
-#   -n/--new-go:  force the installation of go even if one is present
+# buildgocryptfs - Build gocryptfs and install go if necessary
+# Usage: buildgocryptfs [-g|--get-go [<ver>]] [-n|--no-cryptfs] [-h|--help]
+#   -g/--get-go [<ver>]:  Install go(lang) [version] even if already present
+#   -n/--no-gocryptfs:    No gocryptfs install
+#   -h/--help:            Display this help text
 #
 # Required: go coreutils(ls) pkg-config libssl-dev
 #   Or (to install go): wget sudo tar coreutils(mktemp mv rm tail)
@@ -15,6 +17,17 @@ set +vx
 goloc=/usr/local  # Install location for the go tree
 bin=/usr/local/bin  # Install location for gocryptfs binary
 git=github.com/rfjakob/gocryptfs
+
+Help(){
+	cat <<-EOH
+		buildgocryptfs - Build gocryptfs and install go if necessary
+		Usage: buildgocryptfs [-g|--get-go [<ver>]] [-n|--no-cryptfs] [-h|--help]
+		  -g/--get-go [<ver>]:  Install go(lang) [version] even if already present
+		  -n/--no-gocryptfs:    No gocryptfs install
+		  -h/--help:            Display this help text
+	EOH
+	exit 0
+}
 
 Abort(){ # $1:message
 	echo "ABORT: $1"
@@ -31,16 +44,25 @@ Sudo(){ # $1:prompt $2-$:command
 	$sudo $@
 }
 
-newgo=0 sudo=
-[[ $1 = -n || $1 = --new-go ]] && newgo=1
+getgo=0 gcfs=1 ver= sudo=
+while (($#))
+do
+	case $1 in
+	-g|--get-go) getgo=1 && shift
+		[[ ! ${1:0:1} = - ]] && ver=$1 && shift ;;
+	-n|--no-gocryptfs) shift && gcfs=0 ;;
+	-h|--help) shift && Help ;;
+	*) echo "Unrecognized commandline argument: $1" && exit 1
+	esac
+done
 
 # Try to install go if not found in PATH
-if ((newgo)) || ! go=$(type -p go)
+if ((getgo)) || ! go=$(type -p go)
 then
 	os=${GO_OS:-linux}
 	[[ $(uname -m) = armv7l ]] && arch=armv6l || arch=amd64
 	: ${arch:=$GO_ARCH}
-	ver=$GO_VERSION
+	: ${ver:=$GO_VERSION}
 	[[ -z $ver ]] &&
 		url=$(wget -qO- "https://golang.org/dl" |grep -o \
 			"https://dl\.google\.com/go/go[^>]*\.$os-$arch\.tar\.gz" |head -1) \
@@ -69,7 +91,8 @@ then
 	go="$goloc/go/bin/go"
 fi
 
-# Install gocryptfs
+# Install gocryptfs if not blocked
+((gcfs)) || exit 0
 repo=$("$go" env GOPATH)/src/$git
 "$go" get -d -u $git
 "$repo/build.bash"
