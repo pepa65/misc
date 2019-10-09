@@ -52,7 +52,7 @@ do
 		[[ ! ${1:0:1} = - ]] && ver=$1 && shift ;;
 	-n|--no-gocryptfs) shift && gcfs=0 ;;
 	-h|--help) shift && Help ;;
-	*) echo "Unrecognized commandline argument: $1" && exit 1
+	*) Abort "unrecognized commandline argument: $1"
 	esac
 done
 
@@ -79,8 +79,8 @@ then
 	# Move install directory if it exists already
 	if [[ -d $goloc/go ]]
 	then
-		! Sudo "to move old go directory" \
-				mv -v "$goloc/go" "$goloc/go_old$RANDOM" &&
+		Sudo "to move old go directory" mv -v "$goloc/go" \
+				"$goloc/$($goloc/go version |cut -f3 -d' ')_old$RANDOM" ||
 			Abort "could not move $goloc/go out of the way"
 	fi
 	Sudo "to install go directory" mv -v "$tmp/go" "$goloc" ||
@@ -89,7 +89,7 @@ then
 	[[ $GOROOT ]] || a+="\nexport GOROOT='$goloc/go'"
 	[[ $GOPATH ]] || a+="\nexport GOPATH=\$HOME/go"
 	export GOROOT="$goloc/go" GOPATH=~/go
-	echo -e "Add to ~/.bashrc:\n$a"
+	echo -e "Add to ~/.bashrc:\n\n$a"
 	eval "${a//\\n/;}"
 	go="$goloc/go/bin/go"
 fi
