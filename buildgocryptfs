@@ -80,14 +80,14 @@ then
 	if [[ -d $goloc/go ]]
 	then
 		! Sudo "to move old go directory" \
-				mv -v "$goloc/go" "$goloc/$go_old$RANDOM" &&
+				mv -v "$goloc/go" "$goloc/go_old$RANDOM" &&
 			Abort "could not move $goloc/go out of the way"
 	fi
 	Sudo "to install go directory" mv -v "$tmp/go" "$goloc" ||
 		Abort "could not move $tmp/go to $goloc"
 	a="p='$goloc/go/bin' && [[ :\$PATH: != *:\$p:* ]] && export PATH=\$p:\$PATH"
 	[[ $GOROOT ]] || a+="\nexport GOROOT='$goloc/go'"
-	[[ $GOPATH ]] || a+="\nexport GOPATH='~/go'"
+	[[ $GOPATH ]] || a+="\nexport GOPATH=\$HOME/go"
 	export GOROOT="$goloc/go" GOPATH=~/go
 	echo -e "Add to ~/.bashrc:\n$a"
 	eval "${a//\\n/;}"
