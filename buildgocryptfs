@@ -75,20 +75,22 @@ then
 	wget -qO "$tmp/$gover" "$url" ||
 		Abort "go not in PATH and could not download it"
 	tar xf "$tmp/$gover" -C "$tmp" || Abort "error unpacking $gover to $tmp"
+
 	# Move install directory if it exists already
 	if [[ -d $goloc/go ]]
 	then
-		! Sudo "to move old go directory" mv "$goloc/go" "$goloc/$go_old$RANDOM" &&
+		! Sudo "to move old go directory" \
+				mv -v "$goloc/go" "$goloc/$go_old$RANDOM" &&
 			Abort "could not move $goloc/go out of the way"
 	fi
-	Sudo "to install go directory" mv "$tmp/go" "$goloc" ||
+	Sudo "to install go directory" mv -v "$tmp/go" "$goloc" ||
 		Abort "could not move $tmp/go to $goloc"
-	add="p='$goloc/go/bin' && [[ :$PATH: != *:$p:* ]] && export PATH=$p:$PATH"
-	[[ $GOROOT ]] || add+="\nexport GOROOT='$goloc/go'"
-	[[ $GOPATH ]] || add+="\nexport GOPATH='~/go'"
+	a="p='$goloc/go/bin' && [[ :\$PATH: != *:\$p:* ]] && export PATH=\$p:\$PATH"
+	[[ $GOROOT ]] || a+="\nexport GOROOT='$goloc/go'"
+	[[ $GOPATH ]] || a+="\nexport GOPATH='~/go'"
 	export GOROOT="$goloc/go" GOPATH=~/go
-	echo -e "Add to ~/.bashrc:\n$add"
-	eval "${add//\\n/;}"
+	echo -e "Add to ~/.bashrc:\n$a"
+	eval "${a//\\n/;}"
 	go="$goloc/go/bin/go"
 fi
 
