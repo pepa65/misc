@@ -80,7 +80,7 @@ then
 	if [[ -d $goloc/go ]]
 	then
 		Sudo "to move old go directory" mv -v "$goloc/go" \
-				"$goloc/$($goloc/go version |cut -f3 -d' ')_old$RANDOM" ||
+				"$goloc/$($goloc/go/bin/go version |cut -f3 -d' ')_old$RANDOM" ||
 			Abort "could not move $goloc/go out of the way"
 	fi
 	Sudo "to install go directory" mv -v "$tmp/go" "$goloc" ||
