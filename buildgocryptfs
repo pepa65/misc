@@ -83,11 +83,12 @@ then
 	fi
 	Sudo "to install go directory" mv "$tmp/go" "$goloc" ||
 		Abort "could not move $tmp/go to $goloc"
-	grep -q ":$goloc/go/bin:" <<<":$PATH:" || echo "Add to PATH: $goloc/go/bin"
-	export PATH="$goloc/go/bin:$PATH"
-	[[ $GOROOT ]] || echo "Set in .bashrc: export GOROOT='$goloc/go'"
-	[[ $GOPATH ]] || echo "Set in .bashrc: export GOPATH='~/go'"
+	add="p='$goloc/go/bin' && [[ :$PATH: != *:$p:* ]] && export PATH=$p:$PATH"
+	[[ $GOROOT ]] || add+="\nexport GOROOT='$goloc/go'"
+	[[ $GOPATH ]] || add+="\nexport GOPATH='~/go'"
 	export GOROOT="$goloc/go" GOPATH=~/go
+	echo -e "Add to ~/.bashrc:\n$add"
+	eval "${add//\\n/;}"
 	go="$goloc/go/bin/go"
 fi
 
