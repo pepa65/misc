@@ -121,13 +121,13 @@ do
 	-v|--verbose) q= ;;
 	-c|--console) zenity=0 whiptail=0 ;;
 	-w|--whiptail) zenity=0 whiptail=1 ;;
-	-u|--unmount) [[ $2 ]] && sleep=$2 ||
-			Abort "Must have a sleeplength after '$1'"
+	-u|--unmount) [[ $2 ]] || Abort "Must have a sleeplength after '$1'"
+		sleep=$2
+		shift
 		len='^[0-9]*([.][0-9]*)?[smhd]?$' dot='^[.][smhd]?$' unit='[smhd]'
 		[[ $sleep =~ $len && ! $sleep =~ $dot ]] ||
 			Abort "Bad sleeplength after -u/--unmount: '$sleep'"
-		[[ ${sleep: -1:1} =~ $unit ]] || sleep=${sleep}m
-		shift ;;
+		[[ ${sleep: -1:1} =~ $unit ]] || sleep=${sleep}m ;;
 	-i|--init) init=1
 		if [[ $2 && ! ${2:0:1} = "-" ]]
 		then
@@ -135,6 +135,7 @@ do
 			shift
 			[[ $2 && ! ${2:0:1} = "-" ]] && name=$2 && shift
 		fi ;;
+	*) Abort "Unrecognized argument: '$1'"
 	esac
 	shift
 done
@@ -142,7 +143,7 @@ dn="$dir/$name"
 
 ((whiptail)) && ! type -P whiptail >/dev/null && whiptail=0
 type -P gocryptfs >/dev/null ||
-	Abort "Install gocryptfs from http://github.com/rfjakob/gocryptfs first!"
+	Abort "Install gocryptfs first: https://4e4.win/bgcfs"
 
 trap "[[ -s '$log' ]] || rm -f -- '$log'" EXIT QUIT
 if ((init))
