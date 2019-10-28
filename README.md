@@ -37,7 +37,7 @@ Usage: `count <file> [-s]`
 Usage:
 ```
 xran [-h|-n] [:<lD> [:<rD>]] [<lP> [<rP>]] [+|-<O>] [-s][<S>]
-  Starting parameters:  :eDP-1 :HDMI-1 100 100 +0  (when no default set yet)
+  Starting parameters:  :eDP1 :HDMI1 100 100 +0  (when no default set yet)
     <lD>, <rD>:  Names of the left and right Displays, preceded by ':'.
     <lP>, <rP>:  Scaling of left and right display in whole Percentages;
                   if <rP> is zero, the right-hand side display is turned off.
