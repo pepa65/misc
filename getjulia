@@ -4,15 +4,17 @@
 # Usage: getjulia [-u|--uninstall | -p|--purge]]
 #   -u/--uninstall:  Remove Julia
 #   -p/--purge:      Remove Julia and also all user directories
-# Environment: TMP (optional) root path of the temporary working directory
+# Environment:
+# - TMP (optional): root path of the temporary working directory
+# - USR (optional, default: /usr/local): install location
 # Required: wget tar coreutils(mktemp rm mv)
 
 binaries='https://julialang-s3.julialang.org/bin/linux/x64/1.2/julia-1.2.0-linux-x86_64.tar.gz'
-usr=/usr/local ics=share/icons/hicolor/scalable/apps
 
 [[ $- = *i* ]] && echo "Run like: sudo bash $BASH_SOURCE" && return 1
 ((UID)) && echo "Run with sudo, like: sudo $0 $*" && exit 2
 
+usr=${USR:-/usr/local} ics=share/icons/hicolor/scalable/apps
 uninstall=0 purge=0
 [[ $1 = -u || $1 = --uninstall ]] && uninstall=1
 [[ $1 = -p || $1 = --purge ]] && purge=1 uninstall=1
@@ -28,37 +30,38 @@ then
 	rm -rfv "$usr"/share/julia
 	rm -fv "$usr"/share/man/man1/julia.1
 	((purge)) && rm -rfv /home/*/.julia /home/*/.juliarc.jl /etc/julia
+else
+	tar=${binaries##*/} tmp=$(mktemp --tmpdir="$TMP" -d getjulia-XXXXXX)
+	trap "rm -rf -- '$tmp'" QUIT EXIT INT
+
+	wget -qP "$tmp" "$binaries" -O- |tar xzC "$tmp"
+	d=$tmp/${tar%-linux*}
+
+	mv -f "$d"/bin/julia "$usr"/bin/ &&
+		echo "INSTALLED: $usr/bin/julia"
+	mkdir -p /etc/julia
+	mv -n "$d"/etc/julia/startup.jl /etc/julia/ &&
+		echo "INSTALLED: /etc/julia/startup.jl"
+	rm -rf "$usr"/include/julia
+	mv "$d"/include/julia "$usr"/include/ &&
+		echo "INSTALLED: $usr/include/julia"
+	rm -rf "$usr"/lib/julia
+	mv -f "$d"/lib/* "$usr"/lib/ &&
+		echo "INSTALLED: $usr/include/julia"
+	mv -f "$d"/share/appdata/julia.appdata.xml "$usr"/share/appdata/ &&
+		echo "INSTALLED: $usr/share/appdata/julia.appdata.xml"
+	mv -fv "$d"/share/applications/julia.desktop "$usr"/share/applications/ &&
+		echo "INSTALLED: $usr/share/applications/julia.desktop"
+	rm -rf "$usr"/share/doc/julia
+	mv "$d"/share/doc/julia "$usr"/share/doc/ &&
+		echo "INSTALLED: $usr/share/doc/julia"
+	mv -f "$d"/"$ics"/julia.svg "$usr"/"$ics"/ &&
+		echo "INSTALLED: $usr/$ics/julia.svg"
+	rm -rf "$usr"/share/julia
+	mv "$d"/share/julia "$usr"/share/ &&
+		echo "INSTALLED: $usr/share/julia"
+	mv -f "$d"/share/man/man1/julia.1 "$usr"/share/man/man1/ &&
+		echo "INSTALLED: $usr/share/man/man1/julia.1"
 fi
 
-tar=${binaries##*/} tmp=$(mktemp --tmpdir="$TMP" -d getjulia-XXXXXX)
-trap "rm -rf -- '$tmp'" QUIT EXIT INT
-
-wget -qP "$tmp" "$binaries" -O- |tar xzC "$tmp"
-d=$tmp/${tar%-linux*}
-
-mv -f "$d"/bin/julia "$usr"/bin/ &&
-	echo "INSTALLED: $usr/bin/julia"
-mkdir -p /etc/julia
-mv -n "$d"/etc/julia/startup.jl /etc/julia/ &&
-	echo "INSTALLED: /etc/julia/startup.jl"
-rm -rf "$usr"/include/julia
-mv "$d"/include/julia "$usr"/include/ &&
-	echo "INSTALLED: $usr/include/julia"
-rm -rf "$usr"/lib/julia
-mv -f "$d"/lib/* "$usr"/lib/ &&
-	echo "INSTALLED: $usr/include/julia"
-mv -f "$d"/share/appdata/julia.appdata.xml "$usr"/share/appdata/ &&
-	echo "INSTALLED: $usr/share/appdata/julia.appdata.xml"
-mv -fv "$d"/share/applications/julia.desktop "$usr"/share/applications/ &&
-	echo "INSTALLED: $usr/share/applications/julia.desktop"
-rm -rf "$usr"/share/doc/julia
-mv "$d"/share/doc/julia "$usr"/share/doc/ &&
-	echo "INSTALLED: $usr/share/doc/julia"
-mv -f "$d"/"$ics"/julia.svg "$usr"/"$ics"/ &&
-	echo "INSTALLED: $usr/$ics/julia.svg"
-rm -rf "$usr"/share/julia
-mv "$d"/share/julia "$usr"/share/ &&
-	echo "INSTALLED: $usr/share/julia"
-mv -f "$d"/share/man/man1/julia.1 "$usr"/share/man/man1/ &&
-	echo "INSTALLED: $usr/share/man/man1/julia.1"
 exit 0
