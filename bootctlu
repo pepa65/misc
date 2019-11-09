@@ -57,6 +57,10 @@ Echo(){ # $1: message, $2: errorcode (exit if go and non-zero!)
 	((quiet)) || echo -ne "$m"
 }
 
+[[ $- = *i* ]] &&
+	echo "Don't source, but install or run like: bash $BASH_SOURCE" &&
+	return 1
+
 imgdir=$defimgdir specesp=$BOOTCTLU_ESP off=/dev/null
 go=1 quiet=0 rd=$off verbose=0 register=0 memtest=0 esp=
 while (($#))

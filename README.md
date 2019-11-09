@@ -152,6 +152,15 @@ earthwallpaperlive [<projection>]
 
 Usage: `buildnano [-g|--git]`
 
+## getjulia
+**Installing Julia from the generic binaries**
+
+Usage:
+```
+getjulia [-f|--force]
+-f/--force:   Overwrite already present file
+```
+
 ## getborg
 **Get borgbackup for Pi (armv7l) or PC (x86_64)**
 

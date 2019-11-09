@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# getjulia - Installing Julia from the generic binaries
+# Usage: getjulia [-f]
+#   -f/--force:   Overwrite already present files
+
+binaries='https://julialang-s3.julialang.org/bin/linux/x64/1.2/julia-1.2.0-linux-x86_64.tar.gz'
+
+[[ $- = *i* ]] && echo "Run like: sudo bash $BASH_SOURCE" && return 1
+((!UID)) && echo "Run with sudo, like: sudo $*" && exit 2
+ 
+[[ $1 = -f || $1 = --force ]] && opt=-fv || opt=-nv
+
+tar=${binaries##*/}
+tmp=$(mktemp --tmpdir=$TMP -d getjulia-XXXXXX)
+wget -P "$tmp" "$binaries" -O- | tar xzC "$tmp"
+cd "$tmp"/julia-*([.0-9])
+mv $opt bin/julia /usr/bin/
+mv $opt etc/julia /etc/
+mv $opt include/julia /usr/include/
+mv $opt lib/* /usr/lib/
+mv $opt share/appdata/julia.appdata.xml /usr/share/appdata/
+mv $opt share/applications/julia.desktop /usr/share/applications/
+mv $opt share/doc/julia /usr/share/doc/
+ics=share/icons/hicolor/scalable/apps
+mkdir -p "$ics"
+mv $opt "$ics/julia.svg" "/usr/$ics/"
+mv $opt share/julia /usr/share/
+mv $opt share/man/man1/julia.1 /usr/share/man/man1/
+
+exit 0
