@@ -37,8 +37,9 @@ else
 	wget -qP "$tmp" "$binaries" -O- |tar xzC "$tmp"
 	d=$tmp/${tar%-linux*}
 
-	mkdir -p "$usr"/bin /etc/julia "$usr"/include "$usr"/lib "$usr"/share/appdata
-	mkdir -p "$usr"/share/applications "$usr"/share/doc "$usr"/share/man/man1
+	mkdir -p "$usr"/bin /etc/julia "$usr"/include "$usr"/lib
+	mkdir -p "$usr"/share/appdata "$usr"/share/applications "$usr"/share/doc
+	mkdir -p "$usr"/"$ics" "$usr"/share/man/man1
 	mv -f "$d"/bin/julia "$usr"/bin/ &&
 		echo "INSTALLED: $usr/bin/julia"
 	mv -n "$d"/etc/julia/startup.jl /etc/julia/ &&
