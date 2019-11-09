@@ -37,9 +37,10 @@ else
 	wget -qP "$tmp" "$binaries" -O- |tar xzC "$tmp"
 	d=$tmp/${tar%-linux*}
 
+	mkdir -p "$usr"/bin /etc/julia "$usr"/include "$usr"/lib "$usr"/share/appdata
+	mkdir -p "$usr"/share/applications "$usr"/share/doc "$usr"/share/man/man1
 	mv -f "$d"/bin/julia "$usr"/bin/ &&
 		echo "INSTALLED: $usr/bin/julia"
-	mkdir -p /etc/julia
 	mv -n "$d"/etc/julia/startup.jl /etc/julia/ &&
 		echo "INSTALLED: /etc/julia/startup.jl"
 	rm -rf "$usr"/include/julia
@@ -50,7 +51,7 @@ else
 		echo "INSTALLED: $usr/include/julia"
 	mv -f "$d"/share/appdata/julia.appdata.xml "$usr"/share/appdata/ &&
 		echo "INSTALLED: $usr/share/appdata/julia.appdata.xml"
-	mv -fv "$d"/share/applications/julia.desktop "$usr"/share/applications/ &&
+	mv -f "$d"/share/applications/julia.desktop "$usr"/share/applications/ &&
 		echo "INSTALLED: $usr/share/applications/julia.desktop"
 	rm -rf "$usr"/share/doc/julia
 	mv "$d"/share/doc/julia "$usr"/share/doc/ &&
