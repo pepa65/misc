@@ -1,33 +1,33 @@
 #!/bin/bash
 
 # getjulia - Installing Julia from the generic binaries
-# Usage: getjulia [-f]
-#   -f/--force:   Overwrite already present files
+# Usage: getjulia
+# Required: wget tar coreutils(mktemp rm mv)
 
 binaries='https://julialang-s3.julialang.org/bin/linux/x64/1.2/julia-1.2.0-linux-x86_64.tar.gz'
 
 [[ $- = *i* ]] && echo "Run like: sudo bash $BASH_SOURCE" && return 1
-((UID)) && echo "Run with sudo, like: sudo $*" && exit 2
+((UID)) && echo "Run with sudo, like: sudo $0 $*" && exit 2
 
-[[ $1 = -f || $1 = --force ]] && opt=-fv || opt=-nv
+tar=${binaries##*/} opt=-fv tmp=$(mktemp --tmpdir=$TMP -d getjulia-XXXXXX)
+trap "rm -rf -- '$tmp'" QUIT EXIT
 
-tar=${binaries##*/}
-tmp=$(mktemp --tmpdir=$TMP -d getjulia-XXXXXX)
-wget -P "$tmp" "$binaries" -O- | tar xzC "$tmp"
-cd "$tmp"/julia-*([.0-9])
-mv $opt bin/julia /usr/bin/
-mv $opt etc/julia /etc/
-mv $opt include/julia /usr/include/
-mv $opt lib/* /usr/lib/
-mv $opt share/appdata/julia.appdata.xml /usr/share/appdata/
-mv $opt share/applications/julia.desktop /usr/share/applications/
-mv $opt share/doc/julia /usr/share/doc/
+wget -qP "$tmp" "$binaries" -O- |tar xzC "$tmp"
+d=$tmp/${tar%-linux*}
+mv -fv "$d"/bin/julia /usr/bin/
+mv -nv "$d"/etc/julia/startup.jl /etc/julia/
+rm -rf /usr/include/julia
+mv -v "$d"/include/julia /usr/include/
+rm -rf "$d"/lib/julia
+mv -fv "$d"/lib/* /usr/lib/
+mv -fv "$d"/share/appdata/julia.appdata.xml /usr/share/appdata/
+mv -fv "$d"/share/applications/julia.desktop /usr/share/applications/
+rm -rf /usr/share/doc/julia
+mv -v "$d"/share/doc/julia /usr/share/doc/
 ics=share/icons/hicolor/scalable/apps
-mkdir -p "$ics"
-mv $opt "$ics/julia.svg" "/usr/$ics/"
-mv $opt share/julia /usr/share/
-mv $opt share/man/man1/julia.1 /usr/share/man/man1/
-cd -
-rm -rf -- "$tmp"
+mv -fv "$d/$ics/julia.svg" "/usr/$ics/"
+rm -rf /usr/share/julia
+mv -v "$d"/share/julia /usr/share/
+mv -fv "$d"/share/man/man1/julia.1 /usr/share/man/man1/
 
 exit 0
