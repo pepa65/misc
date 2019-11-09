@@ -9,16 +9,17 @@ binaries='https://julialang-s3.julialang.org/bin/linux/x64/1.2/julia-1.2.0-linux
 [[ $- = *i* ]] && echo "Run like: sudo bash $BASH_SOURCE" && return 1
 ((UID)) && echo "Run with sudo, like: sudo $0 $*" && exit 2
 
-tar=${binaries##*/} opt=-fv tmp=$(mktemp --tmpdir=$TMP -d getjulia-XXXXXX)
+tar=${binaries##*/} tmp=$(mktemp --tmpdir=$TMP -d getjulia-XXXXXX)
 trap "rm -rf -- '$tmp'" QUIT EXIT
 
 wget -qP "$tmp" "$binaries" -O- |tar xzC "$tmp"
 d=$tmp/${tar%-linux*}
 mv -fv "$d"/bin/julia /usr/bin/
+mkdir -p /etc/julia
 mv -nv "$d"/etc/julia/startup.jl /etc/julia/
 rm -rf /usr/include/julia
 mv -v "$d"/include/julia /usr/include/
-rm -rf "$d"/lib/julia
+rm -rf /lib/julia
 mv -fv "$d"/lib/* /usr/lib/
 mv -fv "$d"/share/appdata/julia.appdata.xml /usr/share/appdata/
 mv -fv "$d"/share/applications/julia.desktop /usr/share/applications/
