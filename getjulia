@@ -9,6 +9,9 @@
 # - USR (optional, default: /usr/local): install location
 # Required: wget tar coreutils(mktemp rm mv)
 
+# Long-term support release: v.1.0.5
+binaries='https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.5-linux-x86_64.tar.gz'
+# Current stable release: v1.2.0
 binaries='https://julialang-s3.julialang.org/bin/linux/x64/1.2/julia-1.2.0-linux-x86_64.tar.gz'
 
 [[ $- = *i* ]] && echo "Run like: sudo bash $BASH_SOURCE" && return 1
@@ -29,7 +32,8 @@ then
 	rm -fv "$usr"/"$ics"/julia.svg
 	rm -rfv "$usr"/share/julia
 	rm -fv "$usr"/share/man/man1/julia.1
-	((purge)) && rm -rfv /home/*/.julia /home/*/.juliarc.jl /etc/julia
+	((purge)) && rm -rfv /home/*/.julia /home/*/.juliarc.jl \
+			/etc/julia /root/.julia /root/.juliarc.jl
 else
 	tar=${binaries##*/} tmp=$(mktemp --tmpdir="$TMP" -d getjulia-XXXXXX)
 	trap "rm -rf -- '$tmp'" QUIT EXIT INT
