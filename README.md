@@ -157,9 +157,12 @@ Usage: `buildnano [-g|--git]`
 
 Usage:
 ```
-getjulia [-f|--force]
--f/--force:   Overwrite already present file
+getjulia [-u|--uninstall | -p|--purge]
+  -u/--uninstall:  Remove Julia
+  -p/--purge:      Remove Julia and also all user directories
 ```
+* Environment: `TMP` (optional) root path of the temporary working directory
+* Required: `wget tar coreutils(mktemp rm mv)`
 
 ## getborg
 **Get borgbackup for Pi (armv7l) or PC (x86_64)**
