@@ -7,8 +7,8 @@
 binaries='https://julialang-s3.julialang.org/bin/linux/x64/1.2/julia-1.2.0-linux-x86_64.tar.gz'
 
 [[ $- = *i* ]] && echo "Run like: sudo bash $BASH_SOURCE" && return 1
-((!UID)) && echo "Run with sudo, like: sudo $*" && exit 2
- 
+((UID)) && echo "Run with sudo, like: sudo $*" && exit 2
+
 [[ $1 = -f || $1 = --force ]] && opt=-fv || opt=-nv
 
 tar=${binaries##*/}
