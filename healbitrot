@@ -123,6 +123,7 @@ Split_dir() { # $1:target_dir, Reading: pwd bitrotlog createlog repairlog
 	local target_dir=$(readlink -e "$1" 2>/dev/null)
 	local source_dir=$BITROT_DATA/${target_dir:1}
 	local regex_bitrot='error: SHA.* mismatch for (.*): expected .*'
+	shopt -s extglob
 	local regex_changes='([[:digit:]]* entries in the database. )?([[:digit:]]*) entries (updated|new|missing):'
 	local regex_moved='([[:digit:]]* entries in the database. )?([[:digit:]]*) entries renamed:'
 	local regex_dir_changes='(.*)' regex_dir_moved='from (.*) to (.*)'

@@ -25,6 +25,7 @@ Self=${0##*/}
 (($#)) || Help "Commandline arguments needed"
 [[ $1 = -h || $1 = --help ]] && Help
 range=$1 in=$2 out=$3
+shopt -s extglob
 [[ $range = ?(?(-)[1-9]*([0-9])),?(?(-)[1-9]*([0-9])) ||
 		$range = ?(?(-)[1-9]*([0-9]))?(+?([1-9]*([0-9]))) ]] ||
 	Help "Invalid format of <range>: '$range'"

@@ -124,6 +124,7 @@ do
 	-u|--unmount) [[ $2 ]] || Abort "Must have a sleeplength after '$1'"
 		sleep=$2
 		shift
+		shopt -s extglob
 		len='^[0-9]*([.][0-9]*)?[smhd]?$' dot='^[.][smhd]?$' unit='[smhd]'
 		[[ $sleep =~ $len && ! $sleep =~ $dot ]] ||
 			Abort "Bad sleeplength after -u/--unmount: '$sleep'"
