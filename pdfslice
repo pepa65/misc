@@ -1,7 +1,7 @@
 #!/bin/bash
 set +vx
 # pdfslice - Make a pdf from a page range in a source document
-# Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm)
+# Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm ls)
 
 Help(){ # $1:message $2:(optional)code [0:Warning, 1:Fatal]
 	if [[ $2 ]]
@@ -10,11 +10,10 @@ Help(){ # $1:message $2:(optional)code [0:Warning, 1:Fatal]
 	else
 		cat <<-EOM
 			$Self - Make a pdf from a page range in a source document
-
 			Usage:  $Self [-h|--help ] | <range> <in.pdf> [<out.pdf>]
-			  Where <range> is:  [<from>],[<to>] | [<from>]+[<number>]
-			    If <from> & <to> start with a minus sign they count from the back;
-			      if omitted they default to first & last page;
+			  Where <range> is:  [<from>],[<to>] | [<from>][+[<number>]]
+			    If <from> or <to> start with a minus sign they count from the back;
+			      if omitted they default to first and last page;
 			      <number> specifies the number of pages, if omitted defaults to 1.
 			  -h/--help:  Just display this help text.
 		EOM
@@ -26,52 +25,50 @@ Self=${0##*/}
 (($#)) || Help "Commandline arguments needed"
 [[ $1 = -h || $1 = --help ]] && Help
 range=$1 in=$2 out=$3
-[[ $range == *+* || $range == *,* ]] ||
-	Help "<range> needs either 1 comma or 1 plus sign, not: '$range'"
-[[ $in ]] || Help "Input document <in.pdf> not specified"
+[[ $range = ?(?(-)[1-9]*([0-9])),?(?(-)[1-9]*([0-9])) ||
+		$range = ?(?(-)[1-9]*([0-9]))?(+?([1-9][0-9]*)) ]] ||
+	Help "Invalid format of <range>: '$range'"
 [[ -f "$in" ]] || Help "Input document <in.pdf> is not a file: '$in'"
 total=$(pdfinfo "$in" 2>/dev/null |grep '^Pages:') total=${total##* }
 [[ $total ]] || Help "Could not determine the number of pages in $in"
-if [[ $range == *+* ]]
+if [[ $range = *,* ]]
 then
-	f=${range%+*} number=${range#*+}
-	[[ $f ]] || f=1
+	from=${range%,*} to=${range#*,}
+	[[ $from ]] || from=1
+	((from<0)) && from=$((total+1+from))
+	((from<1)) && from=1 &&
+		Help "The actual <from> page is lower than 1, using 1" 0
+	((from>total)) && from=$total &&
+		Help "The actual <from> page is higher than total, using $total" 0
+	[[ $to ]] || to=$total
+	((to<0)) && to=$((total+1+to))
+	((to<1)) && to=1 &&
+		Help "The actual <to> page is lower than 1, using 1" 0
+	((to>total)) && to=$total &&
+		Help "The actual <to> page is higher than total, using $total" 0
+	((to<from)) &&
+		Help "The actual <to> page is before the actual <from> page: $to<$from"
+else  # starting page (+ number)
+	[[ $range = *+* ]] && from=${range%+*} number=${range#*+} ||
+		from=$range number=1
+	[[ $from ]] || from=1
 	[[ $number ]] || number=1
-	[[ $number =~ ^[1-9][0-9]*$ ]] ||
-		Help "<number> should be a positive integer, not '$number'"
-	[[ ${f#-} =~ ^[1-9][0-9]*$ ]] ||
-		Help "<from> should be a non-zero integer, not '$f'"
-	((f<0)) && from=$((total+f+1)) || from=$f
-	((from<1)) && from=1
-		Help "The actual first page is before 1, starting at 1" 0
-	((from>total)) && from=total
-		Help "The actual first page is higher than total, starting at $total" 0
+	((from<0)) && from=$((total+1+from))
+	((from<1)) && from=1 &&
+		Help "The actual <from> page is lower than 1, using 1" 0
+	((from>total)) && from=$total &&
+		Help "The actual first page is higher than total, using $total" 0
 	to=$((from+number-1))
 	((to>total)) && to=$total &&
-		Help "<number> '$number' too high, just producing $((to-from+1))" 0
-else  # range with comma
-	f=${range%,*} t=${range#*,}
-	[[ $f ]] || f=1
-	[[ ${f#-} =~ ^[1-9][0-9]*$ ]] ||
-		Help "<from> should be a non-zero integer, not '$f'"
-	((f<0)) && from=$((total+f+1)) || from=$f
-	((from<1)) && from=1 &&
-		Help "The actual first page is below 1, starting at 1" 0
-	[[ $t ]] || t=$total
-	[[ ${t#-} =~ ^[1-9][0-9]*$ ]] ||
-		Help "<to> should be a non-zero integer, not '$t'"
-	((t<0)) && to=$((total+t+1)) || to=$t
-	((to<from)) &&
-		Help "The actual last page is before the actual first page: $to<$from"
-	((to>total)) && to=$total &&
-		Help "The actual last page is higher than total, going until $total" 0
+		Help "<number> ($number) too high, using $((to-from+1))" 0
 fi
 [[ $out ]] || out="$(basename "$in" .pdf)_$from-$to.pdf"
 
 tmp=$(mktemp -d)
+trap "rm -r -- '$tmp'" QUIT EXIT INT
 pdfseparate -f "$from" -l "$to" "$in" "$tmp/p%07d"
-[[ -z $(ls -L) ]] && Help "Problem getting pages $from-$to from $in" 1
+[[ -z $(ls -L "$tmp") ]] &&
+	Help "Pages $from-$to could not be sliced from $in"
 pdfunite "$tmp"/p* "$out"
-rm -r -- "$tmp"
 
 exit 0

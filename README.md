@@ -329,16 +329,17 @@ a5toa4 [<Options>] <a5.pdf> [<a4.pdf>]
 ## pdfslice
 **Make a pdf from a page range in a source document**
 
+* Required
 Usage:
 ```
-Usage:  $Self [-h|--help ] | <range> <in.pdf> [<out.pdf>]
-    Where <range> is:  [<from>],[<to>] | [<from>]+[<number>]
+Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
+    Where <range> is:  [<from>],[<to>] | [<from>][+[<number>]]
       If <from> & <to> start with a minus sign they count from the back;
         if omitted they default to first & last page;
         <number> specifies the number of pages, if omitted defaults to 1.
     -h/--help:  Just display this help text.
 ```
-* Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm)
+* Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm ls)
 
 ## rmkernels
 **Remove old kernels from Debian/Ubuntu**
