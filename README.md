@@ -207,6 +207,27 @@ Usage: `buildgocryptfs [-n|--new-go]`
  - If GO_VERSION is not set to a specific go version, the latest is used.
  - When TMPDIR is set, it is used for the temporary directory
 
+## bb
+**Wrapperscript around borgbackup**
+
+Usage:
+```
+bb [ init|check|help|unlock|prune | list [<prefix>] | info|delete <name> |
+     backup [<dir>] | rename <name> <newname> | mount [<name>] | unmount ]
+  init:  init repo (set BORG_REPO variable in $self or on commandline)
+  check:  check repo
+  help:  output this help text (also without any argument)
+  unlock:  unlock the repo when left locked
+  prune:  prune the backups
+  list [<prefix>]:  list backups in repo [starting with <prefix>]
+  info <name>:  list details of [backup <name> in] repo
+  delete <name>:  delete [backup <name> from] repo
+  backup [Dovecot|Peter|Kelly|MyDocuments]:  backup $basedir[/<dir>]
+  rename <name> <newname>:  rename backup <name> to <newname>
+  mount [<name>]:  mount [backup <name> from] repo on $(basename "$mnt")
+  unmount:  unmount from $(basename "$mnt")
+```
+
 ## ypass
 **GUI for 'pass' the standard unix password manager**
 
