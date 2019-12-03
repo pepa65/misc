@@ -27,10 +27,11 @@ esac
 tmp=$(mktemp -d --tmpdir=$TMPDIR)
 ! wget -qO "$tmp/borg" $url && echo "Problem downloading $url" && exit 3
 [[ -x $bin/borg ]] && borgv=$("$bin/borg" -V) &&
-	sudo mv "$bin/borg" "$bin/${borgv// /-}"
-sudo mv "$tmp/borg" "$bin"
+	sudo mv -- "$bin/borg" "$bin/${borgv// /-}"
+sudo mv -- "$tmp/borg" "$bin"
 rm -rf -- "$tmp"
-sudo chmod +x "$bin/borg"
+sudo chmod +x -- "$bin/borg"
+sudo chown root:root -- "$bin/borg"
 hash -r
 echo "Borg version: $(borg -V)"
 
