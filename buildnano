@@ -122,7 +122,9 @@ else
 fi
 
 # Needs autoconf autopoint
-((git)) && ! ./autogen.sh && Abort "error in Autogen"
+if ((git))
+then ./autogen.sh || Abort "error in Autogen"
+fi
 
 # Needs gcc pkg-config libncursesw5-dev gettext (groff)
 ./configure ${conf[@]/#/--} || Abort "error in Configure"
