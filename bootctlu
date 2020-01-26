@@ -2,7 +2,7 @@
 set +vx
 # bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 #
-# Required: util-linux(lsblk) coreutils(tee sort cut mkdir cat cp s rm cd)
+# Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp s rm cd ls)
 #           grep sed systemd(file:systemd-bootx64.efi)/wget[if not present]
 #           sudo[unless run as root, or only invoked with -n/--nogo]
 #   For -m/--memtest: wget tar
@@ -91,10 +91,16 @@ sudo=
 ((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
 
 # Get EFI System Partitions
-mapfile -t <<<"$($sudo lsblk -o KNAME,PARTTYPE |
-	grep c12a7328-f81f-11d2-ba4b-00a0c93ec93b)"
-[[ ${MAPFILE[0]} ]] || Echo "No EFI System Partitions present" 4
-p=(${MAPFILE[@]%% *}) esps=${p[@]/#//dev/}
+esps=
+parts=$(ls -Al /dev/disk/by-partuuid |grep -o '[a-z][a-z0-9]*$')
+for part in $parts
+do
+	num=${part##*[a-z]}
+	disk=${part%$num}
+	esp=$(sgdisk -i$num /dev/$disk |grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
+	esps+=" /dev/$part"
+done
+[[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 4
 Echo "EFI System Partitions: $esps\n" 0
 
 # Usable EFI partition must be mounted, collect all mounted
@@ -117,7 +123,7 @@ else  # No EFI-mount specified
 		esp=$mp
 	fi
 fi
-Echo "Copying images from $imgdir into EFI mountpoint $esp"
+Echo "--- Copying images from $imgdir into EFI mountpoint $esp"
 
 # Initialize and prepare loader confguration
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' |$sudo tee /etc/machine-id
@@ -149,17 +155,15 @@ then
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		$sudo mv "$out" "$out~" &&
 		Echo "\nRenaming previous loader.conf to '$out~'\n" 0
-	Echo "\nWriting '$out'"
+	Echo "\n--- Writing '$out'"
 	Echo ":\n" 0
-	Echo "\n"
 	echo -e "$file" |$sudo tee "$out" >$rd
 	Echo "\nInstalling bootloader binaries\n" 0
 	$sudo cp "$bootloader" "$esp/EFI/bootctlu/gummi.efi"
 	$sudo cp "$bootloader" "$esp/EFI/BOOT/BOOTX64.EFI"
 else
-	Echo "\nWriting '$out'"
-	Echo ":\n\n$file" 0
-	Echo "\n"
+	Echo "\n--- Writing '$out'"
+	Echo ":\n$file" 0
 	Echo "\nInstalling bootloader binaries\n" 0
 fi
 
@@ -177,13 +181,12 @@ do
 	entry="$iddir/linux-$version"
 	((go)) && ! $sudo mkdir -p "$entry" &&
 		Echo "Problem making directory $entry" 9
-	Echo "\nCopying images to $entry\n"
+	Echo "\n--- Copying images to $entry"
 	((go)) && $sudo cp "$kernel" "$entry/linux"
 	((go)) && $sudo cp "$initrd" "$entry/initrd"
 	out="$entries/$id-linux-$version.conf"
-	Echo "\nWriting '$out'"
+	Echo "\n--- Writing '$out'"
 	Echo ":" 0
-	Echo "\n"
 	file=$(cat <<-EOF
 		title $release on $root (linux-$version)
 		version $version
@@ -212,9 +215,8 @@ then
 	cd - >/dev/null
 	rm -r -- "$tmp"
 	out="$entries/$id-memtest86.conf"
-	Echo "\nWriting '$out'"
+	Echo "\n--- Writing '$out'"
 	Echo ":" 0
-	Echo "\n"
 	file=$(cat <<-EOF
 		title MemTest86
 		version $memver
