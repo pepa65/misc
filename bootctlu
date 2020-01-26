@@ -167,10 +167,10 @@ fi
 ((go)) && $sudo rm -rf -- "$iddir"/linux-* "$entries/$id-linux-"*.conf
 
 # Making new entries for each kernel binary
+shopt -s nullglob extglob
 for kernel in $imgdir/vmlinuz-*
 do
 	version=${kernel#$imgdir/vmlinuz-}
-	shopt -s extglob
 	[[ $release = @(void|Artix|Antergos Linux|Arch Linux) ]] &&
 		initrd=$imgdir/boot/initramfs-$version.img ||
 		initrd=$imgdir/initrd.img-$version
