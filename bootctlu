@@ -98,7 +98,7 @@ do
 	num=${part##*[a-z]}
 	disk=${part%$num}
 	esp=$(sgdisk -i$num /dev/$disk |grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
-	esps+=" /dev/$part"
+	[[ $esp ]] && esps+=" /dev/$part"
 done
 [[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 4
 Echo "EFI System Partitions: $esps\n" 0
@@ -106,6 +106,7 @@ Echo "EFI System Partitions: $esps\n" 0
 # Usable EFI partition must be mounted, collect all mounted
 mp=$(egrep "${esps// /|}" /proc/mounts |cut -d' ' -f2)
 [[ $mp ]] || Echo "No EFI System Partitions mounted" 5
+mp=${mp//$'\n'/ }
 Echo "Mount points of EFI partitions: $mp\n" 0
 
 # Pick EFI mountpoint
