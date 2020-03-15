@@ -72,6 +72,28 @@ backup [-h|--help] | [<backup-list> [<backup-file> [<backup-log>]]]
      '%' (percent):  gpg-password
 ```
 
+# bacme
+**Simply request certificates from Let's Encrypt using ACME**
+Usage:
+```
+bacme [-h] [-v] [-t] [-e <email>] [-w <docroot>] [<domain>[...]]
+Options:
+  -h/--help             This help text
+  -v/--verbose          Verbose mode: additional debug output
+  -t/--test             Test with Let's Encrypt Staging API to not get banned
+  -e/--email <email>    Contact email for Let's Encrypt
+  -w/--webroot <dir>    Path to document root of the webserver
+If <dir> is not specified, some manual action is required The <dir> may be an
+rsync-compatible remote location like: user@server:/var/www/html/
+
+Instead of specifying <email>/<dir>/<domain>[...] on the commandline, they may
+be put in environment variables BACME_EMAIL, BACME_WEBROOT and BACME_DOMAINS.
+The first <domain> must be the root domainname, followed by the subdomains.
+
+Example:
+bacme -e me@mail.me -w me@server:/var/www/html example.com www.example.com
+```
+
 ## duckdns
 **Update duckdns.org DDNS service**
 

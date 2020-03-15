@@ -1,0 +1,307 @@
+#!/bin/bash
+
+# bacme - Simply request certificates from Let's Encrypt using ACME
+# Copyright: (c) 2020 Stephan Uhlmann <su@su2.info>
+# Modified: pepa65@passchier.net https://gitlab.com/pepa65/misc
+# License: GPLv3+
+# Required: xxd sed curl grep openssl rsync
+#  coreutils(cat base64 basename tr mkdir cd tail head rm touch chmod)
+
+# Hardcodable defaults
+# Contact email (or set in environment variable BACME_EMAIL)
+email=''
+# Domains, space separated (or set in environment variable BACME_DOMAINS)
+domains=''
+# Webroot (or set in environment variable BACME_WEBROOT)
+webroot=''
+
+
+Usage(){ # I:$self O:stdout
+	cat <<EOU
+Usage: $self [-h] [-v] [-t] [-e <email>] [-w <dir>] [<domain>[...]]
+Options:
+  -h/--help             This help text
+  -v/--verbose          Verbose mode: additional debug output
+  -t/--test             Test with Let's Encrypt Staging API to not get banned
+  -e/--email <email>    Contact email for Let's Encrypt
+  -w/--webroot <dir>    Path to document root of the webserver
+If <dir> is not specified, some manual action is required. The <dir> may be an
+rsync-compatible remote location like: user@server:/var/www/html/
+
+Instead of specifying <email>/<dir>/<domain>[...] on the commandline, they may
+be put in environment variables BACME_EMAIL, BACME_WEBROOT and BACME_DOMAINS.
+The first <domain> must be the root domainname, followed by the subdomains.
+
+Example:
+  $self -e me@mail.me -w me@server:/var/www/html example.com www.example.com
+EOU
+}
+
+Log(){ # $1:message O:stdout
+	echo -e "--- $1"
+}
+
+Debug(){ # $1:message I:$verbose O:stderr
+	((verbose)) && echo -e "=== $1" >&2
+	return 0
+}
+
+Exit(){ # $1:message O:stderr
+	echo -e "### $1" >&2
+	exit 1
+}
+
+Base64url(){ # I:stdin O:stdout
+	# Encoding: base64 (https://tools.ietf.org/html/rfc4648#section-5)
+	base64 -w 0 |sed 's/+/-/g' |sed 's/\//_/g' |sed 's/=*$//g'
+}
+
+Flatten(){ # I:stdin O:stdout
+	tr -d '\n\r' |sed 's/[[:space:]]\+/ /g'
+}
+
+Request(){ # $1:url $2:body I:$api,$jws_auth,$acc_key O:stdout
+	local url=$1 body=$2 nonce header jws_protected jws_payload jws_sig jws
+	local curlout httpres res acmeres
+
+	# Get new nonce by HEAD to newNonce API
+	Debug 'Getting nonce...'
+	nonce=$(curl --silent --head "$api/acme/new-nonce" |grep -i '^replay-nonce: ' |sed 's/^replay-nonce: //i' |Flatten)
+	Debug "nonce: $nonce"
+
+	# JSON Web Signature
+	header='{"alg":"RS256",'$jws_auth',"nonce":"'$nonce'","url":"'$url'"}'
+	jws_protected=$(printf "%s" "$header" |Base64url)
+	jws_payload=$(printf "%s" "$body" |Base64url)
+	jws_sig=$(printf "%s" "$jws_protected.$jws_payload" |openssl dgst -sha256 -sign "$acc_key" |Base64url)
+	jws='{"protected":"'$jws_protected'","payload":"'$jws_payload'","signature":"'$jws_sig'"}'
+
+	Debug "Request URL: $url\nJWS Header: $header\nJWS Body: $body"
+	# Use base64 encoding/decoding to stay binary-safe
+	# (eg. new-cert responds with a der-encoded certificate)
+	curlout=$(curl --silent --include --show-error --write-out "\\n%{http_code}" -X POST -H "Content-Type: application/jose+json" -d "$jws" "$url" |base64 -w 0 )
+	httpres=$(echo "$curlout" |base64 -d |tail -n 1)
+	res=$(echo "$curlout" |base64 -d |head -n -1)
+	Debug "Head: $res\nTail: $httpsres"
+	# just in case we get a 2xx status code but an error in response body (spec is not clear on that)
+	acmeres=$(echo "$res" |Flatten |sed 's/^.*"type": "urn:acme:error.*$/ERROR/')
+	[[ $acmeres = ERROR || $httpres != 20[0-2] ]] &&
+		Exit "API request error\nRequest URL: $url\nHTTP status: $httpres\n$res"
+
+	# Re-decode, because $res cannot contain 0x00 bytes
+	echo "$curlout" |base64 -d |head -n -1
+	Debug 'API request successful'
+}
+
+
+# Exit on errors and trap exits
+set -e
+trap 'Debug "Exit code $?"; exit 2' EXIT
+self=${0##*/}
+email=${BACME_EMAIL:-$email}
+domains=(${BACME_DOMAINS:-$domains})
+webroot=${BACME_WEBROOT:-$webroot}
+# Let's Encrypt ACME APIs
+api='https://acme-v02.api.letsencrypt.org'
+sapi='https://acme-staging-v02.api.letsencrypt.org'
+
+# Handle commandline
+verbose=0 doms=
+while (($#))
+do
+	case $1 in
+		-e|--email) shift; email=$1 ;;
+		-h|--help) Usage; exit ;;
+		-t|--test) Log 'Using Staging API'; api=$sapi ;;
+		-v|--verbose) verbose=1 ;;
+		-w|--webroot) shift; webroot=$1 ;;
+		-*) Usage; Exit "Unknown option: $1" ;;
+		*) doms+="$1 "
+	esac
+	shift
+done
+[[ $doms ]] && domains=($doms)
+Debug "domains: ${domains[@]}"
+[[ -z $domains ]] && Usage && Exit 'No domain(s) specified'
+
+dom=$domains
+
+Log 'Creating domain subdirectory...'
+mkdir -p -- "$dom"
+Log "Done: $dom/ created"
+
+Log 'Getting URL of current subscriber agreement...'
+agreement=$(curl --silent $api/directory |grep '"termsOfService":' |sed 's/^.*"termsOfService": "\([^"]*\)".*$/\1/' |Flatten)
+Log "OK $agreement"
+
+# Create new account key for each certificate request
+Log 'Generating account key...'
+acc_key=$dom/account.key
+acc_pub=$dom/account.pub
+Log "Private key: $acc_key"
+touch "$acc_key"
+chmod 600 "$acc_key"
+openssl genrsa 4096 >"$acc_key"
+chmod 400 "$acc_key"
+Log "Public key: $acc_pub"
+openssl rsa -in "$acc_key" -out "$acc_pub" -pubout
+Log 'OK'
+
+# Account public key Exponent:
+# feed leading 00-stripped 16 bytes hex into xxd and encode to base64
+jwke=$(printf '%0.32x' $(openssl rsa -pubin -in "$acc_pub" -text -noout |tail -1 |grep -o '\b[0-9]*\b') |sed 's/^\(00\)*//g' |xxd -p -r |Base64url)
+
+# Account public key Modulus
+jwkn=$(openssl rsa -pubin -in "$acc_pub" -modulus -noout |grep -o '[0-9A-F]*' |xxd -p -r |Base64url)
+
+# API authentication by JWK until we have an account (no whitespace!)
+jws_auth='"jwk":{"e":"'$jwke'","kty":"RSA","n":"'$jwkn'"}'
+
+# No space in JSON to match sha256, see https://tools.ietf.org/html/rfc7638
+jwkt=$(printf '%s' "${jws_auth#*:}" |openssl dgst -sha256 -binary |Base64url)
+Debug "JWK Thumbprint: $jwkt"
+
+Log 'Registering account...'
+req='{"termsOfServiceAgreed":true'
+[[ $email ]] && req+=',"contact":["mailto:'$email'"]}' || req+='}'
+res=$(Request "$api/acme/new-acct" "$req")
+url=$(echo "$res" |grep -i '^location: ' |sed 's/^location: //i' |Flatten)
+Debug "Account URL: $url"
+Log 'OK'
+
+# API authentication by account URL from now on
+jws_auth='"kid":"'$url'"'
+
+Log "Generating domain private key in $dom/$dom.key..."
+touch "$dom/$dom.key"
+chmod 600 "$dom/$dom.key"
+openssl genrsa 4096 >"$dom/$dom.key"
+chmod 400 "$dom/$dom.key"
+
+Log 'Creating order...'
+req='{"identifiers":['
+for ((i=0; i<${#domains[@]}; i++))
+do req+='{"type":"dns","value":"'${domains[$i]}'"},'
+done
+req=${req:0: -1}']}'
+res=$(Request "$api/acme/new-order" "$req")
+order_url=$(echo "$res" |grep -i '^location: ' |sed 's/^location: //i' |Flatten)
+IFS=' ' read -r -a auth_urls <<<"$(echo "$res" |Flatten |sed 's/^.*"authorizations"\:\ \[\ \(.*\)\ \].*$/\1/' |tr -d ',"')"
+Debug "Authorization URLs: ${auth_urls[@]}"
+((${#domains[@]}!=${#auth_urls[@]})) && Debug "Result: $res" &&
+	Exit "Number of returned authorization URLs (${#auth_urls[@]}) does not match the number your requested domains (${#domains[@]})."
+final_url=$(echo "$res" |Flatten |sed 's/^.*"finalize"\:\ "\([^"]*\)".*$/\1/')
+Debug "Finalize URL: $final_url"
+Log 'OK'
+
+Log 'Getting authorization tokens...'
+chal_urls=()
+chal_tokens=()
+keyauths=()
+for ((i=0; i<${#domains[@]}; i++))
+do
+	Log " for ${domains[$i]}"
+	Debug "  Authorization URLs: ${auth_urls[$i]}"
+	res=$(Request "${auth_urls[$i]}" "")
+	chal_urls[$i]=$(echo "$res" |Flatten |sed 's/^.*"type": "http-01", "status": "pending", "url": "\([^"]*\)", "token": "\([^"]*\)".*$/\1/')
+	Debug "  Challenge URLs: ${chal_urls[$i]}"
+	chal_tokens[$i]=$(echo "$res" |Flatten |sed 's/^.*"type": "http-01", "status": "pending", "url": "\([^"]*\)", "token": "\([^"]*\)".*$/\2/')
+	Debug "  Challenge tokens: ${chal_tokens[$i]}"
+	keyauths[$i]=${chal_tokens[$i]}.$jwkt
+	Debug "  Key Auth: ${keyauths[$i]}"
+done
+Log 'OK'
+
+Log 'Doing HTTP validation'
+if [[ $webroot ]]
+then
+	Log "Copying challenge tokens to $webroot..."
+	cd "$dom"
+	rm -rf ".well-known"
+	mkdir -p ".well-known/acme-challenge"
+	for ((i=0; i<${#domains[@]}; i++))
+	do echo "${keyauths[$i]}" >".well-known/acme-challenge/${chal_tokens[$i]}"
+	done
+	rsync -axR ".well-known/" "$webroot"
+	cd - >/dev/null
+	Log 'Done'
+else
+	Log 'Execute in the document root of the webserver:'
+	echo -e "\nmkdir -p .well-known/acme-challenge"
+	for ((i=0; i<${#domains[@]}; i++))
+	do echo "echo '${keyauths[$i]}' >.well-known/acme-challenge/${chal_tokens[$i]}"
+	done
+	echo
+	Log 'Press [Enter] when done'
+	read -r
+fi
+
+Log 'Responding to challenges...'
+for ((i=0; i<${#domains[@]}; i++))
+do
+	Debug "Challenge URL: ${chal_urls[$i]}"
+	res=$(Request "${chal_urls[$i]}" "{}")
+done
+Log 'OK'
+
+Log 'Waiting for validation...'
+for attempt in 1 2 3 4 5
+do
+	sleep $((4*attempt))
+	res=$(Request "$order_url" '')
+	status=$(echo "$res" |Flatten |sed 's/^.*"status"\:\ "\([^"]*\)".*$/\1/')
+	Log " check attempt $attempt: status=$status"
+	[[ $status != pending ]] && break
+done
+case $status in
+	ready) Log 'Validation successful' ;;
+	invalid) Exit 'The server was unsuccessful in validating your authorization challenge(s).' ;;
+	*) Exit "Timeout. Certificate order status is still '$status' instead of 'ready'. Something went wrong validating the authorization challenge(s)."
+esac
+
+Log 'Creating CSR...'
+altnames=${domains[@]/#/DNS:} altnames=${altnames// /,}
+sanconf="[req]\ndistinguished_name=req_distinguished_name\n[req_distinguished_name]\n[SAN]\nsubjectAltName=$altnames\n"
+openssl req -new -sha256 -key "$dom/$dom.key" -subj "/CN=$dom" -reqexts SAN -config <(echo -e "$sanconf") >"$dom/$dom.csr"
+Log "Done $dom/$dom.csr"
+
+Log 'Finalizing order...'
+csr=$(openssl req -in "$dom/$dom.csr" -inform PEM -outform DER |Base64url)
+req='{"csr":"'$csr'"}'
+res=$(Request "$final_url" "$req")
+status=$(echo "$res" |Flatten |sed 's/^.*"status"\:\ "\([^"]*\)".*$/\1/')
+Debug "Status: $status"
+[[ $status != valid ]] && Debug "Result: $res" &&
+	Exit "Certificate order status is '$status' instead of 'valid'. Something went wrong issuing the certificate."
+cert_url=$(echo "$res" |Flatten |sed 's/^.*"certificate"\:\ "\([^"]*\)".*$/\1/')
+Debug "Certificate URL: $cert_url"
+Log 'OK'
+
+Log 'Downloading certificate...'
+res="$(Request "$cert_url" '')"
+# Response has the server and intermediate certificate(s) in order.
+grep -v '[/:]' <<<"$res" >"$dom/$dom.crt"
+Log "Success! Certificate with intermediates saved to: $dom/$dom.crt"
+
+if [[ $webroot ]]
+then
+	Log "Deleting challenge tokens from $webroot..."
+	cd "$dom" || exit
+	includes=()
+	for ((i=0; i<${#domains[@]}; i++))
+	do
+		rm ".well-known/acme-challenge/${chal_tokens[$i]}"
+		includes+=(--include)
+		includes+=(".well-known/acme-challenge/${chal_tokens[$i]}")
+	done
+	rsync -axR --delete "${includes[@]}" --exclude '.well-known/acme-challenge/*' ".well-known/" "$webroot"
+	cd - >/dev/null
+	Log 'Done'
+else
+	Log 'Now execute in the document root of the webserver:'
+	echo -e "\nrm -r .well-known\n"
+fi
+
+Log "Renewed certificates for: ${domains[@]}"
+Log 'All done!'
+exit 0

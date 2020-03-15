@@ -2,7 +2,7 @@
 set +o xtrace +o verbose
 
 # bb - Wrapperscript around borgbackup
-# Required: borg date coreutils(tee cat)
+# Required: borg coreutils(date tee cat)
 # Environment variables (optional): BORG_REPO BORG_PASSPHRASE
 
 borgrepo='ssh://hosthatch.passchier.net/data/borg'
