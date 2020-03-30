@@ -167,8 +167,10 @@ bind Sh-M-N prevbuf all
 bind M-N nextbuf all
 bind M-O enter all
 bind M-C wordcount all
-bind M-R flipreplace search
-bind M-R flipreplace replace
+bind M-R regexp search
+bind M-R regexp replace
+bind M-S flipreplace search
+bind M-S flipreplace replace
 bind M-D backwards search
 bind M-D backwards replace
 bind M-C casesens search
