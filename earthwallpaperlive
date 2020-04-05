@@ -1,5 +1,5 @@
 #!/bin/bash
-set +xv
+set -xv
 ## earthwallpaperlive - Set desktop background to earth image
 ##
 ## Usage: earthwallpaperlive [-p] [<projection>]
@@ -15,25 +15,32 @@ set +xv
 ##  chmod +x /PATH/TO/earthwallpaperlive
 
 Help(){
-	echo "earthwallpaperlive - Set desktop background to earth image"
-	echo "Usage: earthwallpaperlive [-h|--help] | [-p] [<projection>]"
-	echo "  -p: pause for 10 seconds to settle the net connection"
-	echo "  <projection> is one of: mercator (default), peters, rectangular, random"
-	echo "  -h/--help:  display this help text"
+	cat <<-EOH
+		earthwallpaperlive - Set desktop background to earth image
+		Usage: earthwallpaperlive [-h|--help] | [-p] [<projection>]
+		  -p: pause for 10 seconds to settle the net connection
+		  <projection> is one of: mercator (default), peters, rectangular, random
+		  -h/--help:  display this help text
+	EOH
 	exit 0
 }
 
 Wallpaper(){  # $1: imagefile
 	if pgrep -f mate-settings-daemon >/dev/null
 	then DISPLAY=':0.0' gsettings set org.mate.background picture-filename "$1"
+		xcaja=$(xwininfo -name x-caja-desktop)
+		xid=$(grep '^xwininfo' <<<$xcaja |cut -d' ' -f4)
+		xdotool windowunmap $xid; sleep 1; xdotool windowmap $xid
 	elif pgrep -f cinnamon-session >/dev/null
 	then gsettings set org.cinnamon.desktop.background picture-uri "file://$1"
 	elif pgrep -f gnome-session >/dev/null
 	then gsettings set org.gnome.desktop.background picture-uri "file://$1"
 	elif pgrep -f xfce4-session >/dev/null
 	then
-		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/image-path --set "$1" 2>/dev/null
-		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null
+		xfconf-query --channel xfce4-desktop --property \
+				/backdrop/screen0/monitor0/image-path --set "$1" 2>/dev/null
+		xfconf-query --channel xfce4-desktop --property \
+				/backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null
 	elif type -p feh >/dev/null
 	then feh --bg-fill "$1"
 	elif type -p nitrogen >/dev/null
@@ -45,7 +52,8 @@ Wallpaper(){  # $1: imagefile
 	elif type -p habak >/dev/null
 	then habak -mS "$1"
 	elif [[ $(uname) = "Darwin" ]]
-	then osascript -e "Tell 'Finder' to set desktop picture to POSIX file '${1/#\~/$HOME}'"
+	then osascript -e \
+			"Tell 'Finder' to set desktop picture to POSIX file '${1/#\~/$HOME}'"
 	else  # trying GNOME..?
 		gsettings set org.gnome.desktop.background picture-uri "file://$1"
 	fi
@@ -65,15 +73,18 @@ Main(){
 	printf '%s\n' ${p[@]} |grep -q "^$proj$" || proj=$p  ## if not found: default
 	[[ $proj = random ]] && proj=${p[$((RANDOM%(${#p[@]}-1)))]}
 
-	dir=/tmp
-	pic=$dir/earthwallpaperlive.jpg
+	pictmp=/tmp/earthwallpaperlive.jpg
+	pic=/home/pp/earthwallpaperlive.jpg
 
 	# available dimensions: 1600x770/887 1280x616 1024x493
 	width=1600
 	((pause)) && sleep 10
-	wget -qpO "$pic" -w 10 --connect-timeout=20 \
+	wget -qpO "$pictmp" -w 10 --connect-timeout=20 \
 			"https://static.die.net/earth/$proj/$width.jpg"
-	sleep 3
+	# If temporarily unavailable, skip
+	(($?==8)) && return 1
+	[[ -s $pictmp ]] && cp "$pictmp" "$pic" || return 2
+	sleep 1
 	sync
 	sleep 1
 

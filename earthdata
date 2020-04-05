@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# earthdata - Get NASA earth foto and put it on the MATE desktop
+
+img=/tmp/earthdata ext=.png
+time=$(date -d yesterday +%Y-%m-%dT%H:%M) # Z time
+dwidth=2320 height=1280 width=1920
+
+	wget -O "$img-dl$ext" "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=$time:00Z&BBOX=-80.578125,-168.75,90.703125,219.65625&CRS=EPSG:4326&LAYERS=VIIRS_SNPP_CorrectedReflectance_TrueColor,Coastlines&WRAP=day,x&FORMAT=image/png&WIDTH=$dwidth&HEIGHT=$height&ts=1586011761518"
+convert "$img-dl$ext" -resize ${width}x$height\! "$img$ext"
+
+DISPLAY=:0 gsettings set org.mate.background picture-filename "$img$ext"
+xcaja=$(xwininfo -name x-caja-desktop)
+xid=$(grep '^xwininfo' <<<$xcaja |cut -d' ' -f4)
+xdotool windowunmap $xid
+sleep 1
+xdotool windowmap $xid
+
+exit 0

@@ -1,61 +1,63 @@
 #!/bin/bash
 
-sudo bash <<-\EOS
+# Required: debootstrap grep chroot qemu-utils(qemu-nbd) mount(umount)
+#  coreutils(cat rmdir sleep rm) cryptsetup(askpass) kmod(modprobe)
+#  sudo fdisk e2fsprogs(mkfs.ext4) grub2-common(grub-install)
 
-disk_size="4G"
-boot_size="300M"
-release="Stretch"
+disk_size="5G"
+efi_size="300M"
+release="Bionic"
 debianrepo="http://ftp.pl.debian.org/debian"
 ubunturepo="http://archive.ubuntu.com/ubuntu"
 include="less,vim,nano,sudo,openssh-server,acpid"
-debianrels="stretch,jessie,wheezy,squeeze"
-ubunturels="artful,zesty,yakkety,xenial,trusty"
+debianrels="buster,stretch,jessie"
+ubunturels="focal,eoan,disco,cosmic,bionic,xenial,trusty"
 
 Help(){
 	self=${0##*/}
 	cat <<-EOF
 		$self - Create a fresh Debian/Ubuntu qemu image
 
-		USAGE: $self [-h|--help] [-r <release>] [-n <hostname>] [-i <img_file>]
-		             [-s <disk_size>] [-b <boot_size>] [<debootstrap>]
-		    -h|--help:       Just display this help text
-		    -r <release>:    A supported Debian ($debianrels) or
-		                     Ubuntu ($ubunturels) release
-		    -n <hostname>:   Desired hostname
-		    -i <img_file>:   Location of the image file (overwritten if existing)
-		    -d <disk_size>:  Size of the virtual disk
-		    -b <boot_size>:  Size of the boot partition (rest: root partition)
-		    <debootstrap>:   Extras arguments for debootstrap
-		  Default values when options are not supplied:
-		    <release>:       $release
-		    <hostname>:      <release>
-		    <img_file>:      <hostname>-<os>-<release>.qcow2
-		    <disk_size>:     $disk_size
-		    <boot_size>:     $boot_size
+		USAGE: $self [-h|--help] [-r <release>] [-n <hostname>] [-i <img file>]
+		             [-s <disk size>] [-e <EFI size>] [<debootstrap>]
+		  -h|--help:       Just display this help text
+		  -r/--release <release>:     Debian ($debianrels) or
+		                              Ubuntu ($ubunturels)
+		  -n/--name <hostname>:       Desired hostname
+		  -i/--image <img file>:      Image file location (overwritten if existing)
+		  -d/--disksize <disk size>:  Size of the virtual disk in MB
+		  -e//-efisize <EFI size>:    Size of the EFI System Partition (rest: root)
+		  <debootstrap>:              Extra arguments for debootstrap
+		      Default values when options are not supplied:
+		        <release>:      $release
+		        <hostname>:     <release>
+		        <img file>:     <hostname>-<os>-<release>.qcow2
+		        <disk size>:    $disk_size
+		        <EFI size>:     $efi_size
 
 		Authors: Kamil Trzcinski (http://ayufan.eu)
 		         pepa65 <pepa65@passchier.net> gitlab.com/pepa65/misc
-		License: GPL-3+
+		License: GPLv3+
 	EOF
 }
 
 Umount(){
-	grep -q "$MNT_DIR$1" /proc/mounts && chroot "$MNT_DIR" umount $1
+	grep -q "$mntdir$1" /proc/mounts && chroot "$mntdir" umount $1
 	sleep 1
 }
 
 Clean(){
-	if [[ $MNT_DIR ]] && grep -q "$MNT_DIR" /proc/mounts
+	if [[ $mntdir ]] && grep -q "$mntdir" /proc/mounts
 	then
 		Umount /proc
 		Umount /sys
-		Umount /boot
+		Umount /boot/efi
 		Umount /dev
-		umount "$MNT_DIR"
+		sudo umount "$mntdir"
 		sleep 1
 	fi
-	[[ $DISK ]] && qemu-nbd -d "$DISK" && sleep 1
-	[[ $MNT_DIR ]] && rmdir "$MNT_DIR"
+	[[ $disk ]] && qemu-nbd -d "$disk" && sleep 1
+	[[ $mntdir ]] && rmdir "$mntdir"
 }
 
 Fail(){
@@ -65,7 +67,7 @@ Fail(){
 	exit 2
 }
 
-MNT_DIR=$(mktemp -d) DISK=
+mntdir=$(mktemp -d) disk=
 
 trap 'Fail "Ctrl-C received"' INT
 
@@ -82,8 +84,8 @@ do
 		img_file=$2; shift 2 ;;
 	-d|--disksize) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
 		disk_size=$2; shift 2 ;;
-	-b|--bootsize) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
-		boot_size=$2; shift 2 ;;
+	-e|--efisize) [[ -z $2 ]] && Help && Fail "option $1 needs argument"
+		efi_size=$2M; shift 2 ;;
 	*) args+="$1 "
 		shift ;;
 	esac
@@ -104,8 +106,6 @@ do
 	pwa=$(/lib/cryptsetup/askpass "Enter the same password again: ")
 done
 
-#((EUID)) && Fail "must have root privileges"
-
 rm -f -- "$img_file" || Fail "insufficient rights to $img_file"
 qemu-img create -f qcow2 "$img_file" $disk_size
 [[ -f $img_file ]] || Fail "cannot create qemu image $img_file of size $disk_size"
@@ -114,42 +114,49 @@ echo "Installing $release into $img_file..."
 
 echo "Looking for nbd device..."
 
-modprobe nbd max_part=16 || Fail "cannot load nbd module into kernel"
+sudo modprobe nbd max_part=16 || Fail "cannot load nbd module into kernel"
 
 for nbd in /dev/nbd*
-do
-	qemu-nbd -c "$nbd" "$img_file" && DISK=$nbd && break
+do sudo qemu-nbd -c "$nbd" "$img_file" 2>/dev/null && disk=$nbd && break
 done
-[[ $DISK ]] || Fail "no nbd device available"
-echo "Connected $img_file to $DISK"
+[[ $disk ]] || Fail "no nbd device available"
+echo "Connected $img_file to $disk"
 
-echo "Partitioning $DISK..."
-fdisk_input=$'o\nn\n\n\n\n+'$boot_size$'\nn\n\n\n\n\nw\n'
-fdisk -Lnever "$DISK" <<<"$fdisk_input" || Fail "cannot partition $img_file"
+echo "Partitioning $disk..."
+#fdisk_input=$'o\nn\n\n\n\n+'$boot_size$'\nn\n\n\n\n\nw\n'
+#sudo fdisk -Lnever "$disk" <<<"$fdisk_input" ||
+#	Fail "cannot partition $img_file"
+gdisk_input=$'n\n1\n\n+'$efi_size$'\nef00\nn\n\n\n\n\nw\ny\n'
+sudo gdisk "$disk" <<<"$gdisk_input" ||
+	Fail "cannot partition $img_file"
 
-echo "Formatting boot partition..."
-mkfs.ext4 -q "${DISK}p1" || Fail "cannot create /boot ext4"
+echo "Formatting EFI partition..."
+sudo mkfs.vfat "${disk}p1" || Fail "cannot create /boot/efi vfat"
 
 echo "Formatting root partition..."
-mkfs.ext4 -q "${DISK}p2" || Fail "cannot create / ext4"
+sudo mkfs.ext4 -q "${disk}p2" || Fail "cannot create / ext4"
 
 echo "Mounting root partition..."
-mount "${DISK}p2" "$MNT_DIR" || Fail "cannot mount /"
+sudo mount "${disk}p2" "$mntdir" || Fail "cannot mount /"
+
+echo "Mounting EFI partition..."
+sudo mkdir -p "$mntdir/boot/efi"
+sudo mount "${disk}p2" "$mntdir/boot/efi" || Fail "cannot mount /boot/efi"
 
 echo "Installing $os $release..."
-debootstrap --include=$include $args "$release" "$MNT_DIR" "$repo" \
-		|| Fail "cannot install $os $release onto $DISK"
+sudo debootstrap --include=$include $args "$release" "$mntdir" "$repo" ||
+	Fail "cannot install $os $release onto $disk"
 
 echo "Configuring system..."
 
-cat <<-EOF >"$MNT_DIR/etc/fstab"
-	/dev/sda1 /boot ext4 sync 0 2
-	/dev/sda2 / ext4 errors=remount-ro 0 1
+cat <<-EOF |sudo tee "$mntdir/etc/fstab"
+	/dev/sda1 /boot/efi vfat rw,relatime,gid=46,fmask=0077,dmask=0077 0 2
+	/dev/sda2 / ext4 relatime,errors=remount-ro 0 1
 EOF
 
-echo "$hostname" >"$MNT_DIR/etc/hostname"
+echo "$hostname" |sudo tee "$mntdir/etc/hostname"
 
-cat <<-EOF >"$MNT_DIR/etc/hosts"
+cat <<-EOF |sudo tee "$mntdir/etc/hosts"
 	127.0.0.1 localhost
 	127.0.1.1 $hostname
 
@@ -158,7 +165,7 @@ cat <<-EOF >"$MNT_DIR/etc/hosts"
 	ff02::2 ip6-allrouters
 EOF
 
-cat <<-EOF >"$MNT_DIR/etc/network/interfaces"
+cat <<-EOF |sudo tee "$mntdir/etc/network/interfaces"
 	auto lo
 	iface lo inet loopback
 
@@ -166,30 +173,33 @@ cat <<-EOF >"$MNT_DIR/etc/network/interfaces"
 	iface eth0 inet dhcp
 EOF
 
-mount --bind /dev/ "$MNT_DIR/dev" || Fail "cannot bind /dev"
-chroot "$MNT_DIR" mount -t ext4 "${DISK}p1" /boot || Fail "cannot mount /boot"
-chroot "$MNT_DIR" mount -t proc proc /proc || Fail "cannot mount /proc"
-chroot "$MNT_DIR" mount -t sysfs sysfs /sys || Fail "cannot mount /sys"
-LANG=C DEBIAN_FRONTEND=noninteractive chroot "$MNT_DIR" apt-get install -y -q $kern grub-pc || Fail "cannot install linux-image and grub packages"
-chroot "$MNT_DIR" grub-install "$DISK" || Fail "cannot install grub bootloader"
-chroot "$MNT_DIR" update-grub || Fail "cannot update grub"
+sudo mount --bind /dev/ "$mntdir/dev" || Fail "cannot bind /dev"
+sudo chroot "$mntdir" mount -t vfat "${disk}p1" /boot/efi ||
+	Fail "cannot mount /boot/efi"
+sudo chroot "$mntdir" mount -t proc proc /proc || Fail "cannot mount /proc"
+sudo chroot "$mntdir" mount -t sysfs sysfs /sys || Fail "cannot mount /sys"
+LANG=C DEBIAN_FRONTEND=noninteractive sudo chroot "$mntdir" \
+		apt-get install -y -q $kern grub-efi ||
+	Fail "cannot install linux-image and grub packages"
+sudo chroot "$mntdir" grub-install "$disk" ||
+	Fail "cannot install grub bootloader"
+sudo chroot "$mntdir" update-grub || Fail "cannot update grub"
 
-sed -i "s|${DISK}p1|/dev/sda1|g" "$MNT_DIR/boot/grub/grub.cfg"
-sed -i "s|${DISK}p2|/dev/sda2|g" "$MNT_DIR/boot/grub/grub.cfg"
+sudo sed -i "s|${disk}p1|/dev/sda1|g" "$mntdir/boot/grub/grub.cfg"
+sudo sed -i "s|${disk}p2|/dev/sda2|g" "$mntdir/boot/grub/grub.cfg"
 
-chroot "$MNT_DIR" chpasswd <<<"root:$pw"
+sudo chroot "$mntdir" chpasswd <<<"root:$pw"
 
 echo "Finishing grub installation..."
-grub-install "$DISK" --root-directory="$MNT_DIR" --modules="biosdisk part_msdos" || Fail "cannot reinstall grub"
-
-EOS
+sudo grub-install "$disk" --root-directory="$mntdir" \
+		--modules="biosdisk part_msdos" || Fail "cannot reinstall grub"
 
 Clean
 echo
 echo "Installed $os $release from $repo"
 echo " on virtual disk file $img_file with hostname $hostname"
 [[ $args ]] && echo " with debootstrap extra arguments $args"
-echo " disk size is $disk_size and boot partition size is $boot_size"
+echo " disk size is $disk_size and EFI partition size is $efi_size"
 echo "SUCCESS!"
 
 exit 0

@@ -157,6 +157,9 @@ Default values when options are not supplied:
   <boot_size>:     $boot_size
 ```
 
+## earthdata
+**Get NASA earth foto and put it on the MATE desktop**
+
 ## earthwallpaperlive
 **Set current earthimage as wallpaper**
 
