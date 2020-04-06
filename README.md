@@ -416,6 +416,7 @@ bootctlu [-h|--help] [-I|--install] [-U|--uninstall]
     -m/--memtest:       Also download and set up a MemTest86 entry.
     -s/--secureboot:    Also install secureboot files.
     -r/--register:      Also register the efi-loader with UEFI.
+	Extraneous arguments ignored to work as install/remove kernel hook.
 ```
 * Required: util-linux(lsblk) coreutils(tee sort cut mkdir cat cp ls rm cd) grep sed systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar. For -r/--register: efibootmgr.
 

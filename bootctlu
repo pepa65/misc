@@ -59,6 +59,7 @@ Help(){
 		    -m/--memtest:       Also download and set up a MemTest86 entry.
 		    -s/--secureboot:    Also install secureboot files.
 		    -r/--register:      Also register the efi-loader with UEFI.
+		  Extraneous arguments ignored to work as install/remove kernel hook.
 	EOH
 }
 
@@ -102,9 +103,8 @@ do
 	-m|--memtest) memtest=1 ;;
 	-r|--register) register=1 ;;
 	-s|--secureboot) secureboot=1 ;;
-	*) # Ignore kernelversion so the script can be used as hook
-		[[ ! -f $defimgdir/vmlinuz-$1 && ! -f $1 ]] &&
-			Help && Echo "Unrecognized commandline option '$1'" 2
+	-*) Help && Echo "Unrecognized flag: $1" 2 ;;
+	*) Echo "Ignored argument '$1'" 0
 	esac
 	shift
 done
