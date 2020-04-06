@@ -1,0 +1,59 @@
+#!/bin/bash
+set +vx
+# ensure-vboxdrv-signed - Sign the virtualbox modules
+# Required: mokutil kmod(modprobe modinfo) sbsigntool(kmodsign) openssl
+#  virtualbox coreutils(type basename dirname uname) grep
+# systemd[ensure-vboxdrv-signed.service]
+
+for b in mokutil modprobe modinfo kmodsign openssl
+do ! eval "$b=$(type -P $b)" && echo "Missing: $b" && exit 1
+done
+
+! $mokutil --sb-state |grep -qi ' enabled$' &&
+	echo "WARNING: SecureBoot not enabled, no signing needed"
+
+sigdir=/var/lib/shim-signed/mok
+key=$sigdir/MOK.key crt=$sigdir/MOK.crt cer=$sigdir/MOK.cer
+new=0
+[[ ! -d $sigdir ]] && mkdir -p $sigdir
+[[ ! -f $key || ! -f $crt || ! -f $cer ]] &&
+	echo "Generate signing keys..." && new=1 &&
+	$openssl req -new -x509 -newkey rsa:2048 -nodes -days 3650 \
+			-keyout $key -out $crt -subj "/CN=VirtualBox/" &&
+	$openssl x509 -in $crt -outform DER -out $cer
+cp $crt /boot/efi/EFI/bootctlu
+
+info=$($modinfo -n vboxdrv)
+if [[ -z $info ]]
+then # Compile it
+	/usr/lib/virtualbox/vboxdrv.sh setup
+	info=$($modinfo -n vboxdrv)
+	[[ -z $info ]] &&
+		echo "ERROR: Module 'vboxdrv' compilation failed" && exit 2
+fi
+
+[[ $1 ]] && kver=$1 || kver=$(uname -r)
+kdir=/usr/src/linux-headers-$kver
+mdir=$(dirname "$info")
+for module in $mdir/vbox*.ko
+do
+	mod=$(basename "$module") mod=${mod//.*/}
+	# No signing needed if the module loads
+	echo "Loading $mod..."
+	$modprobe $mod && continue
+	# Signing needed
+	echo "Signing $mod..."
+	#! $kdir/scripts/sign-file sha512 $key $cer $module &&
+	! $kmodsign sha512 $key $cer $module &&
+		echo "# Failed to sign $module with $key:$cer, kernel=$kver, rc: $?" &&
+		exit 3
+	((new)) && continue
+	echo "Reloading signed $mod..."
+	! $modprobe $mod &&
+		echo "# Signed $mod but failed to load it from $module" && exit 4
+	echo "Completed loading signed $mod"
+done
+((new)) && $mokutil --import $cer &&
+	echo "Reboot to enroll new hash into UEFI!"
+
+exit 0
