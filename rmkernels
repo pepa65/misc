@@ -80,12 +80,14 @@ Main(){
 
 	## Removing incompletely uninstalled packages
 	rc=$(dpkg -l |grep ^rc |sed "$sedpkg")
-	[[ $rc ]] &&
-		echo -e "\nUninstalled packages that have not been properly removed:\n" $rc &&
-		echo
+	ic=$(dpkg -l |grep ^ic |sed "$sedpkg")
+	[[ $rc || $ic ]] &&
+		echo -e "\nUninstalled but not properly removed packages:\n" $rc $ic "\n"
 
 	## Purge all superfluous and extra versions, and improperly removed packages
-	[[ $pkgsf || $pkgpat || $rc ]] && sudo apt purge $pkgsf $pkgpat $rc || echo "Nothing to remove"
+	[[ $pkgsf || $pkgpat || $rc ]] && sudo apt purge $pkgsf $pkgpat $rc ||
+		echo "Nothing to remove"
+	[[ $ic ]] && sudo dpkg -P $ic || echo "Nothing to wipe"
 }
 
 Main $*
