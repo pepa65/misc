@@ -109,7 +109,7 @@ duckdns [-d|--date | -h|--help]
 
 Usage: `dg[x] <domain> [<dnsrecordtype>]`
 
-When called as something else than `dg` then subdomains get probed
+When called through a symlink other than 'dg' then subdomains get probed.
 
 ## merge2ass
 **Merge 2 subtitle files into one**
@@ -397,19 +397,25 @@ Usage: `rmkernels`
 
 Usage:
 ```
-bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
-         [-i|--imgdir <images dir>] [-e|--esp <EFI-mount>]
-         [-m|--memtest] [-r|--register]
-    -h/--help:                 Only display this help text.
-    -n/--nogo:                 No writing to the system at all.
-    -q/--quiet:                Only fatal errors output to the terminal.
-    -v/--verbose:              Show more detail of the actions.
-    -i/--imgdir <images dir>:  Kernel & initrd images directory, default:
-                               /boot, overrides BOOTCTLU_IMGDIR.
-    -e/--esp <EFI-mount>:      EFI System Partition mountpoint, default:
-                               /boot/efi, overrides BOOTCTLU_ESP.
-    -m/--memtest:              Also download and set up a MemTest86 entry.
-    -r/--register:             Also register the efi-loader with UEFI.
+bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
+
+bootctlu [-h|--help] [-I|--install] [-U|--uninstall]
+         [-n|--nogo] [-q|--quiet] [-v|--verbose]
+         [-i|--imgdir <dir>] [-e|--esp <dir>]
+         [-m|--memtest] [-s|--secureboot] [-r|--register]
+    -h/--help:          Only display this help text.
+    -I/--install:       Only install the script and kernel install hooks
+    -U/--uninstall:     Only uninstall the script and kernel install hooks
+    -n/--nogo:          No writing to the system at all.
+    -q/--quiet:         Only fatal errors output to the terminal.
+    -v/--verbose:       Show more detail of the actions.
+    -i/--imgdir <dir>:  Kernel & initrd images directory, default:
+                          /boot, overrides BOOTCTLU_IMGDIR.
+    -e/--esp <dir>:     EFI System Partition mountpoint, default:
+                          /boot/efi, overrides BOOTCTLU_ESP.
+    -m/--memtest:       Also download and set up a MemTest86 entry.
+    -s/--secureboot:    Also install secureboot files.
+    -r/--register:      Also register the efi-loader with UEFI.
 ```
 * Required: util-linux(lsblk) coreutils(tee sort cut mkdir cat cp ls rm cd) grep sed systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar. For -r/--register: efibootmgr.
 

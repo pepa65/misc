@@ -1,10 +1,12 @@
 #!/bin/bash
 # dg - Extended dig
-# Usage: dg[x] <domain> [<dnsrecordtype>]
-#   When called as something else than 'dg' then subdomains get probed
+# Usage: [dg] <domain> [<dnsrecordtype>]
+#   When called through a symlink other than 'dg' then subdomains get probed.
 
 subdomains=('*' www mail smtp pop imap blog en ftp ssh login webmail)
 
+[[ -z $1 ]] && echo "Usage: dg[x] <domain> [<dnsrecordtype>]" &&
+	echo "Error: missing <domain>" && exit 1
 [[ $0 = dg ]] && dig +nocmd "$1" +noall +answer "${2:-any}" && exit $?
 
 dig +nocmd "$1" +noall +answer "${2:-any}"

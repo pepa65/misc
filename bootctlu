@@ -26,23 +26,39 @@ bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
 # Downloads
 gumurl='4e4.win/gummi' memurl='4e4.win/memtest.tgz' memver='8.1'
 
+# Install location
+inst=/usr/local/bin
+
+# Install/remove kernel hooks
+hook=zz-bootctlu
+hookidir=/etc/kernel/postinst.d hooki=$hookidir/$hook
+hookrdir=/etc/kernel/postrm.d hookr=$hookrdir/$hook
+
+# PreLoader.efi and HashTool.efi urls
+preloader='https://apt.blobfolio.com/other/PreLoader/PreLoader.efi'
+hashtool='https://apt.blobfolio.com/other/PreLoader/HashTool.efi'
+
 Help(){
 	cat <<-EOH
-		bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
+		$self - Setting up and registering gummiboot on Ubuntu/Void/Arch
 
-		Usage:  bootctlu [-h|--help] [-n|--nogo] [-q|--quiet] [-v|--verbose]
-		                 [-i|--imgdir <images dir>] [-e|--esp <EFI-mount>]
-		                 [-m|--memtest] [-r|--register]
-		    -h/--help:                 Only display this help text.
-		    -n/--nogo:                 No writing to the system at all.
-		    -q/--quiet:                Only fatal errors output to the terminal.
-		    -v/--verbose:              Show more detail of the actions.
-		    -i/--imgdir <images dir>:  Kernel & initrd images directory, default:
-		                               $defimgdir, overrides BOOTCTLU_IMGDIR.
-		    -e/--esp <EFI-mount>:      EFI System Partition mountpoint, default:
-		                               $defesp, overrides BOOTCTLU_ESP.
-		    -m/--memtest:              Also download and set up a MemTest86 entry.
-		    -r/--register:             Also register the efi-loader with UEFI.
+		Usage:  $self [-h|--help] [-I|--install] [-U|--uninstall]
+		                 [-n|--nogo] [-q|--quiet] [-v|--verbose]
+		                 [-i|--imgdir <dir>] [-e|--esp <dir>]
+		                 [-m|--memtest] [-s|--secureboot] [-r|--register]
+		    -h/--help:          Only display this help text.
+		    -I/--install:       Only install the script and kernel install hooks
+		    -U/--uninstall:     Only uninstall the script and kernel install hooks
+		    -n/--nogo:          No writing to the system at all.
+		    -q/--quiet:         Only fatal errors output to the terminal.
+		    -v/--verbose:       Show more detail of the actions.
+		    -i/--imgdir <dir>:  Kernel & initrd images directory, default:
+		                          $defimgdir, overrides BOOTCTLU_IMGDIR.
+		    -e/--esp <dir>:     EFI System Partition mountpoint, default:
+		                          $defesp, overrides BOOTCTLU_ESP.
+		    -m/--memtest:       Also download and set up a MemTest86 entry.
+		    -s/--secureboot:    Also install secureboot files.
+		    -r/--register:      Also register the efi-loader with UEFI.
 	EOH
 }
 
@@ -61,11 +77,17 @@ Echo(){ # $1: message, $2: errorcode (exit if go and non-zero!)
 	echo "Don't source, but install or run like: bash $BASH_SOURCE" &&
 	return 1
 
-imgdir=$defimgdir specesp=$BOOTCTLU_ESP off=/dev/null
-go=1 quiet=0 rd=$off verbose=0 register=0 memtest=0 esp=
+self=${0##*/} imgdir=$defimgdir specesp=$BOOTCTLU_ESP off=/dev/null
+go=1 quiet=0 rd=$off verbose=0 register=0 secureboot=0 memtest=0 esp=
 while (($#))
 do
 	case $1 in
+	-h|--help) Help && exit 0 ;;
+	-I|--install) sudo cp -v "$self" "$inst"
+		sudo ln -sfv "$inst/$self" "$hooki"
+		sudo ln -sfv "$inst/$self" "$hookr"
+		exit 0 ;;
+	-U|--uninstall) sudo rm -v "$inst/$self" "$hooki" "$hookr"; exit 0 ;;
 	-n|--nogo) go=0 ;;
 	-q|--quiet) quiet=1 ;;
 	-v|--verbose) verbose=1 rd=/dev/stdout ;;
@@ -79,8 +101,10 @@ do
 		shift ;;
 	-m|--memtest) memtest=1 ;;
 	-r|--register) register=1 ;;
-	-h|--help) Help && exit 0 ;;
-	*) Help && Echo "Unrecognized commandline option '$1'" 2
+	-s|--secureboot) secureboot=1 ;;
+	*) # Ignore kernelversion so the script can be used as hook
+		[[ ! -f $defimgdir/vmlinuz-$1 && ! -f $1 ]] &&
+			Help && Echo "Unrecognized commandline option '$1'" 2
 	esac
 	shift
 done
@@ -124,7 +148,10 @@ else  # No EFI-mount specified
 		esp=$mp
 	fi
 fi
-Echo "--- Copying images from $imgdir into EFI mountpoint $esp"
+part=$(grep " $esp " /proc/mounts) part=${part%% *}
+partnum=${part##*[^0-9]} disk=${part%$p}
+Echo "--- Using mountpoint $esp on $part (disk:$d part:$p)\n"
+Echo "--- Copying images from $imgdir into EFI mountpoint $esp\n"
 
 # Initialize and prepare loader confguration
 [[ -f /etc/machine-id ]] || uuidgen |tr -d '-' |$sudo tee /etc/machine-id
@@ -136,15 +163,8 @@ p=$(grep ' / ' /proc/mounts) root=${p%% *}
 p=${p#*\"} release=${p:0: -1}
 cmdline=$(sed 's@initrd=[^ ]*@@g' /proc/cmdline)
 out="$esp/loader/loader.conf"
-file=$(cat <<-EOF
-	#auto-entries 0
-	#auto-firmware 0
-	#console-mode auto
-	default $id-linux-*
-	timeout $timeout
-	editor yes
-EOF
-)
+file="#auto-entries 0\n#auto-firmware 0\n#console-mode auto\n"
+file+="default $id-linux-*\ntimeout $timeout\neditor yes"
 
 # Install bootloader binary and loader configuration
 if ((go))
@@ -160,12 +180,27 @@ then
 	Echo ":\n" 0
 	echo -e "$file" |$sudo tee "$out" >$rd
 	Echo "\nInstalling bootloader binaries\n" 0
-	$sudo cp "$bootloader" "$esp/EFI/bootctlu/gummi.efi"
+	$sudo cp "$bootloader" "$esp/EFI/bootctlu/loader.efi"
 	$sudo cp "$bootloader" "$esp/EFI/BOOT/BOOTX64.EFI"
+	if ((secureboot))
+	then
+		Echo "\n--- Ensuring the presence of SecureBoot files"
+		if [[ ! -f "$esp/EFI/bootctlu/PreLoader.efi" ]]
+		then
+			Echo "\nDownloading SecureBoot:PreLoader.efi" 0
+			wget -qO "$esp/EFI/bootctlu/PreLoader.efi" "$preloader"
+		fi
+		if [[ ! -f "$esp/EFI/bootctlu/HashTool.efi" ]]
+		then
+			Echo "\nDownloading SecureBoot:HashTool.efi" 0
+			wget -qO "$esp/EFI/bootctlu/HashTool.efi" "$hashtool"
+		fi
+	fi
 else
 	Echo "\n--- Writing '$out'"
 	Echo ":\n$file" 0
 	Echo "\nInstalling bootloader binaries\n" 0
+	((secureboot)) && Echo "\n--- Ensuring the presence of SecureBoot files"
 fi
 
 # Remove all linux entries for the current machine
@@ -188,15 +223,9 @@ do
 	out="$entries/$id-linux-$version.conf"
 	Echo "\n--- Writing '$out'"
 	Echo ":" 0
-	file=$(cat <<-EOF
-		title $release on $root (linux-$version)
-		version $version
-		machine-id $id
-		options $cmdline
-		linux /$id/linux-$version/linux
-		initrd /$id/linux-$version/initrd
-	EOF
-	)
+	file="title $release on $root (linux-$version)\nversion $version\n"
+	file+="machine-id $id\noptions $cmdline\nlinux /$id/linux-$version/linux\n"
+	file+="initrd /$id/linux-$version/initrd"
 	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
 		Echo "\n$file\n" 0
 done
@@ -218,12 +247,7 @@ then
 	out="$entries/$id-memtest86.conf"
 	Echo "\n--- Writing '$out'"
 	Echo ":" 0
-	file=$(cat <<-EOF
-		title MemTest86
-		version $memver
-		efi $memdir/BOOTX64.efi
-	EOF
-	)
+	file="title MemTest86\nversion $memver\nefi $memdir/BOOTX64.efi"
 	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
 		Echo "\n$file\n" 0
 fi
@@ -234,17 +258,24 @@ then
 	[[ ! -d /sys/firmware/efi/efivars ]] &&
 		Echo "Not in UEFI mode, no EFI variables, unable to register" 12
 	Echo "\nRegistering the bootloader with UEFI\n"
-	ebm=$(type -P efibootmgr) ||
+	ebm=$(type -P efibootmgr)" -d $disk -p $partnum" ||
 		Echo "Can't register with UEFI, efibootmgr not available" 13
 	entries=$($sudo $ebm |grep " $menuname$" |grep -o 'Boot....')
+	((secureboot)) &&
+		entries+=$($sudo $ebm |grep " PreLoader$" |grep -o 'Boot....')
+	Echo "\nLooking at entries: "$entries 0
 	for entry in $entries
 	do
 		((go)) && $sudo $ebm -b ${entry:4:4} -B >$off
 		Echo "\nUEFI entry '$entry $menuname' removed" 0
 	done
 	echo
-	((go)) && $sudo $ebm -c -t $timeout -l '\EFI\bootctlu\gummi.efi' -L "$menuname" &&
+	((go)) &&
+		$sudo $ebm -c -t $timeout -D -l '\EFI\bootctlu\loader.efi' -L "$menuname" &&
 		Echo "\nSuccessfully registered $menuname\n" 0
+	((go && secureboot)) &&
+		$sudo $ebm -c -t $timeout -D -l '\EFI\bootctlu\PreLoader.efi' -L "PreLoader" &&
+		Echo "\nSuccessfully registered PreLoader\n" 0
 else
 	Echo "\nNot registering with UEFI, no -r/--register option given\n" 0
 fi
