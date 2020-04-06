@@ -23,9 +23,6 @@ defesp=/boot/efi
 # Boot loader binary file
 bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
 
-# Downloads
-gumurl='4e4.win/gummi' memurl='4e4.win/memtest.tgz' memver='8.1'
-
 # Install location
 inst=/usr/local/bin
 
@@ -34,13 +31,16 @@ hook=zz-bootctlu
 hookidir=/etc/kernel/postinst.d hooki=$hookidir/$hook
 hookrdir=/etc/kernel/postrm.d hookr=$hookrdir/$hook
 
-# PreLoader.efi and HashTool.efi urls
+# Downloads
+gumurl='4e4.win/gummi' memurl='4e4.win/memtest.tgz' memver='8.1'
+
+# SecureBoot binaries PreLoader.efi and HashTool.efi urls
 preloader='https://apt.blobfolio.com/other/PreLoader/PreLoader.efi'
 hashtool='https://apt.blobfolio.com/other/PreLoader/HashTool.efi'
 
 Help(){
 	cat <<-EOH
-		$self - Setting up and registering gummiboot on Ubuntu/Void/Arch
+		$self - Install & register gummiboot/systemd-boot on Ubuntu/Void/Arch
 
 		Usage:  $self [-h|--help] [-I|--install] [-U|--uninstall]
 		                 [-n|--nogo] [-q|--quiet] [-v|--verbose]
@@ -121,7 +121,8 @@ for part in $parts
 do
 	num=${part##*[a-z]}
 	disk=${part%$num}
-	esp=$(sgdisk -i$num /dev/$disk |grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
+	esp=$($sudo sgdisk -i$num /dev/$disk |
+			grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
 	[[ $esp ]] && esps+=" /dev/$part"
 done
 [[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 4

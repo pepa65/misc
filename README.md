@@ -397,7 +397,7 @@ Usage: `rmkernels`
 
 Usage:
 ```
-bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
+bootctlu - Install & register gummiboot/systemd-boot on Ubuntu/Void/Arch
 
 bootctlu [-h|--help] [-I|--install] [-U|--uninstall]
          [-n|--nogo] [-q|--quiet] [-v|--verbose]

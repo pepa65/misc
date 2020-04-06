@@ -86,8 +86,6 @@ Main(){
 
 	## Purge all superfluous and extra versions, and improperly removed packages
 	[[ $pkgsf || $pkgpat || $rc ]] && sudo apt purge $pkgsf $pkgpat $rc || echo "Nothing to remove"
-
-	bootctlu=$(type -P bootctlu) && $bootctlu
 }
 
 Main $*
