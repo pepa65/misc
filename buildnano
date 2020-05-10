@@ -250,13 +250,13 @@ then
 	cd "$gitdir" || Abort "could not enter git directory $gitdir"
 
 	# Pull when repo present already
-	if [[ -d nano ]]
+	if [[ -d nano/.git ]]
 	then
 		cd nano || Abort "could not enter directory $gitdir/nano"
+		git checkout master
 		# Delete on unsuccessful pull
 		! git pull && cd .. && rm -rf -- nano
 	fi
-	cd "$gitdir"
 	[[ ! -d nano ]] && ! git clone $nanogit &&
 		Abort "could not download the nano git repo"
 	cd nano
