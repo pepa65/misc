@@ -151,7 +151,7 @@ else  # No EFI-mount specified
 fi
 part=$(grep " $esp " /proc/mounts) part=${part%% *}
 partnum=${part##*[^0-9]} disk=${part%$p}
-Echo "--- Using mountpoint $esp on $part (disk:$d part:$p)\n"
+Echo "--- Using mountpoint $esp on $part\n"
 Echo "--- Copying images from $imgdir into EFI mountpoint $esp\n"
 
 # Initialize and prepare loader confguration
@@ -227,7 +227,7 @@ do
 	file="title $release on $root (linux-$version)\nversion $version\n"
 	file+="machine-id $id\noptions $cmdline\nlinux /$id/linux-$version/linux\n"
 	file+="initrd /$id/linux-$version/initrd"
-	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
+	((go)) && Echo "\n" && echo -e "$file" |$sudo tee "$out" >$rd ||
 		Echo "\n$file\n" 0
 done
 

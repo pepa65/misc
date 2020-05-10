@@ -165,6 +165,9 @@ bind ^C copy main
 bind M-B findbracket all
 bind Sh-M-N prevbuf all
 bind M-N nextbuf all
+bind ^A anchor all
+bind M-, prevanchor all
+bind M-< nextanchor all
 bind M-O enter all
 bind M-C wordcount all
 bind M-R regexp search
@@ -191,8 +194,6 @@ bind ^W softwrap all
 # cut all forward
 unbind M-T all
 
-bind ^A firstline all
-bind ^E lastline all
 unbind F9 all
 # Unbind un-undoable actions:
 
@@ -212,15 +213,17 @@ bind Ins "" all
 EORC
 )
 
-git=0
+git=0 cur=0
 if [[ $1 ]]
 then
 	if [[ $1 = -g || $1 = --git ]]
 	then git=1 req+=" git autoconf autopoint"
+	elif [[ $1 = -c || $1 = --current ]]
+	then git=1 cur=1 req+=" autoconf autopoint"
 	else
 		[[ $1 =~ ^[45]\.[0-9]$ ]] &&
 			ver=$1 ||
-			Abort "argument can only be -g/--git or version; bad version: $1"
+			Abort "argument not -g/--git or -c/--current, or bad version: $1"
 	fi
 else
 	req+=" wget"
@@ -234,7 +237,12 @@ do grep -q "^ii  $p[ :]" <<<$pkgs || inst+=" $p"; done
 [[ $inst ]] && echo "Need to install $inst" &&
 	! Sudo apt-get install $inst && Abort "could not install packages:$inst"
 
-if ((git))
+if ((cur))
+then
+	[[ ! -d $gitdir/nano ]] &&
+		Abort "$gitdir/nano must be buildable already for -c/--current"
+	cd $gitdir/nano
+elif ((git))
 then
 	# Prepare git repo clone
 	[[ ${gitdir:0:1} = / ]] || Abort "GITDIR not an absolute path: $gitdir"
