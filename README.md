@@ -423,3 +423,15 @@ bootctlu [-h|--help] [-I|--install] [-U|--uninstall]
 ## noiseclean
 **Filter out noise based on sample**
 * Required: ffmpeg(ffmpeg ffprobe) sox
+
+## fillform
+**Auto fill form for multiple cases**
+* Required: flpsed sed ghostscrips(ps2pdf) poppler-utils(pdfunite)
+coreutils(cd wc rm ls)
+
+Usage:
+```
+fillform [-s|--separate] [<dir>]
+  When -s/--separate is given, the separate .pdf files for each form are kept
+  as well as the concatenated file. Directory <dir> has the input files.
+```
