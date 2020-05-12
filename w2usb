@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# w2usb - Write image/hybridiso to (USB) disk device
+# Usage:  w2usb <dev> <file>
+
+Help(){
+	cat <<-EOH
+		w2usb - Write image/hybridiso to (USB) disk device
+		Usage: w2usb <dev> <file>
+	EOH
+}
+
+Abort(){ # $1:message
+	Help
+  echo "ABORT: $1"
+  exit 1
+}
+
+Sudo(){ # $@:command
+	local prompt="Privileges required for $1"
+	((EUID)) && ! sudo=$(type -p sudo) &&
+		Abort "privileges required but 'sudo' not available"
+	$sudo -nv &>/dev/null || echo "$prompt"
+	$sudo $@
+}
+
+[[ ! -b $1 ]] && Abort "Not a block device: $1"
+[[ ! -f $2 ]] && Abort "Not a file: $2"
+dev=$1 file=$(readlink -e $2)
+
+ls -AFlR /dev/disk |grep "/${dev##*/}$" |grep -o '[^ ]* -> [^ ]*$' |
+	grep -o '^[^ ]*'
+echo "'$file' will be written to device '$dev'..."
+read -p "Sure to destroy its contents? [Confirm with Enter, Ctrl-C to abort] "
+
+Sudo umount $dev*
+Sudo wipefs -af $dev*
+Sudo dd if="$file" of="$dev"
+fsum=$(md5sum "$file" |grep -o '^[^ ]*')
+echo "File md5:    $fsum"
+len=$(stat -c '%s' "$file")
+dsum=$(Sudo dd if="$dev" bs=$len count=1 |md5sum |grep -o '^[^ ]*')
+echo "Device md5:  $dsum"
+
+[[ ! $fsum = $dsum ]] && echo "Bad copy..." && exit 2
+echo "Checksum OK"
+exit 0

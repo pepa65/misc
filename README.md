@@ -1,8 +1,10 @@
 # misc
-**miscellaneous utilities and programs**
+**Miscellaneous utilities and programs**
 
-Almost all these utilities can be used by downloading them and running them like `bash <utility>`. Running like `bash <utility> -h` is always safe and will provide some sort of help text. If necessary packages are missing, this will be reported at runtime.
-
+Almost all these utilities can be used by downloading them and running them
+like `bash <utility>`. Running like `bash <utility> -h` is always safe and will
+provide some sort of help text. If necessary packages are missing, this will be
+reported at runtime.
 
 ## difth
 **Show differences between 2 Thai language sources in html or terminal**
@@ -435,3 +437,8 @@ fillform [-s|--separate] [<dir>]
   When -s/--separate is given, the separate .pdf files for each form are kept
   as well as the concatenated file. Directory <dir> has the input files.
 ```
+
+## w2usb
+**Write image/hybridiso to (USB) disk device**
+
+Usage: 'w2usb <dev> <file>'
