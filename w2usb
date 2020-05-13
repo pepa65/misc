@@ -35,10 +35,15 @@ read -p "Sure to destroy its contents? [Confirm with Enter, Ctrl-C to abort] "
 
 Sudo umount $dev*
 Sudo wipefs -af $dev*
+sync "$file"
 Sudo dd if="$file" of="$dev"
+sync -f $dev
 fsum=$(md5sum "$file" |grep -o '^[^ ]*')
 echo "File md5:    $fsum"
 len=$(stat -c '%s' "$file")
+sleep 1
+sync -f $dev
+sleep 1
 dsum=$(Sudo dd if="$dev" bs=$len count=1 |md5sum |grep -o '^[^ ]*')
 echo "Device md5:  $dsum"
 
