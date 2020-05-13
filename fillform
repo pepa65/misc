@@ -17,27 +17,25 @@
 # contains spaces. The CASE.flp files are filled into the FORM.flp file and a
 # CASE.pdf file is generated and eventually merged into one FORM.pdf file.
 
-sep=0
+sep=0 dir=
 [[ $1 = -s || $1 = --separate ]] && sep=1 && shift
 [[ $1 && ! -d $1 ]] &&
-	echo "Argument should be directory: $1" && shift && exit 1 ||
-	dir=$1
-[[ $1 && ! $1 = -s && ! $1 = --separate ]] &&
-	echo "Invalid argument: $1" && exit 2 ||
-	sep=1
-[[ $2 ]] && shift && echo "Invalid arguments: $@" && exit 3
+	echo "Argument should be directory: $1" && exit 1
+[[ $1 ]] && dir=$1 && shift
+[[ $1 = -s || $1 = --separate ]] && sep=1 && shift
+[[ $@ ]] && echo "Invalid arguments: $@" && exit 2
 [[ $dir ]] && cd "dir"
 
 form=$(echo *.flpsed)
-[[ ! -f $form ]] && echo "Need input file $form" && exit 4
+[[ ! -f $form ]] && echo "Need input file $form" && exit 3
 lines=$(wc -l <<<$(flpsed -d "$form")) unite=
 
 for name in *.flp
 do
-	[[ ! $name = ${name// } ]] && echo "'$name' should not have spaces" && exit 5
-	[[ ! -f $name ]] && echo "Need input file $name" && exit 6
+	[[ ! $name = ${name// } ]] && echo "'$name' should not have spaces" && exit 4
+	[[ ! -f $name ]] && echo "Need input file $name" && exit 5
 	l=$(wc -l <"$name")
-	((lines!=l)) && echo "Length of $name is $l, not $lines" && exit 7
+	((lines!=l)) && echo "Length of $name is $l, not $lines" && exit 6
 	fields=$(sed 's@^@ -t @' "$name")
 	ps=${name%flp}ps
 	cmd="flpsed -b $(echo $fields) \"$form\" \"$ps\""
@@ -49,7 +47,7 @@ do
 done
 
 ! pdfunite $unite ${form%flpsed}pdf &&
-	echo "Something went wrong..?" && exit 8
+	echo "Something went wrong..?" && exit 7
 ((sep)) || rm -- $unite
 
 ls -AFltr
