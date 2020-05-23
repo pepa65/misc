@@ -27,18 +27,16 @@ Help(){
 	Pr(){ # $1:leftdisplay $2:rightdisplay $3:leftperc $4:rightperc $5:offset
 			# $6:leftmode $7:rightmode
 		local lpos rpos lp rp sm
-		local mr=$(grep $2 -A1 <<<"$xrandr" |tail -1 |grep -o [0-9]*x[0-9]*)
 		local mlx=${ml%x*} mly=${ml#*x} mrx=${mr%x*} mry=${mr#*x}
 		local lx=$((mlx*$3/100)) ly=$((mly*$3/100))
 		local rx=$((mrx*$4/100)) ry=$((mry*$4/100))
 
-		sm=$((lp>rp ? (lx+rx)*lp/100 : (lx+rx)*rp/100))x
 		(($3<100)) && lp=.$3 || lp=${3:0:1}.${3:1}
 		(($4<100)) && rp=.$4 || rp=${4:0:1}.${4:1}
 		(($5<0)) &&
 			sy=$((-$5+ry>ly ? -$5+ry : ly)) lpos=0x0 rpos=${lx}x${5:1} ||
-			sy=$(($5+ly>ry ? $5+ly : ry)) lpos=0x${5:1} rpos=${rx}x0
-		sm+=$sy
+			sy=$(($5+ly>ry ? $5+ly : ry)) lpos=0x${5:1} rpos=${lx}x0
+		sm=$((lx+rx))x$sy
 		if (($4))
 		then
 			echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode $ml"
