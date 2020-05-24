@@ -175,9 +175,17 @@ earthwallpaperlive [<projection>]
 ## buildnano
 **Build nano from source (release or git repo) on Ubuntu or Debian**
 
-* Required: coreutils(mkdir cd mktemp rm) git+autoconf+autopoint+automake/wget[git/release] pkg-config gettext libncursesw5-dev groff[optional html-help] texinfo make gcc libmagic-dev[optional filetype detection]
-
-Usage: `buildnano [-g|--git]`
+* Required: coreutils(mkdir cd mktemp rm)
+git+autoconf+autopoint+automake/wget[git/release] pkg-config gettext
+libncursesw5-dev groff[optional html-help] texinfo make gcc
+libmagic-dev[optional filetype detection]
+* Usage:
+```
+buildnano [<version> | -g|--git | -c|--current]
+    <version>:     Build <version>
+    -g/--git:      Build from current git HEAD (not stable release version)
+    -c/--current:  Build from local git repo (as is)
+```
 
 ## getjulia
 **Installing Julia from the generic binaries**

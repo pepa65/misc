@@ -5,8 +5,10 @@
 #   git+autoconf+autopoint+automake/wget[git/release]
 #   pkg-config gettext libncursesw5-dev groff[optional html-help]
 #   texinfo make gcc libmagic-dev[optional filetype detection]
-# Usage: buildnano [version|-g|--git]
-#   -g/--git: build from current git HEAD (not stable release version)
+# Usage: buildnano [<version> | -g|--git | -c|--current]
+#   <version>:     Build <version>
+#   -g/--git:      Build from current git HEAD (not stable release version)
+#   -c/--current:  Build from local git repo (as is)
 
 # Configuration options to (un)comment-out
 conf=(
@@ -67,7 +69,7 @@ fi
 nanorc=$(cat <<\EORC
 ## ~/.nanorc
 # Syntaxfiles:
-include /usr/local/share/nano/*
+include /usr/local/share/nano/*.nanorc
 # After: git clone https://github.com/scopatz/nanorc.git ~/.nano
 # Enhanced syntaxfiles:
 include ~/.nano/*.nanorc
