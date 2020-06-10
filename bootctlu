@@ -2,11 +2,12 @@
 set +vx
 # bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 #
-# Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp s rm cd ls)
+# Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp s rm cd ls diff)
 #           grep sed systemd(file:systemd-bootx64.efi)/wget[if not present]
 #           sudo[unless run as root, or only invoked with -n/--nogo]
-#   For -m/--memtest: wget tar
+#   For -m/--memtest:  wget tar
 #   For -r/--register: efibootmgr
+#   For -I/--install:  diffutils(diff)
 
 # Used as the UEFI boot entry name
 menuname='Main boot menu'
@@ -84,7 +85,7 @@ while (($#))
 do
 	case $1 in
 	-h|--help) Help && exit 0 ;;
-	-I|--install) sudo cp -v "$self" "$inst"
+	-I|--install) diff "$0" "$inst/$self" || sudo cp -v "$0" "$inst"
 		sudo ln -sfv "$inst/$self" "$hooki"
 		sudo ln -sfv "$inst/$self" "$hookr"
 		exit 0 ;;

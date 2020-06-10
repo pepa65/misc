@@ -36,7 +36,7 @@ Help(){
 		(($5<0)) &&
 			sy=$((-$5+ry>ly ? -$5+ry : ly)) lpos=0x0 rpos=${lx}x${5:1} ||
 			sy=$(($5+ly>ry ? $5+ly : ry)) lpos=0x${5:1} rpos=${lx}x0
-		sm=$((lx+rx))x$sy
+		sm=$((lx+rx+1))x$((sy+1))
 		if (($4))
 		then
 			echo -n "xrandr --output $1 --auto --scale ${lp}x$lp --mode $ml"
