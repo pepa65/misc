@@ -218,6 +218,7 @@ EORC
 git=0 cur=0
 if [[ $1 ]]
 then
+	nanorc+="bind ^A anchor all\nbind M-, prevanchor all\nbind M-< nextanchor all\n"
 	if [[ $1 = -g || $1 = --git ]]
 	then git=1 req+=" git autoconf autopoint makedev"
 	elif [[ $1 = -c || $1 = --current ]]
@@ -294,7 +295,7 @@ make || Abort "error in Make"
 Sudo make install-strip || Abort "error in Install"
 rc=$HOME/.nanorc
 mv -v --backup=t "$rc" "$rc~"
-echo "$nanorc" >"$rc"
+echo -e "$nanorc" >"$rc"
 hash nano
 echo "Installed $(nano -V)"
 
