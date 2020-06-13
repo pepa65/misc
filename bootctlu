@@ -85,7 +85,9 @@ while (($#))
 do
 	case $1 in
 	-h|--help) Help && exit 0 ;;
-	-I|--install) diff "$0" "$inst/$self" || sudo cp -v "$0" "$inst"
+	-I|--install)
+		[[ $inst/$self ]] && diff "$0" "$inst/$self" ||
+			sudo cp -v "$0" "$inst"
 		sudo ln -sfv "$inst/$self" "$hooki"
 		sudo ln -sfv "$inst/$self" "$hookr"
 		exit 0 ;;
@@ -93,11 +95,13 @@ do
 	-n|--nogo) go=0 ;;
 	-q|--quiet) quiet=1 ;;
 	-v|--verbose) verbose=1 rd=/dev/stdout ;;
-	-i|--imgdir) [[ $BOOTCTLU_IMGDIR ]] &&
+	-i|--imgdir)
+		[[ $BOOTCTLU_IMGDIR ]] &&
 			Echo "WARNING: overriding BOOTCTLU_IMGDIR with '$2'"
 		imgdir=$2
 		shift ;;
-	-e|--esp) [[ ${2%%/*} ]] && Echo "Mountpoint '$2' must start with /" 1
+	-e|--esp)
+		[[ ${2%%/*} ]] && Echo "Mountpoint '$2' must start with /" 1
 		[[ $specesp ]] && Echo "WARNING: overriding BOOTCTLU_ESP with '$2'"
 		specesp=$2
 		shift ;;
@@ -113,7 +117,13 @@ done
 sudo=
 ((EUID)) && ! sudo=$(type -P sudo) &&
 	Echo "Need to escalate privilege, but sudo not present" 3
-((go)) || Echo "\n### Simulation, no actual copying/writing/registering\n"
+if ((go))
+then
+	((register)) && ! ebm=$(type -P efibootmgr)" -d $disk -p $partnum" &&
+		Echo "Can't register with UEFI, efibootmgr not available" 4
+else
+	Echo "\n### Simulation, no actual copying/writing/registering\n"
+fi
 
 # Get EFI System Partitions
 esps=
@@ -126,12 +136,12 @@ do
 			grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
 	[[ $esp ]] && esps+=" /dev/$part"
 done
-[[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 4
+[[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 5
 Echo "EFI System Partitions: $esps\n" 0
 
 # Usable EFI partition must be mounted, collect all mounted
 mp=$(egrep "${esps// /|}" /proc/mounts |cut -d' ' -f2)
-[[ $mp ]] || Echo "No EFI System Partitions mounted" 5
+[[ $mp ]] || Echo "No EFI System Partitions mounted" 6
 mp=${mp//$'\n'/ }
 Echo "Mount points of EFI partitions: $mp\n" 0
 
@@ -139,14 +149,14 @@ Echo "Mount points of EFI partitions: $mp\n" 0
 if [[ $specesp ]]
 then  # EFI-mount specified (commandline / env.variable): check if mounted
 	[[ " $mp " == *" $specesp "* ]] && esp=$specesp ||
-		Echo "Specified EFI mountpoint '$specesp' has no EFI partition mounted" 6
+		Echo "Specified EFI mountpoint '$specesp' has no EFI partition mounted" 7
 else  # No EFI-mount specified
 	if [[ " $mp " == *" $defesp "* ]]
 	then  # Use default if mounted
 		esp=$defesp
 	else  # Use the discovered one
 		[[ $mp == *$'\n'* ]] &&
-			Echo "More than 1 EFI System Partition mounted, must specify one" 7
+			Echo "More than 1 EFI System Partition mounted, must specify one" 8
 		esp=$mp
 	fi
 fi
@@ -174,7 +184,7 @@ then
 	[[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
 		wget -q "$gumurl"
 	$sudo mkdir -p "$iddir" "$entries" "$esp/EFI/bootctlu" "$esp/EFI/Boot" ||
-		Echo "Problem making required directories" 8
+		Echo "Problem making required directories" 9
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		$sudo mv "$out" "$out~" &&
 		Echo "\nRenaming previous loader.conf to '$out~'\n" 0
@@ -218,7 +228,7 @@ do
 		initrd=$imgdir/initrd.img-$version
 	entry="$iddir/linux-$version"
 	((go)) && ! $sudo mkdir -p "$entry" &&
-		Echo "Problem making directory $entry" 9
+		Echo "Problem making directory $entry" 10
 	Echo "\n--- Copying images to $entry"
 	((go)) && $sudo cp "$kernel" "$entry/linux"
 	((go)) && $sudo cp "$initrd" "$entry/initrd"
@@ -239,11 +249,11 @@ then
 	memdir="$id/memtest86"
 	tmp=$(mktemp -d)
 	cd "$tmp"
-	wget -q "$memurl" || Echo "Can't download MemTest86" 10
+	wget -q "$memurl" || Echo "Can't download MemTest86" 11
 	((go)) && $sudo mkdir -p "$esp/$memdir" && $sudo rm -rf -- "$esp/$memdir/*"
 	((go)) &&
 		! $sudo tar xf memtest.tgz --no-same-owner -C "$esp/$memdir" &&
-		Echo "Can't setup the files for MemTest86" 11
+		Echo "Can't setup the files for MemTest86" 12
 	cd - >/dev/null
 	rm -r -- "$tmp"
 	out="$entries/$id-memtest86.conf"
@@ -258,10 +268,8 @@ fi
 if ((register))
 then
 	[[ ! -d /sys/firmware/efi/efivars ]] &&
-		Echo "Not in UEFI mode, no EFI variables, unable to register" 12
+		Echo "Not in UEFI mode, no EFI variables, unable to register" 13
 	Echo "\nRegistering the bootloader with UEFI\n"
-	ebm=$(type -P efibootmgr)" -d $disk -p $partnum" ||
-		Echo "Can't register with UEFI, efibootmgr not available" 13
 	entries=$($sudo $ebm |grep " $menuname$" |grep -o 'Boot....')
 	((secureboot)) &&
 		entries+=$($sudo $ebm |grep " PreLoader$" |grep -o 'Boot....')
