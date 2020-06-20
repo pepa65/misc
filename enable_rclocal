@@ -9,10 +9,11 @@ sdunit=/etc/systemd/system/rc-local.service
 [[ ! -f $rclocal ]] && echo -e "#!/bin/bash\n\n\nexit 0\n" >"$rclocal"
 chmod +x "$rclocal"
 
-[[ ! -f $sdunit ]] && cat <<-EOS
+[[ ! -f $sdunit ]] && cat <<-\EOS
 	[Unit]
 	Description=/etc/rc.local Compatibility
 	ConditionPathExists=/etc/rc.local
+	After=network.target
 
 	[Service]
 	Type=forking
@@ -26,4 +27,5 @@ chmod +x "$rclocal"
 	WantedBy=multi-user.target
 EOS
 
-systemctl enable rc-local
+systemctl enable rc-local.service
+systemctl status rc-local.service
