@@ -1,0 +1,29 @@
+#!/bin/bash
+# install_rclocal - Enable the usage of /etc/rc.local under systemd
+
+((EUID)) && echo "Run as root or with sudo" && exit 1
+
+rclocal=/etc/rc.local
+sdunit=/etc/systemd/system/rc-local.service
+
+[[ ! -f $rclocal ]] && echo -e "#!/bin/bash\n\n\nexit 0\n" >"$rclocal"
+chmod +x "$rclocal"
+
+[[ ! -f $sdunit ]] && cat <<-EOS
+	[Unit]
+	Description=/etc/rc.local Compatibility
+	ConditionPathExists=/etc/rc.local
+
+	[Service]
+	Type=forking
+	ExecStart=/etc/rc.local start
+	TimeoutSec=0
+	StandardOutput=tty
+	RemainAfterExit=yes
+	SysVStartPriority=99
+
+	[Install]
+	WantedBy=multi-user.target
+EOS
+
+systemctl enable rc-local

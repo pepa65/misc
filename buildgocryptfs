@@ -97,6 +97,7 @@ fi
 
 # Install gocryptfs if not blocked
 ((gcfs)) || exit 0
+sudo apt install libssl-dev
 repo=$("$go" env GOPATH)/src/$git
 "$go" get -d -u $git
 "$repo/build.bash"
