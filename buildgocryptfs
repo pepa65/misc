@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +vx
 # buildgocryptfs - Build gocryptfs and install go if necessary
 # Usage: buildgocryptfs [-g|--get-go [<ver>]] [-n|--no-cryptfs] [-h|--help]

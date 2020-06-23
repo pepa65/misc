@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # getborg - Get borgbackup for Pi (armv7l) or PC (x86_64)
 # Required: wget sudo coreutils(mktemp rm mv chmod hash)

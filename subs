@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +vx
 ## subs - Download subtitles from subscene.com
 ## Usage: subs <search terms>

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +vx
 ## mgcfs - Manage access to gocryptfs encrypted directory
 ## Required: gocryptfs(http://github/com/rfjakob/gocryptfs) fuse grep procps

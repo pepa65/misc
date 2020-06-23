@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ## duckdns - Update duckdns.org DDNS service
 ## Usage: duckdns [-d]  # -d adds a timestamp in the log

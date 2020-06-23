@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +vx
 # bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
 #

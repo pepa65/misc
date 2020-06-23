@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # getjulia - Installing Julia from the generic binaries
 # Usage: getjulia [-u|--uninstall | -p|--purge]]

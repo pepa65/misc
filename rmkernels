@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +xv
 ## rmkernels - uninstall extraneous kernels on Ubuntu based systems
 ## Usage: bash rmkernels [-h|--help] [-f|--force] [<version>]...

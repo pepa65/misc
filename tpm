@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # tpm - Terminal Password Manager (uses standard 'pass' database)
 # Copyright (C) 2013-2016 Sören Tempel, GPL3+

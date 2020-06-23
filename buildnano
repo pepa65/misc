@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # buildnano - Build nano from source (release or git repo) on Ubuntu or Debian
 # Required: coreutils(mkdir cd mktemp rm)

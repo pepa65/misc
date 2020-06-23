@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # earthdata - Get NASA earth foto and put it on the MATE desktop
 

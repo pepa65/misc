@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -xv
 ## earthwallpaperlive - Set desktop background to earth image
 ##
