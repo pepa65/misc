@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # savedio - Export saved.io links through the API into a json file,
 #   and convert it into 3 formats:

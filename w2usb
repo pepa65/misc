@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # w2usb - Write image/hybridiso to (USB) disk device
 # Usage:  w2usb <dev> <file>

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # getjulia - Installing Julia from the generic binaries
 # Usage: getjulia [-u|--uninstall | -p|--purge]]
@@ -22,7 +22,7 @@ uninstall=0 purge=0
 [[ $1 = -p || $1 = --purge || $1 = purge ]] && purge=1 uninstall=1
 if ((uninstall))
 then
-	((UID)) && echo "Privileges needed!"
+	((EUID)) && echo "Privileges needed!"
 	sudo rm -fv -- "$usr"/bin/julia
 	sudo rm -rfv -- "$usr"/include/julia
 	sudo rm -rfv -- "$usr"/lib/julia

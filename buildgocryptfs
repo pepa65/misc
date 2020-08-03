@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +vx
 # buildgocryptfs - Build gocryptfs and install go if necessary
 # Usage: buildgocryptfs [-g|--get-go [<ver>]] [-n|--no-cryptfs] [-h|--help]
@@ -97,6 +97,7 @@ fi
 
 # Install gocryptfs if not blocked
 ((gcfs)) || exit 0
+sudo apt install libssl-dev
 repo=$("$go" env GOPATH)/src/$git
 "$go" get -d -u $git
 "$repo/build.bash"

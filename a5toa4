@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +vx
 # a5toa4 - Print an A5 size document on A4 for booklet folding
 # Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf)

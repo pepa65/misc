@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Required: debootstrap grep chroot qemu-utils(qemu-nbd) mount(umount)
 #  coreutils(cat rmdir sleep rm) cryptsetup(askpass) kmod(modprobe)

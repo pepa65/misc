@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # dg - Extended dig
 # Usage: [dg] <domain> [<dnsrecordtype>]
 #   When called through a symlink other than 'dg' then subdomains get probed.

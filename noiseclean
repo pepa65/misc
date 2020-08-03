@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # noiseclean - Filter out noise based on sample
 # Required: ffmpeg(ffmpeg ffprobe) sox
 # After https://github.com/yonilevy/noiseclean

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +xv
 # xran - Arrange 2 screens with different pixel densities beside each other
 # Required: xrandr

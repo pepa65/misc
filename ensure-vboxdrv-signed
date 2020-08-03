@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set +vx
 # ensure-vboxdrv-signed - Sign the virtualbox modules
 # Required: mokutil kmod(modprobe modinfo) sbsigntool(kmodsign) openssl

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # bitwarden2xml - Enter bitwarden data into keepassx database:
 #  database=[group[<title>,icon=0,entry=[title=<name>,<username>,<password>,<url>,<comment>,<creation?>,<lastaccess?>,<lastmod?>,expire=Never]..]..]

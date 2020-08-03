@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # keepassxml2json - Convert KeePassX xml export to json for Ironclad
 # Usage: keepassxml2json [-d|--debug] <in.xml> <out.json>

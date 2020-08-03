@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # yt2srt - Convert YouTube subtitles to .srt
 
 in=$1 out=${in%.txt}.srt
