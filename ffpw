@@ -1,0 +1,368 @@
+#!/usr/bin/env python3
+
+"""
+ffpw - Manage Firefox passwords: view, import, export
+Usage:  ffpw [<filter>] [<file>] [-v|--verbose] [-h|--help]
+	<filter>:      [ -u|-url | -n|--username | -p|--password ] <regex>
+	<file>:        -i|--import | -e|--export [<csv-file>]
+  The <regex> filter can be generic or specific for urls/usernames/passwords.
+  The <csv-file> can be empty or '-': import from stdin or export to stdout.
+  If <file> is not specified, the output is formatted and piped to a viewer.
+  -v/--verbose:  More verbose output to stderr
+  -h/--help:     This help text
+Requires: python3-pyasn1 less
+Copyright: 2018 Louis Abraham <louis.abraham@yahoo.fr> MIT License
+Adapted by gitlab.com/pepa65/misc <pepa65@passchier.net> GPLv3
+"""
+
+import sys, hmac, json, csv, secrets, configparser, sqlite3, os.path, re
+from subprocess import Popen
+from base64 import b64decode, b64encode
+from hashlib import sha1
+from pathlib import Path
+from getpass import getpass
+from uuid import uuid4
+from datetime import datetime
+from urllib.parse import urlparse
+
+from pyasn1.codec.der.decoder import decode as der_decode
+from pyasn1.codec.der.encoder import encode as der_encode
+from pyasn1.type.univ import Sequence, OctetString, ObjectIdentifier
+from Crypto.Cipher import DES3
+
+
+MAGIC1 = b"\xf8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+# des-ede3-cbc
+MAGIC2 = (1, 2, 840, 113_549, 3, 7)
+# pkcs-12-PBEWithSha1AndTripleDESCBC
+MAGIC3 = (1, 2, 840, 113_549, 1, 12, 5, 1, 3)
+
+class E_database(Exception): pass
+class E_password(Exception): pass
+
+def getKey(masterPassword=""):
+	dbfile: Path = G_dir / "key4.db"
+	if not dbfile.exists():
+		raise E_database()
+	# Firefox 58.0.2 / NSS 3.35 with key4.db in SQLite
+	conn = sqlite3.connect(dbfile.as_posix())
+	c = conn.cursor()
+	# First check password
+	c.execute("SELECT item1,item2 FROM metadata WHERE id = 'password';")
+	row = next(c)
+	globalSalt = row[0]  # item1
+	item2 = row[1]
+	decodedItem2, _ = der_decode(item2)
+	entrySalt = decodedItem2[0][1][0].asOctets()
+	cipherT = decodedItem2[1].asOctets()
+	# Usual Mozilla PBE
+	clearText = decrypt3DES(globalSalt, masterPassword, entrySalt, cipherT)
+	if clearText != b"password-check\x02\x02":
+		raise E_password()
+	if G_verbose:
+		print("Password correct", file=sys.stderr)
+	# Decrypt 3des key to decrypt "logins.json" content
+	c.execute("SELECT a11,a102 FROM nssPrivate;")
+	for row in c:
+		if row[1] == MAGIC1: # CKA_VALUE
+			a11 = row[0]
+			break
+		else: # CKA_ID
+			raise Exception("Firefox database broken, add a password to rebuild.")
+	decodedA11, _ = der_decode(a11)
+	oid = decodedA11[0][0].asTuple()
+	assert oid == MAGIC3, f"The key is encoded with an unknown format {oid}"
+	entrySalt = decodedA11[0][1][0].asOctets()
+	cipherT = decodedA11[1].asOctets()
+	key = decrypt3DES(globalSalt, masterPassword, entrySalt, cipherT)
+	if G_verbose:
+		print("3deskey", key.hex(), file=sys.stderr)
+	return key[:24]
+
+def PKCS7pad(b):
+	l = (-len(b) - 1) % 8 + 1
+	return b + bytes([l] * l)
+
+def PKCS7unpad(b):
+	return b[: -b[-1]]
+
+def decrypt3DES(globalSalt, masterPassword, entrySalt, encryptedData):
+	hp = sha1(globalSalt + masterPassword.encode()).digest()
+	pes = entrySalt + b"\x00" * (20 - len(entrySalt))
+	chp = sha1(hp + entrySalt).digest()
+	k1 = hmac.new(chp, pes + entrySalt, sha1).digest()
+	tk = hmac.new(chp, pes, sha1).digest()
+	k2 = hmac.new(chp, tk + entrySalt, sha1).digest()
+	k = k1 + k2
+	iv = k[-8:]
+	key = k[:24]
+	if G_verbose:
+		print("key=" + key.hex(), "iv=" + iv.hex(), file=sys.stderr)
+	return DES3.new(key, DES3.MODE_CBC, iv).decrypt(encryptedData)
+
+def decData(key, data):
+	# First base64 decoding, then ASN1DERdecode
+	asn1data, _ = der_decode(b64decode(data))
+	assert asn1data[0].asOctets() == MAGIC1
+	assert asn1data[1][0].asTuple() == MAGIC2
+	iv = asn1data[1][1].asOctets()
+	ciphertext = asn1data[2].asOctets()
+	des = DES3.new(key, DES3.MODE_CBC, iv)
+	return PKCS7unpad(des.decrypt(ciphertext)).decode()
+
+def encData(key, data):
+	iv = secrets.token_bytes(8)
+	des = DES3.new(key, DES3.MODE_CBC, iv)
+	ciphertext = des.encrypt(PKCS7pad(data.encode()))
+	asn1data = Sequence()
+	asn1data[0] = OctetString(MAGIC1)
+	asn1data[1] = Sequence()
+	asn1data[1][0] = ObjectIdentifier(MAGIC2)
+	asn1data[1][1] = OctetString(iv)
+	asn1data[2] = OctetString(ciphertext)
+	return b64encode(der_encode(asn1data)).decode()
+
+def getJsonLogins():
+	with open(G_dir / "logins.json", "r") as logins:
+		jsonLogins = json.load(logins)
+	return jsonLogins
+
+def overwriteJsonLogins(jsonLogins):
+	with open(G_dir / "logins.json", "w") as logins:
+		json.dump(jsonLogins, logins, separators=",:")
+
+def exportLogins(key, jsonLogins): # returns array (url,username,password)
+	if "logins" not in jsonLogins:
+		print("error: no 'logins' key in logins.json", file=sys.stderr)
+		return []
+	logins = []
+	for row in jsonLogins["logins"]:
+		url = row["hostname"]
+		decN = decData(key, row["encryptedUsername"])
+		decP = decData(key, row["encryptedPassword"])
+		if G_col == "url" and re.search(G_regex, url) != None or \
+				G_col == "username" and re.search(G_regex, decN) != None or \
+				G_col == "password" and re.search(G_regex, decP) != None or \
+				G_col == "all" and re.search(G_regex, url+" "+decN+" "+decP) != None:
+			logins.append((url, decN, decP))
+	return logins
+
+def lowerHeader(): # yields file with lowercase header
+	csvfile = open(G_file, encoding="utf-8")
+	it = iter(csvfile)
+	yield next(it).lower()
+	yield from it
+
+def readCSV(): # returns array (url,username,password)
+	logins = []
+	reader = csv.DictReader(lowerHeader())
+	for row in reader:
+		u = urlparse(row["url"])
+		url = type(u)(*u[:2], *[""] * 4).geturl()
+		logins.append((url, row["username"], row["password"]))
+	return logins
+
+def addNewLogins(key, jsonLogins, logins):
+	nextId = jsonLogins["nextId"]
+	timestamp = int(datetime.now().timestamp() * 1000)
+	for i, (url, username, password) in enumerate(logins, nextId):
+		entry = {
+			"id": i,
+			"hostname": url,
+			"httpRealm": None,
+			"formSubmitURL": "",
+			"usernameField": "",
+			"passwordField": "",
+			"encryptedUsername": encData(key, username),
+			"encryptedPassword": encData(key, password),
+			"guid": "{%s}" % uuid4(),
+			"encType": 1,
+			"timeCreated": timestamp,
+			"timeLastUsed": timestamp,
+			"timePasswordChanged": timestamp,
+			"timesUsed": 0,
+		}
+		jsonLogins["logins"].append(entry)
+	jsonLogins["nextId"] += len(logins)
+
+def askPass(): # returns key
+	password = getpass("Firefox master password: ")
+	while True:
+		if password == "":
+			raise E_password()
+			return
+		try: key = getKey(password)
+		except: password = getpass("Unusable, enter master password: ")
+		else: return key
+
+def mainFilter():
+	try: key = askPass()
+	except: return
+	jsonLogins = getJsonLogins()
+	logins = exportLogins(key, jsonLogins)
+	rev, nor = "\033[7m", "\033[m"
+	list = ""
+	less = subprocess.Popen(["less", "-RMgx2"], stdin=subprocess.PIPE)
+	for (url, decN, decP) in logins:
+		list = list + "%s %s%s%s %s\n" %(url, rev, decN, nor, decP)
+	less.stdin.write(list.encode("utf-8"))
+	less.stdin.close()
+	less.wait()
+
+def mainExport():
+	try: key = askPass()
+	except: return
+	jsonLogins = getJsonLogins()
+	logins = exportLogins(key, jsonLogins)
+	csvfile = sys.stdout
+	if G_file != csvfile:
+		csvfile = open(G_file, mode="w", encoding="utf-8")
+	writer = csv.writer(csvfile)
+	writer.writerow(["url", "username", "password"])
+	writer.writerows(logins)
+
+def mainImport():
+	running: Path = G_dir / "places.sqlite-wal"
+	if os.path.isfile(running):
+		print("Abort: cannot import when Firefox is running!", file=sys.stderr)
+		return
+	if G_file == sys.stdin:
+		# Can't read password from stdin when used for piping input file
+		try:
+			key = getKey()
+		except E_password:
+			print("Password necessary, can't pipe import file, use -i/--import.",
+				file=sys.stderr)
+			return
+	else:
+		key = askPass()
+	jsonLogins = getJsonLogins()
+	logins = readCSV()
+	addNewLogins(key, jsonLogins, logins)
+	overwriteJsonLogins(jsonLogins)
+
+def getDir():
+	global G_dir
+	dirs = {"linux": "~/.mozilla/firefox",
+		"darwin": "~/Library/Application Support/Firefox",
+		"win32": os.path.expandvars(r"%LOCALAPPDATA%\Mozilla\Firefox"),
+		"cygwin": os.path.expandvars(r"%LOCALAPPDATA%\Mozilla\Firefox")}
+	if sys.platform in dirs:
+		path = Path(dirs[sys.platform]).expanduser()
+		config = configparser.ConfigParser()
+		config.read(path / "profiles.ini")
+		profiles = [s for s in config.sections() if "Path" in config[s]]
+		if len(profiles) == 0:
+			print("No Firefox profiles found", file=sys.stderr)
+			return
+		profile = config[profiles[0]]
+		G_dir = path / profile["Path"]
+		G_dir = G_dir.expanduser()
+		if G_verbose and len(profiles) > 1:
+			print("More than one profile, picking first.", file=sys.stderr)
+	elif G_verbose:
+		print("Automatic profile selection not supported for platform",
+			sys.platform, file=sys.stderr,)
+
+def parse(): # returns True if parsing OK
+	global G_regex, G_col, G_mode, G_dir, G_file, G_verbose
+	G_regex, G_col, G_mode, G_dir, G_file, G_verbose = "", "", "", "", "", False
+	expect = ""
+	for arg in sys.argv[1:]:
+		if expect == "dir":
+			expect = ""
+			G_dir = arg
+		elif expect == "regex":
+			expect = ""
+			G_regex = arg
+		elif expect == "file":
+			expect = ""
+			G_file = arg
+		elif arg == "-h" or arg == "--help":
+			print(__doc__)
+			return False
+		elif arg == '-v' or arg == "--verbose":
+			G_verbose = True
+		elif arg == '-d' or arg == "--dir":
+			if G_dir != "":
+				print("Only 1 directory can be given")
+				return False
+			expect = "dir"
+		elif arg == '-u' or arg == "--url":
+			if G_regex != "":
+				print("Only one regex can be given")
+				return False
+			G_col = "url"
+			expect = "regex"
+		elif arg == '-n' or arg == "--username":
+			if G_regex != "":
+				print("Only one regex can be given")
+				return False
+			G_col = "username"
+			expect = "regex"
+		elif arg == '-p' or arg == "--password":
+			if G_regex != "":
+				print("Only one regex can be given")
+				return False
+			G_col = "password"
+			expect = "regex"
+		elif arg == '-i' or arg == '--import':
+			if G_mode == "import":
+				print("Only one import file can be given")
+				return False
+			if G_mode == "export":
+				print("Can't both import and export at the same time")
+				return False
+			G_mode = "import"
+			expect = "file"
+		elif arg == '-e' or arg == '--export':
+			if G_mode == "export":
+				print("Only one export file can be given")
+				return False
+			if G_mode == "import":
+				print("Can't both import and export at the same time")
+				return False
+			G_mode = "export"
+			expect = "file"
+		else:
+			if G_regex == "":
+				G_regex = arg
+			else:
+				print("Too many regexes")
+				return False
+	if expect == "dir":
+		print("Directory not given")
+		return False
+	if G_col != "" and G_regex == "":
+		print("Filter flag for", G_col, "must be followed by a non-empty regex")
+		return False
+	if G_mode == "import" and G_regex != "":
+		print("Can't import and specify a regex at the same time")
+		return False
+	if G_mode == "export":
+		if G_file == "-" or G_file == "":
+			G_file = sys.stdout
+	if G_mode == "import":
+		if G_file == "-" or G_file == "":
+			G_file = sys.stdin
+	if G_dir == "":
+		getDir()
+	if G_mode == "":
+		G_mode = "view"
+	if G_col == "":
+		G_col = "all"
+	if G_verbose:
+		print("Profile:", G_dir, file=sys.stderr)
+	return True
+
+def main():
+	if not parse(): return
+	elif G_mode == "import": mainImport()
+	elif G_mode == "export": mainExport()
+	else: mainFilter()
+	if G_verbose:
+		print("Dir:'%s'  Verbose:%s\nFile:'%s' Mode:%s  Field:%s Regex:'%s'"
+			%(G_dir, G_verbose, G_file, G_mode, G_col, G_regex))
+
+if __name__ == "__main__":
+	main()

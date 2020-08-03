@@ -282,17 +282,23 @@ Usage: `bitwarden2xml bitwarden.csv >keepassx.xml`
 **Enter keepassx text into bitwarden .csv format**
 Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
 
-## ffpw.py
-**Decode Firefox passwords**
+## ffpw
+**Manage Firefox passwords: view, import, export**
 
-* Required: python-pyasn1 python-pycryptodome
+* Required: python3-pyasn1 less
+* Copyright: 2018 Louis Abraham <louis.abraham@yahoo.fr> MIT License
+* Adapted: gitlab.com/pepa65/misc <pepa65@passchier.net> GPLv3
 
 Usage:
 ```
-ffpw.py [<options>]
-    options:  -d/--directory <firefox-dir>
-              -p/--password <masterpassword>
-              -v/--verbose
+ffpw [<filter>] [<file>] [-v|--verbose] [-h|--help]
+	  <filter>:      [ -u|-url | -n|--username | -p|--password ] <regex>
+  	<file>:        -i|--import | -e|--export [<csv-file>]
+  The <regex> filter can be generic or specific for urls/usernames/passwords.
+  The <csv-file> can be empty or '-': import from stdin or export to stdout.
+  If <file> is not specified, the output is formatted and piped to a viewer.
+    -v/--verbose:  More verbose output to stderr
+    -h/--help:     This help text
 ```
 
 ## keepassx.sh
