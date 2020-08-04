@@ -187,7 +187,7 @@ bind M-S writeout all
 bind M-| recordmacro all
 bind M-\ runmacro all
 bind M-' nosyntax all
-bind ^A anchor all
+bind ^T anchor all
 bind M-, prevanchor all
 bind M-< nextanchor all
 
@@ -208,7 +208,7 @@ unbind M-J all
 #bind M-J speller main
 
 # Spell checker
-unbind ^T main
+#unbind ^T main
 unbind F12 all
 
 ## Make sure no 'formatter' option is set!
