@@ -167,9 +167,6 @@ bind ^C copy main
 bind M-B findbracket all
 bind Sh-M-N prevbuf all
 bind M-N nextbuf all
-#bind ^A anchor all
-#bind M-, prevanchor all
-#bind M-< nextanchor all
 bind M-O enter all
 bind M-C wordcount all
 bind M-R regexp search
@@ -218,7 +215,7 @@ EORC
 git=0 cur=0
 if [[ $1 ]]
 then
-	nanorc+="bind ^A anchor all\nbind M-, prevanchor all\nbind M-< nextanchor all\n"
+	nanorc+="\nbind ^A anchor all\nbind M-, prevanchor all\nbind M-< nextanchor all\n"
 	if [[ $1 = -g || $1 = --git ]]
 	then git=1 req+=" git autoconf autopoint makedev"
 	elif [[ $1 = -c || $1 = --current ]]

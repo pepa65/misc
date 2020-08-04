@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-## duckdns - Update duckdns.org DDNS service
-## Usage: duckdns [-d]  # -d adds a timestamp in the log
-##  domain and token variables need to be set below
+# duckdns - Update duckdns.org DDNS service
+# Usage: duckdns [-d]  # -d adds a timestamp in the log
+#   Domain and token variables need to be set below.
+# Example crontab lines (replace /PATH/TO by the actual path to the script):
+#   0 0 * * * /PATH/TO/duckdns -d
+#   */15 * * * * /PATH/TO/duckdns
+# Required: wget grep
 
-## Example crontab lines (replace /PATH_TO by the actual path of the script):
-##  0 0 * * * /PATH_TO/duckdns -d
-##  */15 * * * * /PATH_TO/duckdns
-
-## The subdomain of duckdns.org and the token
+# duckdns.org subdomain & token, can be set in DUCKDNS_DOMAIN & DUCKDNS_TOKEN
 domain=''
 token=''
 
@@ -31,17 +31,18 @@ msg="$duckdir/duckdns.msg"
 : ${token:=$DUCKDNS_TOKEN}
 [[ -f "$log" ]] || echo -n "Log duckdns" >"$log"
 [[ -f "$msg" ]] || touch "$msg"
-ip='' res=''
+ip= res=
 url="https://www.duckdns.org/update?domains=$domain&token=$token&verbose=true"
 
 Long(){
 	res=$(wget -qO- $url)
 	ip=$(grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' <<<$res)
-	! grep -q "$ip" <<<$(tail -1 "$msg") && echo $res >>"$msg" && echo -ne "\n $ip" >>"$log"
+	! grep -q "$ip" <<<$(tail -1 "$msg") &&
+		echo $res >>"$msg" && echo -ne "\n $ip" >>"$log"
 }
 
 [[ $1 = -h || $1 = --help ]] && Help
-[[ $1 = -d || $1 = --date ]] && echo -ne "\n$(date '+%Y-%m-%d')" >>"$log"
+[[ $1 = -d || $1 = --date ]] && printf '\n%(%Y-%m-%d)T' >>"$log"
 Long
 if [[ ${res:0:2} = OK ]]
 then

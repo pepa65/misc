@@ -15,8 +15,8 @@ Copyright: 2018 Louis Abraham <louis.abraham@yahoo.fr> MIT License
 Adapted by gitlab.com/pepa65/misc <pepa65@passchier.net> GPLv3
 """
 
-import sys, hmac, json, csv, secrets, configparser, sqlite3, os.path, re
-from subprocess import Popen
+import sys, hmac, json, csv, secrets, sqlite3, os.path, re, subprocess
+from configparser import ConfigParser
 from base64 import b64decode, b64encode
 from hashlib import sha1
 from pathlib import Path
@@ -249,7 +249,7 @@ def getDir():
 		"cygwin": os.path.expandvars(r"%LOCALAPPDATA%\Mozilla\Firefox")}
 	if sys.platform in dirs:
 		path = Path(dirs[sys.platform]).expanduser()
-		config = configparser.ConfigParser()
+		config = ConfigParser()
 		config.read(path / "profiles.ini")
 		profiles = [s for s in config.sections() if "Path" in config[s]]
 		if len(profiles) == 0:

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-set +vx
-# pdfslice - Make a pdf from a page range in a source document
+
+# %1 - Make a pdf from a page range in a source document
+# Usage:  %1 [-h|--help ] | <range> <in.pdf> [<out.pdf>]
+#   Where <range> is:  [<from>],[<to>] | [<from>][+[<number>]]
+#     If <from> or <to> start with a minus sign they count from the back;
+#     if omitted they default to first and last page;
+#     <number> specifies the number of pages, if omitted defaults to 1.
+#   -h/--help:  Just display this help text.
 # Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm ls)
 
 Help(){ # $1:message $2:(optional)code [0:Warning, 1:Fatal]
@@ -8,20 +14,11 @@ Help(){ # $1:message $2:(optional)code [0:Warning, 1:Fatal]
 	then
 		(($2)) && echo "FATAL: $1" && exit 2 || echo "WARNING: $1"
 	else
-		cat <<-EOM
-			$Self - Make a pdf from a page range in a source document
-			Usage:  $Self [-h|--help ] | <range> <in.pdf> [<out.pdf>]
-			  Where <range> is:  [<from>],[<to>] | [<from>][+[<number>]]
-			    If <from> or <to> start with a minus sign they count from the back;
-			      if omitted they default to first and last page;
-			      <number> specifies the number of pages, if omitted defaults to 1.
-			  -h/--help:  Just display this help text.
-		EOM
+		sed -n "/# Required/q;s@%1@${0##*/}@g;s@^# @@p" "$0"
 		[[ $1 ]] && echo -e "\n$1" && exit 1 || exit 0
 	fi
 }
 
-Self=${0##*/}
 (($#)) || Help "Commandline arguments needed"
 [[ $1 = -h || $1 = --help ]] && Help
 range=$1 in=$2 out=$3
@@ -29,7 +26,7 @@ shopt -s extglob
 [[ $range = ?(?(-)[1-9]*([0-9])),?(?(-)[1-9]*([0-9])) ||
 		$range = ?(?(-)[1-9]*([0-9]))?(+?([1-9]*([0-9]))) ]] ||
 	Help "Invalid format of <range>: '$range'"
-[[ -f "$in" ]] || Help "Input document <in.pdf> is not a file: '$in'"
+[[ -f "$in" ]] || Help "No file <in.pdf>: '$in'"
 total=$(pdfinfo "$in" 2>/dev/null |grep '^Pages:') total=${total##* }
 [[ $total ]] || Help "Could not determine the number of pages in $in"
 if [[ $range = *,* ]]

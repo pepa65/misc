@@ -10,7 +10,7 @@
 input=$(<"$1")$'\xd' out=&1
 echo -e "<!DOCTYPE KEEPASSX_DATABASE>\n<database>" >"$out"
 
-d=$(date +"%Y-%m-%dT%H:%M:%S")
+printf -v d '%(%Y-%m-%dT%H:%M:%S)T'
 title0=
 while read -r -d $'\xd'
 do

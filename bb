@@ -1,8 +1,24 @@
 #!/usr/bin/env bash
-set +o xtrace +o verbose
 
-# bb - Wrapperscript around borgbackup
-# Required: borg coreutils(date tee cat)
+# %1 - Wrapperscript around borgbackup
+# Usage:  %1 [ init|check|help|unlock|prune | list [<prefix>] |
+#         info|delete <name> | backup [<dir>] | rename <name> <newname> |
+#         mount [<name>] | unmount ]
+#     init:  init repo (set BORG_REPO variable in %1 or on commandline)
+#     check:  check repo
+#     help:  output this help text (also without any argument)
+#     unlock:  unlock the repo when left locked
+#     prune:  prune the backups
+#     list [<prefix>]:  list backups in repo [starting with <prefix>]
+#     info <name>:  list details of [backup <name> in] repo
+#     delete <name>:  delete [backup <name> from] repo
+#     backup [Dovecot|Peter|Kelly|MyDocuments]:  backup $basedir[/<dir>]
+#     rename <name> <newname>:  rename backup <name> to <newname>
+#     mount [<name>]:  mount [backup <name> from] repo on %2
+#     unmount:  unmount from %2
+# BORG_REPO=%3
+#
+# Required: borg coreutils(tee cat)
 # Environment variables (optional): BORG_REPO BORG_PASSPHRASE
 
 borgrepo='ssh://hosthatch.passchier.net/data/borg'
@@ -12,28 +28,6 @@ log="$HOME/borg.log"
 passwordfile="$HOME/borg.pw"
 mnt="$HOME/Public"
 mustmount=0
-
-Help(){
-	cat <<-EOH
-		 $self - Wrapperscript around borgbackup
-		 USAGE: $self [ init|check|help|unlock|prune | list [<prefix>] |
-		       info|delete <name> | backup [<dir>] | rename <name> <newname> |
-		       mount [<name>] | unmount ]
-			 init:  init repo (set BORG_REPO variable in $self or on commandline)
-			 check:  check repo
-			 help:  output this help text (also without any argument)
-			 unlock:  unlock the repo when left locked
-			 prune:  prune the backups
-			 list [<prefix>]:  list backups in repo [starting with <prefix>]
-			 info <name>:  list details of [backup <name> in] repo
-			 delete <name>:  delete [backup <name> from] repo
-			 backup [Dovecot|Peter|Kelly|MyDocuments]:  backup $basedir[/<dir>]
-			 rename <name> <newname>:  rename backup <name> to <newname>
-			 mount [<name>]:  mount [backup <name> from] repo on $(basename "$mnt")
-			 unmount:  unmount from $(basename "$mnt")
-		 BORG_REPO=$BORG_REPO
-	EOH
-}
 
 Error(){ # $1:message  O:error
 	echo -e "\nERROR: $1"
@@ -46,12 +40,12 @@ Umount(){ # IO:mounted  I:mnt
 
 Backup(){ # $1:directory in $basedir
 	# New incremental backup
-	out+="$(echo 'y' |borg create -v --show-rc --stats -C lz4 "::$1-$(date +%Y%m%d)" "$basedir/$1" 2>&1)\n"
+	out+="$(echo 'y' |borg create -v --show-rc --stats -C lz4 "::$1-$(printf '%(%Y%m%d)T')" "$basedir/$1" 2>&1)\n"
 }
 
 self=$(basename "$0")
 : ${BORG_REPO:=$borgrepo}
-BORG_PASSPHRASE=$(<"$passwordfile")
+[[ -f $passwordfile ]] && BORG_PASSPHRASE=$(<"$passwordfile")
 error=0
 grep -q "^borgfs $mnt fuse " /proc/mounts && wasmounted=1 || wasmounted=0
 mounted=$wasmounted
@@ -76,7 +70,7 @@ case $1 in
 			borg prune -d 6 -w 4 -m 11 -v --show-rc -P "$n" :: |
 					sed '/^borg.output.progress/d'
 		done ;;
-	help|'') Help ;;
+	help|'') sed -n "/# Required/q;s@%1@${0##*/}@g;s@%2@$mnt@g;s@%3@$BORG_REPO@g;s@^# @@p" "$0" ;;
 	list) [[ $2 ]] && borg list --short --debug --show-rc -P "$2" ||
 			borg list -v --show-rc --short :: ;;
 	info) [[ $2 ]] && borg info -v --show-rc "::$2" ||
@@ -134,7 +128,7 @@ esac
 if [[ $out ]]
 then {
 	echo "================================================================================"
-	echo "$(date +%Y-%m-%d_%H:%M:%S) LOG: $self $@"
+	printf '%(%Y-%m-%d_%H:%M:%S)T LOG: %s' $self; echo "$@"
 	echo -en "$out"; } |tee -a "$log"
 fi
 
