@@ -187,11 +187,16 @@ bind M-S writeout all
 bind M-| recordmacro all
 bind M-\ runmacro all
 bind M-' nosyntax all
+bind ^A anchor all
+bind M-, prevanchor all
+bind M-< nextanchor all
 
 bind M-L linenumbers all
 bind ^W softwrap all
 # cut all forward
 unbind M-T all
+# delete
+unbind ^D all
 
 unbind F9 all
 # Unbind un-undoable actions:
@@ -215,7 +220,6 @@ EORC
 git=0 cur=0
 if [[ $1 ]]
 then
-	nanorc+="\nbind ^A anchor all\nbind M-, prevanchor all\nbind M-< nextanchor all\n"
 	if [[ $1 = -g || $1 = --git ]]
 	then git=1 req+=" git autoconf autopoint makedev"
 	elif [[ $1 = -c || $1 = --current ]]
