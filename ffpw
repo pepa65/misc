@@ -3,13 +3,13 @@
 """
 ffpw - Manage Firefox passwords: view, import, export
 Usage:  ffpw [<filter>] [<file>] [-v|--verbose] [-h|--help]
-	<filter>:      [ -u|-url | -n|--username | -p|--password ] <regex>
-	<file>:        -i|--import | -e|--export [<csv-file>]
+      <filter>:      [ -u|-url | -n|--username | -p|--password ] <regex>
+      <file>:        -i|--import | -e|--export [<csv-file>]
   The <regex> filter can be generic or specific for urls/usernames/passwords.
   The <csv-file> can be empty or '-': import from stdin or export to stdout.
   If <file> is not specified, the output is formatted and piped to a viewer.
-  -v/--verbose:  More verbose output to stderr
-  -h/--help:     This help text
+      -v/--verbose:  More verbose output to stderr
+      -h/--help:     This help text
 Requires: python3-pyasn1 less
 Copyright: 2018 Louis Abraham <louis.abraham@yahoo.fr> MIT License
 Adapted by gitlab.com/pepa65/misc <pepa65@passchier.net> GPLv3

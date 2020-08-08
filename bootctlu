@@ -119,7 +119,7 @@ sudo=
 	Echo "Need to escalate privilege, but sudo not present" 3
 if ((go))
 then
-	((register)) && ! ebm=$(type -P efibootmgr)" -d $disk -p $partnum" &&
+	((register)) && ! ebm=$(type -P efibootmgr) &&
 		Echo "Can't register with UEFI, efibootmgr not available" 4
 	if [[ ! -f /etc/machine-id ]]
 	then
@@ -275,6 +275,7 @@ then
 	[[ ! -d /sys/firmware/efi/efivars ]] &&
 		Echo "Not in UEFI mode, no EFI variables, unable to register" 14
 	Echo "\nRegistering the bootloader with UEFI\n"
+	ebm="$sudo $ebm -d $disk -p $partnum" &&
 	entries=$($sudo $ebm |grep " $menuname$" |grep -o 'Boot....')
 	((secureboot)) &&
 		entries+=$($sudo $ebm |grep " PreLoader$" |grep -o 'Boot....')
