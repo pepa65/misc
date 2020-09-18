@@ -142,13 +142,13 @@ Xran(){ # $@: commandline arguments
 		echo "Percentage for leftscale can only be numeric: '$lp'" && exit 13
 	[[ ! $rp =~ ^[1-9]*([0-9])$ ]] &&
 		echo "Percentage for rightscale can only be numeric: '$rp'" && exit 14
-	[[ ! $vo =~ ^[-+]*([0-9]) ]] &&
+	[[ ! $vo =~ ^[-+][1-9]*([0-9])$ ]] &&
 		echo "Offset must be a signed integer: '$vo'" && exit 15
 	((vo>0)) && top="$vo pixels higher"
 	((vo<0)) && top="$vo pixels lower"
-	[[ ! $ml =~ ^[1-9]*([0-9])x[1-9]*([0-9]) ]] &&
+	[[ ! $ml =~ ^[1-9]*([0-9])x[1-9]*([0-9])$ ]] &&
 		echo "Mode of left screen must be <numeric>x<numeric>: '$ml'" && exit 16
-	[[ ! $mr =~ ^[1-9]*([0-9])x[1-9]*([0-9]) ]] &&
+	[[ ! $mr =~ ^[1-9]*([0-9])x[1-9]*([0-9])$ ]] &&
 		echo "Mode of right screen must be <numeric>x<numeric>: '$mr'" && exit 17
 
 	# Save the parameters to the config file
