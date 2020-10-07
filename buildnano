@@ -73,14 +73,16 @@ include /usr/local/share/nano/*.nanorc
 # After: git clone https://github.com/scopatz/nanorc.git ~/.nano
 # Enhanced syntaxfiles:
 include ~/.nano/*.nanorc
-# Colors: (bright) white black blue green red cyan yellow magenta & normal
+# Colors: [bold|italic,][light]white|black|blue|green|red|cyan|yellow|magenta |
+#  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal
 set errorcolor brightyellow,red
 set functioncolor cyan,white
-set keycolor brightwhite,cyan
+set keycolor blue,yellow
 set numbercolor white,cyan
-set selectedcolor black,yellow
+set selectedcolor black,lightyellow
 set stripecolor brightred,normal
-set titlecolor brightyellow,cyan
+set titlecolor black,lightwhite
+set scrollercolor yellow,cyan
 
 unset afterends
 unset allow_insecure_backup
@@ -124,6 +126,7 @@ unset smarthome
 set smooth
 set softwrap
 #set speller enchant
+set stateflags
 set suspend
 set tabsize 2
 unset tabstospaces
@@ -293,7 +296,7 @@ fi
 make || Abort "error in Make"
 
 # Needs: make sudo
-Sudo make install-strip || Abort "error in Install"
+Sudo make install || Abort "error in Install"
 rc=$HOME/.nanorc
 mv -v --backup=t "$rc" "$rc~"
 echo -e "$nanorc" >"$rc"
