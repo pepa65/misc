@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+set -vx
 # buildnano - Build nano from source (release or git repo) on Ubuntu or Debian
 # Required: coreutils(mkdir cd mktemp rm)
 #   git+autoconf+autopoint+automake/wget[git/release]
@@ -43,7 +43,7 @@ nanogit="http://git.savannah.gnu.org/git/nano.git"
 nanosrcdir="https://nano-editor.org/dist/latest"
 
 # Required packages
-req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff"
+req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff gcc"
 
 
 Abort(){ # $1:message
@@ -171,7 +171,7 @@ bind M-B findbracket all
 bind Sh-M-N prevbuf all
 bind M-N nextbuf all
 bind M-O enter all
-bind M-C wordcount all
+bind Sh-M-C wordcount all
 bind M-R regexp search
 bind M-R regexp replace
 bind M-S flipreplace search
@@ -241,7 +241,7 @@ fi
 pkgs=$(dpkg -l) inst=
 for p in $req
 do grep -q "^ii  $p[ :]" <<<$pkgs || inst+=" $p"; done
-[[ $inst ]] && echo "Need to install $inst" &&
+[[ $inst ]] && echo "Need to install$inst" &&
 	! Sudo apt-get install $inst && Abort "could not install packages:$inst"
 
 if ((cur))
@@ -300,7 +300,7 @@ Sudo make install || Abort "error in Install"
 rc=$HOME/.nanorc
 mv -v --backup=t "$rc" "$rc~"
 echo -e "$nanorc" >"$rc"
-hash nano
+hash -r nano
 echo "Installed $(nano -V)"
 
 exit 0
