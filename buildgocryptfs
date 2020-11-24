@@ -55,26 +55,29 @@ do
 	*) Abort "unrecognized commandline argument: $1"
 	esac
 done
+[[ ${ver//[.0-9]} ]] &&
+	Abort "Version should only contain numbers and a dot, not: '$ver'"
 
 # Try to install go if not found in PATH
 if ((getgo)) || ! go=$(type -p go)
 then
-	os=${GO_OS:-linux}
+	os=${GO_OS:-Linux} os=${os,,}
 	[[ $(uname -m) = armv7l ]] && arch=armv6l || arch=amd64
 	: ${arch:=$GO_ARCH}
 	: ${ver:=$GO_VERSION}
 	[[ -z $ver ]] &&
-		url=$(wget -qO- "https://golang.org/dl" |grep -o \
-			"https://dl\.google\.com/go/go[^>]*\.$os-$arch\.tar\.gz" |head -1) \
-		ver=${url%.$os-$arch.tar.gz} ver=${ver#https://dl.google.com/go/go}
-	gover="go$ver.$os-$arch.tar.gz"
-	url="https://dl.google.com/go/$gover"
+		url=$(wget -qO- "https://golang.org/dl" |
+				grep -o "[^\"]*\.$os-$arch\.tar\.gz" |head -1) \
+		ver=${url%.$os-$arch.tar.gz} ver=${ver#/dl/go}
+	# Use the discovered or specified $ver
+	dl="go$ver.$os-$arch.tar.gz"
+	url="https://golang.org/dl/$dl"
 	echo "Installing go $ver on $arch $os"
 	tmp=$(mktemp -d --tmpdir=$TMPDIR)
 	trap "sudo rm -rf -- '$tmp'" QUIT EXIT
-	wget -qO "$tmp/$gover" "$url" ||
+	wget -qO "$tmp/$dl" "$url" ||
 		Abort "go not in PATH and could not download it"
-	tar xf "$tmp/$gover" -C "$tmp" || Abort "error unpacking $gover to $tmp"
+	tar xf "$tmp/$dl" -C "$tmp" || Abort "error unpacking $dl to $tmp"
 	sudo chown root:root -R -- "$tmp"
 
 	# Move install directory if it exists already
