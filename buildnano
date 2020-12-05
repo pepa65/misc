@@ -43,7 +43,7 @@ nanogit="http://git.savannah.gnu.org/git/nano.git"
 nanosrcdir="https://nano-editor.org/dist/latest"
 
 # Required packages
-req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff gcc"
+req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff build-essential"
 
 
 Abort(){ # $1:message
