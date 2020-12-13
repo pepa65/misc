@@ -5,10 +5,17 @@ set +vx
 #   git+autoconf+autopoint+automake/wget[git/release]
 #   pkg-config gettext libncursesw5-dev groff[optional html-help]
 #   texinfo make gcc libmagic-dev[optional filetype detection]
-# Usage: buildnano [<version> | -g|--git | -c|--current]
-#   <version>:     Build <version>
-#   -g/--git:      Build from current git HEAD (not stable release version)
-#   -c/--current:  Build from local git repo (as is)
+
+Help(){
+	echo "Usage: buildnano [<version> | -g|--git | -c|--current] -h
+    <version>:     Build <version>
+    -g/--git:      Build from current git HEAD (not stable release version)
+    -c/--current:  Build from local git repo (as is)
+    -h/--help:     This help text"
+	exit 0
+}
+
+[[ ' '$*' ' = *' -h '* || ' '$*' ' = *' --help '* ]] && Help
 
 # Configuration options to (un)comment-out
 conf=(
@@ -75,14 +82,15 @@ include /usr/local/share/nano/*.nanorc
 include ~/.nano/*.nanorc
 # Colors: [bold|italic,][light]white|black|blue|green|red|cyan|yellow|magenta |
 #  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal
+set titlecolor black,lightwhite
+set statuscolor brightwhite,green
 set errorcolor brightyellow,red
-set functioncolor cyan,white
-set keycolor blue,yellow
-set numbercolor white,cyan
 set selectedcolor black,lightyellow
 set stripecolor brightred,normal
-set titlecolor black,lightwhite
-set scrollercolor yellow,cyan
+set numbercolor white,cyan
+set keycolor blue,yellow
+set functioncolor cyan,white
+#set scrollercolor yellow,cyan
 
 unset afterends
 unset allow_insecure_backup
