@@ -305,8 +305,9 @@ make || Abort "error in Make"
 # Needs: make sudo
 Sudo make install || Abort "error in Install"
 rc=$HOME/.nanorc
-mv -v --backup=t "$rc" "$rc~"
-echo -e "$nanorc" >"$rc"
+
+echo -e "$nanorc" >"$rc.tmp"
+[[ -f $rc ]] && ! diff $rc $rc.tmp && mv -v --backup=t "$rc.tmp" "$rc"
 hash -r nano
 echo "Installed $(nano -V)"
 
