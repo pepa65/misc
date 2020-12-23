@@ -507,3 +507,6 @@ optional arguments:
                         support systems with insufficient memory, use this
                         option to avoid a MemoryError
   -V, --version         Show the version number and exit
+
+# tn
+**Try TCP on host & port**

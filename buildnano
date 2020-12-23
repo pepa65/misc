@@ -83,11 +83,11 @@ include ~/.nano/*.nanorc
 # Colors: [bold|italic,][light]white|black|blue|green|red|cyan|yellow|magenta |
 #  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal
 set titlecolor black,lightwhite
-set statuscolor brightwhite,green
+set statuscolor brightwhite,cyan
 set errorcolor brightyellow,red
 set selectedcolor black,lightyellow
 set stripecolor brightred,normal
-set numbercolor white,cyan
+set numbercolor black,cyan
 set keycolor blue,yellow
 set functioncolor cyan,white
 #set scrollercolor yellow,cyan
@@ -114,6 +114,7 @@ unset locking
 #set matchbrackets "(<[{)>]}"
 set morespace
 ###unset mouse
+set minibar
 set multibuffer
 set noconvert # overrides: set unix
 set nohelp
@@ -267,7 +268,7 @@ then
 	if [[ -d nano/.git ]]
 	then
 		cd nano || Abort "could not enter directory $gitdir/nano"
-		git checkout master
+		#git checkout master
 		# Delete on unsuccessful pull
 		! git pull && cd .. && rm -rf -- nano
 	fi
