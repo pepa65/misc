@@ -74,12 +74,13 @@ then
 fi
 
 nanorc=$(cat <<\EORC
-## ~/.nanorc
+# ~/.nanorc
 # Syntaxfiles:
 include /usr/local/share/nano/*.nanorc
-# After: git clone https://github.com/scopatz/nanorc.git ~/.nano
-# Enhanced syntaxfiles:
-include ~/.nano/*.nanorc
+
+# Enhanced syntaxfiles: git clone https://github.com/scopatz/nanorc.git ~/.nano
+#include ~/.nano/*.nanorc
+
 # Colors: [bold|italic,][light]white|black|blue|green|red|cyan|yellow|magenta |
 #  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal
 set titlecolor black,lightwhite
@@ -99,6 +100,7 @@ unset autoindent
 unset backup
 #set backupdir <dir>
 unset boldtext
+unset bookstyle
 #set brackets <string> # default: ""')>]}"
 ###unset breaklonglines
 set casesensitive
@@ -106,37 +108,40 @@ set constantshow # overrides: set quickblank
 unset cutfromcursor
 unset emptyline
 ##set fill -1 # conflicts with: set nowrap; last option given takes effect
-set guidestripe 81
+set guidestripe 80
 set historylog
+unset indicator
 unset jumpyscrolling
 unset linenumbers
 unset locking
+set magic
 #set matchbrackets "(<[{)>]}"
-set morespace
-###unset mouse
 set minibar
+##set morespace
+###unset mouse
 set multibuffer
 set noconvert # overrides: set unix
 set nohelp
 set nonewlines
-unset nopauses
+##unset nopauses
 ##set nowrap # conflicts with: set fill; last option given takes effect
 #set operatingdir <directory>
 set positionlog
 unset preserve
 #set punct "!.?"
 unset quickblank # overridden by: set constantshow
-#set quotestr "^([ \t]*[#:>\|}])+" # "> " if no EREGEX
+#set quotestr "^([ \t]*[!#%:;>|}]|//))+" # "> " if no EREGEX
 unset rawsequences
 unset rebinddelete # set this when Backspace behaves like Delete
 unset regexp
+unset saveonexit
 set showcursor
 unset smarthome
-set smooth
+##set smooth
 set softwrap
 #set speller enchant
 set stateflags
-set suspend
+set suspendable
 set tabsize 2
 unset tabstospaces
 unset tempfile
