@@ -78,9 +78,6 @@ nanorc=$(cat <<\EORC
 # Syntaxfiles:
 include /usr/local/share/nano/*.nanorc
 
-# Enhanced syntaxfiles: git clone https://github.com/scopatz/nanorc.git ~/.nano
-#include ~/.nano/*.nanorc
-
 # Colors: [bold|italic,][light]white|black|blue|green|red|cyan|yellow|magenta |
 #  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal
 set titlecolor black,lightwhite
@@ -115,6 +112,7 @@ unset jumpyscrolling
 unset linenumbers
 unset locking
 set magic
+set markmatch
 #set matchbrackets "(<[{)>]}"
 set minibar
 ##set morespace

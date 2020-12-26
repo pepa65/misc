@@ -390,8 +390,6 @@ a5toa4 [<Options>] <a5.pdf> [<a4.pdf>]
 
 ## pdfslice
 **Make a pdf from a page range in a source document**
-
-* Required
 Usage:
 ```
 Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
@@ -405,12 +403,10 @@ Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 
 ## rmkernels
 **Remove old kernels from Debian/Ubuntu**
-
 Usage: `rmkernels`
 
 ## bootctlu
 **Setting up and registering gummiboot on Ubuntu/Void/Arch**
-
 Usage:
 ```
 bootctlu - Install & register gummiboot/systemd-boot on Ubuntu/Void/Arch
@@ -454,15 +450,14 @@ fillform [-s|--separate] [<dir>]
 
 ## w2usb
 **Write image/hybridiso to (USB) disk device**
-
 Usage: 'w2usb <dev> <file>'
 
 ## spd
 **Commandline interface for testing internet bandwidth using speedtest.net**
-
-usage: spd [-h] [-u] [-d] [-1] [-B] [-I] [-b] [-c] [-C CHAR] [-H] [-j] [-L]
-           [-l] [-m STR] [-x INT] [-s ID] [-X ID] [-M URL] [-i IP] [-t SECS]
-           [-S] [-N] [-V]
+Usage:
+```
+spd [-h] [-u] [-d] [-1] [-B] [-I] [-b] [-c] [-C CHAR] [-H] [-j] [-L] [-l]
+    [-m STR] [-x INT] [-s ID] [-X ID] [-M URL] [-i IP] [-t SECS] [-S] [-N] [-V]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -507,6 +502,28 @@ optional arguments:
                         support systems with insufficient memory, use this
                         option to avoid a MemoryError
   -V, --version         Show the version number and exit
+```
 
 # tn
 **Try TCP on host & port**
+* Required: perl
+
+# kenburns
+* Required: ruby ffmpeg
+
+Usage:
+```
+kenburns [options] input1 [input2...] output
+    -h, --help                       Prints this help
+        --size=INTxINT               Video WIDTHxHEIGHT [default: 1280x800]
+        --slide-duration=FLOAT       Slide DURATION (seconds) [default: 4]
+        --fade-duration=FLOAT        Transition DURATION (seconds) [default: 1]
+        --fps=INT                    Frame RATE (frames/second) [default: 30]
+        --zoom-direction=STRING      DIRECTION [default: random]
+        --zoom-rate=FLOAT            RATE [default: 0.1]
+        --scale-mode=STRING          MODE (pad|crop_center|pan) [default: auto]
+    -l, --loopable                   Create loopable video
+        --audio=FILE                 Use FILE as audio track
+        --subtitles=FILE             Use FILE as subtitles track
+    -y, --yes                        Overwrite OUTPUT without asking
+```
