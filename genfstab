@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+# genfstab - Generate /etc/fstab content
+# Required: coreutils(readlink)
+
+Usage(){
+	cat <<-EOH
+		${0##*/} - Generate /etc/fstab content
+		Usage: ${0##*/} [<options> [<path-to-root>]
+		  options:
+		    -t|--type <type>:      Use <type> for partitions
+		      <type>:              LABEL | UUID | PARTLABEL | PARTUUID | ID | PATH
+		    -U|--UUID:             Use UUIDs for partitions
+		    -L|--labels:           Use labels for partitions
+		    -p|--prefix <prefix>:  Only output mountpoints starting with <prefix>
+		    -h|--help:             Display this help message
+		  path-to-root:            Default: /
+	EOH
+}
+
+Error(){ # $1:message
+	Usage >&2
+	echo -e "\nError: $1" >&2
+	exit 1
+}
+
+Type(){ # $1:dev  I:type
+	# Find partition type
+	local iddir file id
+	[[ -z $type ]] && echo "$1" && return 0
+	iddir=/dev/disk/by-${type,,}
+	[[ ! -d $iddir ]] && Error "directory '$iddir' doesn't exist"
+	for file in "$iddir/"*
+	do [[ ! $(readlink -f "$file") = $1 ]] && continue
+		id=$type=${file##*/}
+		break
+	done
+	echo "${id:-$1}"
+}
+
+type= prefix= root=
+while (($#))
+do case $1 in
+	-h|--help) Usage; exit 0 ;;
+	-L|--label) type=LABEL ;;
+	-U|--UUID) type=UUID ;;
+	-p|--prefix)
+		[[ $prefix ]] && Error "only 1 prefix allowed"
+		[[ -z $2 || ${2:0:1} = - ]] && Error "missing argument for flag '$1'"
+		prefix=$2
+		shift ;;
+	-t|--type)
+		[[ $type ]] && Error "only 1 type allowed"
+		[[ -z $2 || ${2:0:1} = - ]] && Error "missing argument for flag '$1'"
+		[[ ! " LABEL UUID PARTLABEL PARTUUID ID PATH " = *" ${2^^} "* ]] &&
+			Error "type '$2' unknown" ||
+			type=${2^^}
+		shift ;;
+	-*) Error "unknown flag '$1'" ;;
+	*) [[ $root ]] && Error "only 1 mountpoint allowed"
+		[[ ! -d $1 ]] && Error "invalid mountpoint '$1'"
+		root=$(readlink -e "$1")
+	esac
+	shift
+done
+root+=/
+
+ignore=' squashfs fuseblk ' ok=' '
+while read a b
+do [[ $a = nodev || $ignore = *" $b "* ]] || ok+="$a "
+done </proc/filesystems
+
+while read -r dev mnt fs options _
+do
+	if [[ $ok = *" $fs "* ]]
+	then [[ $dev = /* || $dev = *=* ]] || continue
+		[[ ! $mnt = $root* ]] && continue
+		tdev=$(Type "$dev") mnt=/${mnt#$root}
+		[[ $prefix && ! $mnt = $prefix* ]] && continue
+		[[ $mnt = / ]] && pass=1 || pass=2
+		[[ ! $tdev = $dev ]] && echo "# $dev"
+		echo -e "$tdev $mnt $fs $options ${dump:-0} $pass\n"
+	fi
+done </proc/mounts
+
+while read -r dev kind _ _ pri
+do [[ $dev = /* ]] || continue
+	[[ $pri = -1 ]] && options=sw || options=sw,pri=$pri
+	if [[ $dev = /dev/dm-* ]]
+	then
+		read <"/sys/class/block/${dev#/dev/}/dm/name"
+		dev=/dev/mapper/$REPLY
+	fi
+	echo -e "$dev swap swap $options 0 0\n"
+done </proc/swaps
+

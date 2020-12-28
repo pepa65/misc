@@ -181,7 +181,6 @@ bind ^C copy main
 bind M-B findbracket all
 bind Sh-M-N prevbuf all
 bind M-N nextbuf all
-bind M-O enter all
 bind Sh-M-C wordcount all
 bind M-R regexp search
 bind M-R regexp replace
