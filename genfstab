@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# genfstab - Generate /etc/fstab content
+# genfstab - Generate /etc/fstab content based on a running system
 # Required: coreutils(readlink)
 
 Usage(){
@@ -72,6 +72,9 @@ done </proc/filesystems
 
 while read -r dev mnt fs options _
 do
+	# Skip loop devices
+	[[ $dev = /dev/loop* ]] && continue
+	# Only deal with basic filesystems
 	if [[ $ok = *" $fs "* ]]
 	then [[ $dev = /* || $dev = *=* ]] || continue
 		[[ ! $mnt = $root* ]] && continue
