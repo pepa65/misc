@@ -5,21 +5,22 @@
 
 # For the latest version, see: https://borg.bauerj.eu or
 #   https://github.com/borgbackup/borg/releases
-version=${BORG_VERSION:-1.1.10}
-
-# Install location for borg binary
-bin=/usr/local/bin # Will override /usr/bin for the Ubuntu repo version
-
-urlpi="https://dl.bintray.com/borg-binary-builder/borg-binaries/borg-$version-armv6"
-urlpc="https://github.com/borgbackup/borg/releases/download/$version/borg-linux64"
 
 [[ $- = *i* ]] && echo "Don't source, but run like: bash $BASH_SOURCE" &&
 	return 1
 
+# Install location for borg binary
+bin=/usr/local/bin # Will override /usr/bin for the Ubuntu repo version
+
+urlpi='https://dl.bintray.com/borg-binary-builder/borg-binaries/'
+urlpc='https://github.com/borgbackup/borg/releases'
+
 pi='armv7l' pc='x86_64' arch=$(uname -m)
 case $arch in
-	$pi) url=$urlpi ;;
-	$pc) url=$urlpc ;;
+	$pi) url=$(wget -O- $urlpi |grep armv6 |tail -1 |egrep -o '>[^<]+')
+		url=$urlpi${url:1: -4} ;;
+	$pc) url=$(wget -qO- $urlpc |grep linux64 |head -1| grep -o '/download[^"]*')
+		url="https://https://github.com/$url" ;;
 	*) echo "Unknown hardware: $arch"
 		exit 2
 esac
