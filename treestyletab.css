@@ -1,3 +1,5 @@
+/* Saved from within TreeStyleTabs */
+
 /* Show title of unread tabs with red and italic font */
 :root.sidebar tab-item.unread .label-content {
  background-color: #fff !important;
