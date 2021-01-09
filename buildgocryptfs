@@ -92,6 +92,7 @@ then
 	a="p='$goloc/go/bin' && [[ :\$PATH: != *:\$p:* ]] && export PATH=\$p:\$PATH"
 	[[ $GOROOT ]] || a+="\nexport GOROOT='$goloc/go'"
 	[[ $GOPATH ]] || a+="\nexport GOPATH=\$HOME/go"
+	echo "Right now: GOROOT=$GOROOT GOPATH=$GOPATH PATH=$PATH"
 	export GOROOT="$goloc/go" GOPATH=~/go
 	echo -e "Add to ~/.bashrc:\n\n$a"
 	eval "${a//\\n/;}"
