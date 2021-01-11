@@ -1,0 +1,405 @@
+#!/usr/bin/env bash
+set +xv
+# megadl - Download mega.nz and MegaCrypter files
+
+version=2.1
+bash_min=3
+self=$(readlink -e "$0")
+name=${self##*/}
+dir=.$name
+mega_api='https://g.api.mega.co.nz'
+openssl_AES128_CTR='openssl enc -d -aes-128-ctr'
+openssl_AES128_CBC='openssl enc -a -A -d -aes-128-cbc'
+openssl_AES256_CBC='openssl enc -a -A -d -aes-256-cbc'
+openssl_MD5='openssl md5'
+
+Error(){ # $1:message
+	echo -e "\n$1" >&2
+	exit 1
+}
+
+Help(){
+	cat <<-EOH
+		$name v$version - Download mega.nz and MegaCrypter files
+
+		Usage: $name [<options>] <URL> | -l|--list <file>
+		  -s|--speed <speed>         Download speed limit <int>B|K|M, example: 20K
+		  -p|-password <password>    Password for MegaCrypter links (same for all)
+		  -m|--metadata              Only display file metadata in JSON format
+		  -q|--quiet                 Quiet mode
+		  -h|--help                  This help text
+		Single <URL> mode options:
+		  -o|--output <filename>    Store the output file with this name
+		URL list in <file>:
+		  Line format in file (filename is optional):  URL FILENAME
+		Repo: https://github.com/pepa65/misc
+	EOH
+}
+
+Check_deps(){
+	local dep_err=0
+	if type -p curl >/dev/null
+	then DL_COM="curl --fail -s" DL_COM_PDATA="--data"
+	elif type -p wget >/dev/null
+	then DL_COM="wget -q -O -" DL_COM_PDATA="--post-data"
+	else echo "Required but not in PATH: wget | curl"; dep_err=1
+	fi
+	for i in openssl pv jq
+	do
+		if ! type -p $i >/dev/null
+		then echo "Required and not installed: $i"; dep_err=1
+		elif [[ $i = openssl ]]
+		then
+			openssl_sup=$(openssl enc -ciphers 2>&1)
+			for i in aes-128-ctr aes-128-cbc aes-256-cbc
+			do [[ -z $(echo -n "$openssl_sup" |grep -o "$i" |head -n1) ]] &&
+					echo "This openssl does not support $i" && dep_err=1
+			done
+		fi
+	done
+	[[ $BASH_VERSION < $bash_min ]] &&
+		echo "At least bash version $bash_min is required" && dep_err=1
+	((dep_err)) && Error "ERROR: missing dependencies"
+}
+
+Urldecode(){ # $2:URL
+	: "${*//+/ }"; echo -e "${_//%/\\x}";
+}
+
+Urlb64_to_b64(){ # $1:base64_string
+	local b64=$(tr '_-' '/+' <<<"$1" |tr -d ',')
+	local pad=$(((4-${#1}%4)%4))
+	for i in $(seq 1 $pad)
+	do b64+==
+	done
+	echo -n "$b64"
+}
+
+Decrypt_md_link(){ # $1:mega_enc_link
+	local data=$(Regexi "^.*?mega:\/\/enc[0-9]*?\?([a-z0-9_,-]+).*?$" "$1" 1)
+	local iv="79F10A01844A0B27FF5B2D4E0ED3163E" key
+	grep -q 'mega://enc?' <<<"$1" &&
+		key=6B316F36416C2D316B7A3F217A30357958585858585858585858585858585858
+	grep 'mega://enc2?' <<<"$1" &&
+		key=ED1F4C200B35139806B260563B3D3876F011B4750F3A1A4A5EFD0BBE67554B44
+	echo -n "https://mega.nz/#"$(echo -n "$(Urlb64_to_b64 "$data")" |$openssl_AES256_CBC -K "$key" -iv "$iv")
+}
+
+Hrk2hk(){ # $1:hex_raw_key
+	local hk1=$((0x${1:0:16}^0x${1:32:16})) hk2=$((0x${1:16:16}^0x${1:48:16}))
+	printf '%016x' $hk1 $hk2
+}
+
+Get_mc_link_info(){ # $1:link
+	local MC_API_URL=$(grep -i -E -o 'https?://[^/]+' <<<"$1")/api
+	local rtn error_code expire no_exp_token
+	local info_link=$($DL_COM --header 'Content-Type: application/json' $DL_COM_PDATA "{\"m\":\"info\",\"link\":\"$1\"}" "$MC_API_URL")
+	rtn=$?
+	((rtn)) &&
+		echo -e "ERROR: Download exit code $rtn" && return 1
+	grep '"error"' <<<"$info_link" &&
+		error_code=$(jq -r .error <<<"$info_link") &&
+		echo -e "MegaCrypter error $error_code" && return 1
+	expire=$(jq -r .expire <<<"$info_link") no_exp_token=$expire
+	[[ ! $expire = false ]] && IFS='#' read -a array <<<"$expire" &&
+		no_exp_token=${array[1]}
+	local file_name path mc_pass file_size key
+	file_name=$(jq -r .name <<<"$info_link" |base64 -w 0 -i 2>/dev/null)
+	path=$(jq -r .path <<<"$info_link")
+	[[ $path = false ]] || path=$(base64 -w 0 -i 2>/dev/null <<<"$path")
+	mc_pass=$(jq -r .pass <<<"$info_link")
+	file_size=$(jq -r .size <<<"$info_link")
+	key=$(jq -r .key <<<"$info_link")
+	echo -n "$file_name@$path@$file_size@$mc_pass@$key@$no_exp_token"
+}
+
+Checkfile(){ # $1:filename $2:filesize $3:formattedsize [$4:md5_mclink]
+	[[ ! -f $1 ]] && DL_MSG="\nDownloading $1 [$3] ...\n" && return
+	local actual_size=$(stat -c %s "$1")
+	if [[ $actual_size = $2 ]]
+	then
+		[[ $4 && -f $dir/$4 ]] && rm "$dir/$4"
+		Error "WARNING: File $1 already exists. Download aborted!"
+	fi
+	DL_MSG="\nFile $1 exists but with different size ($2 vs $actual_size bytes). Downloading [$3] ...\n"
+}
+
+Format_file_size(){ # $1:file_size
+	local file_size gb=1073741824 mb=1048576 kb=1024
+	if (($1>=gb))
+	then file_size="$(bc <<<"scale=1; $1/$gb") GB"
+	elif (($1>=mb))
+	then file_size="$(bc <<<"scale=1; $1/$mb") MB"
+	elif (($1>=kb))
+	then file_size="$(bc <<<"scale=1; $1/$kb") kB"
+	else file_size="$1 B"
+	fi
+	echo -n "$file_size"
+}
+
+Mc_pbkdf2(){ # $1:password $2:salt $3:iterations
+	local python="import sys,hashlib,base64\nprint(base64.b64encode(hashlib."
+	python+="pbkdf2_hmac('sha256',b'$1',base64.b64decode(b'$2'),$3)).decode())"
+	echo -e "$python" |python
+}
+
+Mc_pass_check(){ # $1:mc_pass_info $2:pass_to_check
+	local array iter_log2 key_check salt iv mc_pass_hash
+	IFS='#' read -a array <<<"$1"
+	iter_log2=${array[0]} key_check=${array[1]} salt=${array[2]} iv=${array[3]}
+	mc_pass_hash=$(Mc_pbkdf2 "$password" "$salt" $((2**$iter_log2)))
+	mc_pass_hash=$(base64 -d -i 2>/dev/null <<<"$mc_pass_hash" |od -v -An -t x1 |
+		tr -d '\n ')
+	iv=$(base64 -d -i 2>/dev/null <<<"$iv" |od -v -An -t x1 |tr -d '\n ')
+	[[ ! $($openssl_AES256_CBC -K "$mc_pass_hash" -iv "$iv" 2>/dev/null \
+			<<<"$key_check" |od -v -An -t x1 |tr -d '\n ') = $mc_pass_hash ]] &&
+		echo -n "0" || echo -n "$mc_pass_hash#$iv"
+}
+
+Trim(){ # $1:string
+	[[ $1 =~ \ *([^ ]|[^ ].*[^ ])\ * ]] && echo -n "${BASH_REMATCH[1]}"
+}
+
+Regex(){ # $1:pattern $2:subject $3:group
+	[[ $2 =~ $1 ]] && echo -n "${BASH_REMATCH[$3]}"
+}
+
+Regexi(){ # $1:pattern $2:subject $3:group
+	shopt -s nocasematch
+	[[ $2 =~ $1 ]] && echo -n "${BASH_REMATCH[$3]}"
+	shopt -u nocasematch
+}
+
+Check_deps
+list= password= output= speed= quiet=0 metadata=0
+eval set -- "$(getopt -o "l:p:k:o:s:qhm" -l "list:,password:,key:,output:,speed:,quiet,help,metadata" -n $0 -- "$@")"
+while :
+do
+	case $1 in
+	-h|--help) Help; exit 0 ;;
+	-l|--list) list=$2; shift 2 ;;
+	-p|--password) password=$2; shift 2 ;;
+	-o|--output) output=$2; shift 2 ;;
+	-s|--speed) speed=$2; shift 2 ;;
+	-q|--quiet) quiet=1; shift ;;
+	-m|--metadata) metadata=1; shift ;;
+	--) shift; break ;;
+	*) Help; exit 2
+	esac
+done
+
+yen=$(echo $1 |sed 's|#|!|g' |sed 's|file/|#!|g')
+p1=$(Trim $(Urldecode "$yen"))
+[[ $p1 =~ ^http || $p1 =~ ^mega:// ]] && link=$p1
+if [[ -z $link ]]
+then if [[ -z $list ]]
+	then
+		Help
+		Error 'ERROR: mega.nz/MegaCrypter URL or -l|--list with FILE required'
+	elif [[ ! -f $list ]]
+	then
+		Help
+		Error "ERROR: file $list with the list of URLs not found"
+	fi
+	((quiet)) || echo -ne "\nPrereading MegaCrypter URLs"
+	link_count=0
+	while IFS='' read -r line || [[ $line ]]
+	do
+		if [[ $line && -z $(grep -E -o 'mega://enc' <<<"$line") ]]
+		then
+			link=$(Regexi "^.*?(https?\:\/\/[^\/]+\/[#!0-9a-z_-]+).*$" "$line" 1)
+			if [[ $(grep -E -o 'https?://[^/]+/!' <<<"$link") ]]
+			then
+				md5=$($openssl_MD5 <<<"$link" |grep -E -o '[0-9a-f]{32}')
+				if [[ ! -f $dir/$md5 ]]
+				then
+					mc_link_info=$(Get_mc_link_info "$link")
+					if ! [ "$?" -eq 1 ];then
+						echo -n "$mc_link_info" >>"$dir/$md5"
+					fi
+				fi
+				((++link_count))
+			fi
+		fi
+	done <"$list"
+	echo -ne " OK ($link_count MegaCrypter links found)"
+	while IFS='' read -r line || [[ $line ]]
+	do
+		if [[ $line ]]
+		then
+			if grep -qE -o 'mega://enc' <<<"$line"
+			then
+				link=$(Regexi "^.*?(mega:\/\/enc\d*?\?[a-z0-9_-]+).*$" "$line" 1)
+				output=$(Regexi "^.*?mega:\/\/enc\d*?\?[a-z0-9_-]+(.*)$" "$line" 1 1)
+			elif grep -qE -o 'https?://' <<<"$line"
+			then
+				link=$(Regexi ".*?(https?\:\/\/[^\/]+\/[#!0-9a-z_-]+).*$" "$line" 1)
+				output=$(Regexi "^.*?https?\:\/\/[^\/]+\/[#!0-9a-z_-]+(.*)$" "$line" 1 1)
+			else continue
+			fi
+			$self "$link" --output="$output" --password="$password" --speed="$speed"
+		fi
+	done <"$list"
+	exit 0
+fi
+
+grep -qE -o 'mega://enc' <<<"$link" && link=$(Decrypt_md_link "$link")
+((quiet)) || echo -e "\nReading link metadata..."
+[[ ! -d $dir ]] && mkdir $dir
+if grep -qE -o 'mega(\.co)?\.nz' <<<"$link"
+then # mega.nz link
+	file_id=$(Regex "^.*\/#.*?!(.+)!.*$" "$link" 1)
+	file_key=$(Regex "^.*\/#.*?!.+!(.+)$" "$link" 1)
+	hex_raw_key=$(echo -n $(Urlb64_to_b64 "$file_key") |
+		base64 -d -i 2>/dev/null |od -v -An -t x1 |tr -d '\n ')
+	if grep -qE -o 'mega(\.co)?\.nz/#!' <<<"$link"
+	then
+		mega_req_json="[{\"a\":\"g\", \"p\":\"$file_id\"}]"
+		mega_req_url="$mega_api/cs?id=&ak="
+	elif grep -qE -o -i 'mega(\.co)?\.nz/#N!' <<<"$link"
+	then
+		mega_req_json="[{\"a\":\"g\", \"n\":\"$file_id\"}]"
+		folder_id=$(Regex "###n\=(.+)$" "$link" 1)
+		mega_req_url="$mega_api/cs?id=&ak=&n=$folder_id"
+	fi
+	mega_res_json=$($DL_COM --header 'Content-Type: application/json' $DL_COM_PDATA "$mega_req_json" "$mega_req_url")
+	rtn=$?
+	((rtn)) && Error "Download exit code $rtn"
+	fi
+	if [ $(echo -n "$mega_res_json" | grep -E -o '\[ *\-[0-9]+ *\]') ]; then
+		Error "MEGA ERROR $(echo -n "$mega_res_json" | grep -E -o '\-[0-9]+')"
+	fi
+	file_size=$(echo "$mega_res_json" | jq -r .[0].s)
+	at=$(echo "$mega_res_json" | jq -r .[0].at)
+	hex_key=$(Hrk2hk "$hex_raw_key")
+	at_dec_json=$(echo -n $(Urlb64_to_b64 "$at") | $openssl_AES128_CBC -K "$hex_key" -iv "00000000000000000000000000000000" -nopad | tr -d '\0')
+	if [ ! $(echo -n "$at_dec_json" | grep -E -o 'MEGA') ]; then
+		Error "MEGA bad link"
+	fi
+	if [ -z "$output" ]; then
+		file_name=$(echo -n "$at_dec_json" | grep -E -o '\{.+\}' | jq -r .n)
+	else
+		file_name="$output"
+	fi
+	((metadata)) && echo "{\"file_name\":\"$file_name\",\"file_size\":$file_size}" && exit 0
+	Checkfile "$file_name" "$file_size" "$(Format_file_size "$file_size")"	if [ $(echo -n "$link" | grep -E -o 'mega(\.co)?\.nz/#!') ]; then
+		mega_req_json="[{\"a\":\"g\", \"g\":\"1\", \"p\":\"$file_id\"}]"
+	elif [ $(echo -n "$link" | grep -E -o -i 'mega(\.co)?\.nz/#N!') ]; then
+		mega_req_json="[{\"a\":\"g\", \"g\":\"1\", \"n\":\"$file_id\"}]"
+	fi
+	mega_res_json=$($DL_COM --header 'Content-Type: application/json' $DL_COM_PDATA "$mega_req_json" "$mega_req_url")
+	rtn=$?
+	((rtn)) && Error "ERROR: download exit code $rtn)"
+	dl_temp_url=$(jq -r .[0].g <<<"$mega_res_json")
+else
+	# MegaCrypter link
+	MC_API_URL=$(grep -i -qE -o 'https?://[^/]+')"/api" <<<"$link"
+	md5=$(echo -n "$link" |$openssl_MD5 |grep -E -o '[0-9a-f]{32}')
+	if [[ -f $dir/$md5 ]]
+	then read -rd '' mc_link_info <"$dir/$md5"
+	else
+		mc_link_info=$(Get_mc_link_info "$link")
+		(($?==1)) && echo -e "$mc_link_info" && exit 3
+		echo -n "$mc_link_info" >>"$dir/$md5"
+	fi
+	IFS='@' read -a array <<<"$mc_link_info"
+	[[ $output ]] && file_name="$output" ||
+		file_name=$(base64 -d -i 2>/dev/null <<<"${array[0]}")
+	path=${array[1]}
+	[[ ! $path = false ]] && path=$(base64 -d -i 2>/dev/null <<<"$path")
+	file_size=${array[2]}
+	mc_pass=${array[3]}
+	key=${array[4]}
+	no_exp_token=${array[5]}
+	if [[ ! $mc_pass = false ]]
+	then
+		! type -p python >/dev/null &&
+			echo "ERROR: python required for MegaCrypter links but not installed" &&
+			exit 4
+		echo -ne "\nLink is password protected. "
+		[[ $password ]] && pass_hash=$(Mc_pass_check "$mc_pass" "$password")
+		if [[ -z $pass_hash || $pass_hash = 0 ]]
+		then
+			echo -e "\n"
+			read -erp "Enter password: " pass
+			pass_hash=$(Mc_pass_check "$mc_pass" "$pass")
+			until [[ ! $pass_hash = false ]]
+			do
+				read -erp "Wrong password! Try again: " pass
+				pass_hash=$(Mc_pass_check "$mc_pass" "$pass")
+			done
+		fi
+		echo -e "\nPassword OK. Decrypting metadata..."
+		IFS='#' read -a array <<<"$pass_hash"
+		pass_hash=${array[0]}
+		iv=${array[1]}
+		hex_raw_key=$($openssl_AES256_CBC -K "$pass_hash" -iv "$iv" <<<"$key" |
+			od -v -An -t x1 |tr -d '\n ')
+		[[ $output ]] || file_name=$($openssl_AES256_CBC -K "$pass_hash" -iv "$iv"
+			<<<"$file_name")
+	else
+		hex_raw_key=$(base64 -d -i 2>/dev/null <<<$(Urlb64_to_b64 "$key") |
+			od -v -An -t x1 |tr -d '\n ')
+	fi
+	[[ $metadata ]] &&
+		echo "{\"file_name\":\"$file_name\",\"file_size\":$file_size}" &&
+		exit 0
+	if [[ $path && ! $path = false ]]
+	then [[ -d $path ]] || mkdir -p "$path"
+		file_name="$path$file_name"
+	fi
+	Checkfile "$file_name" "$file_size" "$(Format_file_size "$file_size")" "$md5"
+	hex_key=$(Hrk2hk "$hex_raw_key")
+	dl_link=$($DL_COM --header 'Content-Type: application/json' $DL_COM_PDATA "{\"m\":\"dl\",\"link\":\"$link\",\"noexpire\":\"$no_exp_token\"}" "$MC_API_URL")
+	rtn=$?
+	(($rtn)) && Error "ERROR: download exit code $rtn"
+	grep -q '"error"' <<<"$dl_link" &&
+		error_code=$(jq -r .error <<<"$dl_link") &&
+		Error "MegaCrypter error $error_code"
+	dl_temp_url=$(jq -r .url <<<"$dl_link")
+	if [[ ! $mc_pass = false ]]
+	then
+		iv=$(jq -r .pass <<<"$dl_link" |base64 -d -i 2>/dev/null |od -v -An -t x1 |
+			tr -d '\n ')
+		dl_temp_url=$($openssl_AES256_CBC -K "$pass_hash" -iv "$iv"
+			<<<"$dl_temp_url")
+	fi
+fi
+[[ $speed ]] && DL_COMMAND="$DL_COM --limit-rate $speed" ||
+	DL_COMMAND="$DL_COM"
+if [[ $output = '-' ]]
+then
+	hex_iv="${hex_raw_key:32:16}0000000000000000"
+	$DL_COMMAND "$dl_temp_url" |$openssl_AES128_CTR -K "$hex_key" -iv "$hex_iv"
+	exit 0
+fi
+
+((quiet)) || echo -e "$DL_MSG"
+((quiet)) && PV_CMD="pv -q" || PV_CMD="pv"
+rtn=1
+until ((!rtn))
+do
+	if [[ -f $file_name.temp ]]
+	then
+		echo -e "(Resuming previous download ...)\n"
+		temp_size=$(stat -c %s "$file_name.temp")
+		offset=$((temp_size-$temp_size%16))
+		printf -v iv_forward '%016x' $(($offset/16))
+		hex_iv="${hex_raw_key:32:16}$iv_forward"
+		truncate -s $offset "$file_name.temp"
+		$DL_COMMAND "$dl_temp_url/$offset" |$PV_CMD -s $(($file_size-$offset)) |
+			$openssl_AES128_CTR -K "$hex_key" -iv "$hex_iv" >>"$file_name.temp"
+	else
+		hex_iv="${hex_raw_key:32:16}0000000000000000"
+		$DL_COMMAND "$dl_temp_url" |$PV_CMD -s $file_size |
+			$openssl_AES128_CTR -K "$hex_key" -iv "$hex_iv" >"$file_name.temp"
+	fi
+	rtn=${PIPESTATUS[0]}
+	((rtn)) && Error "ERROR: download failed, exit code $rtn"
+done
+[[ ! -f $file_name.temp ]] && Error "ERROR: file could not be downloaded"
+mv "$file_name.temp" "$file_name"
+[[ -f $dir/$md5 ]] && rm "$dir/$md5"
+((quiet)) || echo -e "\nFILE DOWNLOADED!\n"
+
+exit 0
