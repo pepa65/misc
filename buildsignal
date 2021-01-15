@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# buildsignal - Build Signal desktop AppImage
+
+elevate='sudo'
+docker_install_cmd="$elevate apt-get install -y docker.io"
+
+if ! type -p docker >/dev/null
+then $docker_install_cmd
+fi
+
+$elevate docker run --rm -it -v $PWD:/A -w /A node:12.13.0 bash -c '
+	set -euo pipefail
+	repo="https://github.com/signalapp/Signal-Desktop.git"
+	git clone --branch=master --depth=1 $repo /tmp/Signal-Desktop
+	cd /tmp/Signal-Desktop
+	sed -i "s@deb\"\$@appimage\"@" package.json
+	yarn install
+	yarn build-release
+	cp /tmp/Signal-Desktop/release/Signal-*.AppImage /A/
+	chown $(stat -c %u:%g /A) /A/Signal-*.AppImage
+'
