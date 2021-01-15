@@ -18,7 +18,7 @@ Error(){ # $1:message
 	exit 1
 }
 
-Help(){
+Help(){ # I:name,version
 	cat <<-EOH
 		$name v$version - Download mega.nz and MegaCrypter files
 
@@ -36,30 +36,30 @@ Help(){
 	EOH
 }
 
-Check_deps(){
-	local dep_err=0
+Check_deps(){ # O:dlcmd[opt],openssl_sup  I:bash_min
+	local err=0 s c
 	if type -p curl >/dev/null
-	then DL_COM="curl --fail -s" DL_COM_PDATA="--data"
+	then dlcmd="curl --fail -s" dlcmdopt="--data"
 	elif type -p wget >/dev/null
-	then DL_COM="wget -q -O -" DL_COM_PDATA="--post-data"
-	else echo "Required but not in PATH: wget | curl"; dep_err=1
+	then dlcmd="wget -q -O -" dlcmdopt="--post-data"
+	else echo "Required but not in PATH: wget | curl"; err=1
 	fi
-	for i in openssl pv jq
+	for s in openssl pv jq
 	do
-		if ! type -p $i >/dev/null
-		then echo "Required and not installed: $i"; dep_err=1
-		elif [[ $i = openssl ]]
+		if ! type -p $s >/dev/null
+		then echo "Required and not installed: $s"; err=1
+		elif [[ $s = openssl ]]
 		then
 			openssl_sup=$(openssl enc -ciphers 2>&1)
-			for i in aes-128-ctr aes-128-cbc aes-256-cbc
-			do [[ -z $(echo -n "$openssl_sup" |grep -o "$i" |head -n1) ]] &&
-					echo "This openssl does not support $i" && dep_err=1
+			for c in aes-128-ctr aes-128-cbc aes-256-cbc
+			do [[ -z $(grep -o "$c" <<<"$openssl_sup"|head -n1) ]] &&
+					echo "This openssl does not support $c" && err=1
 			done
 		fi
 	done
 	[[ $BASH_VERSION < $bash_min ]] &&
-		echo "At least bash version $bash_min is required" && dep_err=1
-	((dep_err)) && Error "ERROR: missing dependencies"
+		echo "At least bash version $bash_min is required" && err=1
+	((err)) && Error "ERROR: missing dependencies"
 }
 
 Urldecode(){ # $2:URL
@@ -82,7 +82,8 @@ Decrypt_md_link(){ # $1:mega_enc_link
 		key=6B316F36416C2D316B7A3F217A30357958585858585858585858585858585858
 	grep 'mega://enc2?' <<<"$1" &&
 		key=ED1F4C200B35139806B260563B3D3876F011B4750F3A1A4A5EFD0BBE67554B44
-	echo -n "https://mega.nz/#"$(echo -n "$(Urlb64_to_b64 "$data")" |$openssl_AES256_CBC -K "$key" -iv "$iv")
+	$openssl_AES256_CBC -K "$key" -iv "$iv" <<<"https://mega.nz/#$(Urlb64_to_b64\
+		"$data")"
 }
 
 Hrk2hk(){ # $1:hex_raw_key
@@ -93,7 +94,7 @@ Hrk2hk(){ # $1:hex_raw_key
 Get_mc_link_info(){ # $1:link
 	local MC_API_URL=$(grep -i -E -o 'https?://[^/]+' <<<"$1")/api
 	local rtn error_code expire no_exp_token
-	local info_link=$($DL_COM --header 'Content-Type: application/json' $DL_COM_PDATA "{\"m\":\"info\",\"link\":\"$1\"}" "$MC_API_URL")
+	local info_link=$($dlcmd --header 'Content-Type: application/json' $dlcmdopt "{\"m\":\"info\",\"link\":\"$1\"}" "$MC_API_URL")
 	rtn=$?
 	((rtn)) &&
 		echo -e "ERROR: Download exit code $rtn" && return 1
@@ -147,7 +148,7 @@ Mc_pass_check(){ # $1:mc_pass_info $2:pass_to_check
 	local array iter_log2 key_check salt iv mc_pass_hash
 	IFS='#' read -a array <<<"$1"
 	iter_log2=${array[0]} key_check=${array[1]} salt=${array[2]} iv=${array[3]}
-	mc_pass_hash=$(Mc_pbkdf2 "$password" "$salt" $((2**$iter_log2)))
+	mc_pass_hash=$(Mc_pbkdf2 "$password" "$salt" $((2**iter_log2)))
 	mc_pass_hash=$(base64 -d -i 2>/dev/null <<<"$mc_pass_hash" |od -v -An -t x1 |
 		tr -d '\n ')
 	iv=$(base64 -d -i 2>/dev/null <<<"$iv" |od -v -An -t x1 |tr -d '\n ')
@@ -262,34 +263,29 @@ then # mega.nz link
 		folder_id=$(Regex "###n\=(.+)$" "$link" 1)
 		mega_req_url="$mega_api/cs?id=&ak=&n=$folder_id"
 	fi
-	mega_res_json=$($DL_COM --header 'Content-Type: application/json' $DL_COM_PDATA "$mega_req_json" "$mega_req_url")
+	mega_res_json=$($dlcmd --header 'Content-Type: application/json' $dlcmdopt "$mega_req_json" "$mega_req_url")
 	rtn=$?
 	((rtn)) && Error "Download exit code $rtn"
-	fi
-	if [ $(echo -n "$mega_res_json" | grep -E -o '\[ *\-[0-9]+ *\]') ]; then
-		Error "MEGA ERROR $(echo -n "$mega_res_json" | grep -E -o '\-[0-9]+')"
-	fi
-	file_size=$(echo "$mega_res_json" | jq -r .[0].s)
-	at=$(echo "$mega_res_json" | jq -r .[0].at)
+	grep -qEo '\[ *\-[0-9]+ *\]' <<<"$mega_res_json" &&
+		Error "MEGA ERROR $(grep -E -o '\-[0-9]+' <<<"$mega_res_json")"
+	file_size=$(jq -r .[0].s <<<"$mega_res_json")
+	at=$(jq -r .[0].at <<<"$mega_res_json")
 	hex_key=$(Hrk2hk "$hex_raw_key")
-	at_dec_json=$(echo -n $(Urlb64_to_b64 "$at") | $openssl_AES128_CBC -K "$hex_key" -iv "00000000000000000000000000000000" -nopad | tr -d '\0')
-	if [ ! $(echo -n "$at_dec_json" | grep -E -o 'MEGA') ]; then
-		Error "MEGA bad link"
-	fi
-	if [ -z "$output" ]; then
-		file_name=$(echo -n "$at_dec_json" | grep -E -o '\{.+\}' | jq -r .n)
-	else
-		file_name="$output"
-	fi
-	((metadata)) && echo "{\"file_name\":\"$file_name\",\"file_size\":$file_size}" && exit 0
-	Checkfile "$file_name" "$file_size" "$(Format_file_size "$file_size")"	if [ $(echo -n "$link" | grep -E -o 'mega(\.co)?\.nz/#!') ]; then
+	at_dec_json=$($openssl_AES128_CBC -K "$hex_key" -iv "00000000000000000000000000000000" -nopad <<<"$(Urlb64_to_b64 "$at")" |tr -d '\0')
+	grep -qEo 'MEGA' <<<"$at_dec_json" || Error "MEGA bad link"
+	[[ $output ]] && file_name="$output" ||
+		file_name=$(grep -E -o '\{.+\}' <<<"$at_dec_json" |jq -r .n)
+	((metadata)) &&
+		echo "{\"file_name\":\"$file_name\",\"file_size\":$file_size}" &&
+		exit 0
+	Checkfile "$file_name" "$file_size" "$(Format_file_size "$file_size")"
+	grep -qEo 'mega(\.co)?\.nz/#!' <<<"$link" &&
 		mega_req_json="[{\"a\":\"g\", \"g\":\"1\", \"p\":\"$file_id\"}]"
-	elif [ $(echo -n "$link" | grep -E -o -i 'mega(\.co)?\.nz/#N!') ]; then
+	grep -qEoi 'mega(\.co)?\.nz/#N!' <<<"$link" &&
 		mega_req_json="[{\"a\":\"g\", \"g\":\"1\", \"n\":\"$file_id\"}]"
-	fi
-	mega_res_json=$($DL_COM --header 'Content-Type: application/json' $DL_COM_PDATA "$mega_req_json" "$mega_req_url")
+	mega_res_json=$($dlcmd --header 'Content-Type: application/json' $dlcmdopt "$mega_req_json" "$mega_req_url")
 	rtn=$?
-	((rtn)) && Error "ERROR: download exit code $rtn)"
+	((rtn)) && Error "ERROR: download exit code $rtn"
 	dl_temp_url=$(jq -r .[0].g <<<"$mega_res_json")
 else
 	# MegaCrypter link
@@ -350,9 +346,11 @@ else
 	fi
 	Checkfile "$file_name" "$file_size" "$(Format_file_size "$file_size")" "$md5"
 	hex_key=$(Hrk2hk "$hex_raw_key")
-	dl_link=$($DL_COM --header 'Content-Type: application/json' $DL_COM_PDATA "{\"m\":\"dl\",\"link\":\"$link\",\"noexpire\":\"$no_exp_token\"}" "$MC_API_URL")
+	dl_link=$($dlcmd --header 'Content-Type: application/json' $dlcmdopt \
+		"{\"m\":\"dl\",\"link\":\"$link\",\"noexpire\":\"$no_exp_token\"}" \
+		"$MC_API_URL")
 	rtn=$?
-	(($rtn)) && Error "ERROR: download exit code $rtn"
+	((rtn)) && Error "ERROR: download exit code $rtn"
 	grep -q '"error"' <<<"$dl_link" &&
 		error_code=$(jq -r .error <<<"$dl_link") &&
 		Error "MegaCrypter error $error_code"
@@ -365,12 +363,11 @@ else
 			<<<"$dl_temp_url")
 	fi
 fi
-[[ $speed ]] && DL_COMMAND="$DL_COM --limit-rate $speed" ||
-	DL_COMMAND="$DL_COM"
+[[ $speed ]] && dlcmd+=" --limit-rate $speed"
 if [[ $output = '-' ]]
 then
 	hex_iv="${hex_raw_key:32:16}0000000000000000"
-	$DL_COMMAND "$dl_temp_url" |$openssl_AES128_CTR -K "$hex_key" -iv "$hex_iv"
+	$dlcmd "$dl_temp_url" |$openssl_AES128_CTR -K "$hex_key" -iv "$hex_iv"
 	exit 0
 fi
 
@@ -383,15 +380,15 @@ do
 	then
 		echo -e "(Resuming previous download ...)\n"
 		temp_size=$(stat -c %s "$file_name.temp")
-		offset=$((temp_size-$temp_size%16))
-		printf -v iv_forward '%016x' $(($offset/16))
+		offset=$((temp_size-temp_size%16))
+		printf -v iv_forward '%016x' $((offset/16))
 		hex_iv="${hex_raw_key:32:16}$iv_forward"
 		truncate -s $offset "$file_name.temp"
-		$DL_COMMAND "$dl_temp_url/$offset" |$PV_CMD -s $(($file_size-$offset)) |
+		$dlcmd "$dl_temp_url/$offset" |$PV_CMD -s $((file_size-offset)) |
 			$openssl_AES128_CTR -K "$hex_key" -iv "$hex_iv" >>"$file_name.temp"
 	else
 		hex_iv="${hex_raw_key:32:16}0000000000000000"
-		$DL_COMMAND "$dl_temp_url" |$PV_CMD -s $file_size |
+		$dlcmd "$dl_temp_url" |$PV_CMD -s $file_size |
 			$openssl_AES128_CTR -K "$hex_key" -iv "$hex_iv" >"$file_name.temp"
 	fi
 	rtn=${PIPESTATUS[0]}
@@ -400,6 +397,6 @@ done
 [[ ! -f $file_name.temp ]] && Error "ERROR: file could not be downloaded"
 mv "$file_name.temp" "$file_name"
 [[ -f $dir/$md5 ]] && rm "$dir/$md5"
-((quiet)) || echo -e "\nFILE DOWNLOADED!\n"
+((quiet)) || echo -e "\nFile downloaded\n"
 
 exit 0
