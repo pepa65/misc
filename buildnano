@@ -83,16 +83,16 @@ include /usr/local/share/nano/*.nanorc
 
 # Colors: [bold|italic,][light]white|black|blue|green|red|cyan|yellow|magenta |
 #  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal
-set errorcolor brightyellow,red
+set errorcolor black,lightred
 set functioncolor cyan,white
 set keycolor blue,yellow
-set numbercolor black,cyan
-set promptcolor brightyellow,black
+set numbercolor black,lightcyan
+set promptcolor black,lightyellow
 #set scrollercolor yellow,cyan
-set selectedcolor black,lightyellow
+set selectedcolor black,white
 set statuscolor brightwhite,cyan
 set stripecolor brightred,normal
-set titlecolor black,lightwhite
+set titlecolor black,lightgreen
 
 unset afterends
 unset allow_insecure_backup

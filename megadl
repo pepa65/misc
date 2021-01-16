@@ -31,7 +31,7 @@ Help(){ # I:name,version
 		Single <URL> mode options:
 		  -o|--output <filename>    Store the output file with this name
 		URL list in <file>:
-		  Line format in file (filename is optional):  URL FILENAME
+		  Line format in file (FILENAME is optional):  URL FILENAME
 		Repo: https://github.com/pepa65/misc
 	EOH
 }
@@ -215,9 +215,7 @@ then if [[ -z $list ]]
 				if [[ ! -f $dir/$md5 ]]
 				then
 					mc_link_info=$(Get_mc_link_info "$link")
-					if ! [ "$?" -eq 1 ];then
-						echo -n "$mc_link_info" >>"$dir/$md5"
-					fi
+					(($?!=1)) && echo -n "$mc_link_info" >>"$dir/$md5"
 				fi
 				((++link_count))
 			fi

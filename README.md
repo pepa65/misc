@@ -527,3 +527,27 @@ kenburns [options] input1 [input2...] output
         --subtitles=FILE             Use FILE as subtitles track
     -y, --yes                        Overwrite OUTPUT without asking
 ```
+
+# megadl
+**Download mega.nz and MegaCrypter files**
+
+Usage:
+```
+megadl v2.1 - Download mega.nz and MegaCrypter files
+
+Usage: megadl [<options>] <URL> | -l|--list <file>
+  -s|--speed <speed>         Download speed limit <int>B|K|M, example: 20K
+  -p|-password <password>    Password for MegaCrypter links (same for all)
+  -m|--metadata              Only display file metadata in JSON format
+  -q|--quiet                 Quiet mode
+  -h|--help                  This help text
+Single <URL> mode options:
+  -o|--output <filename>    Store the output file with this name
+URL list in <file>:
+  Line format in file (FILENAME is optional):  URL FILENAME
+Repo: https://github.com/pepa65/misc
+```
+
+# buildsignal
+**Build Signal desktop AppImage**
+* Required: sudo
