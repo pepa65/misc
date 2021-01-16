@@ -4,19 +4,6 @@ set +xv
 
 version=2.1
 bash_min=3
-self=$(readlink -e "$0")
-name=${self##*/}
-dir=.$name
-mega_api='https://g.api.mega.co.nz'
-openssl_AES128_CTR='openssl enc -d -aes-128-ctr'
-openssl_AES128_CBC='openssl enc -a -A -d -aes-128-cbc'
-openssl_AES256_CBC='openssl enc -a -A -d -aes-256-cbc'
-openssl_MD5='openssl md5'
-
-Error(){ # $1:message
-	echo -e "\n$1" >&2
-	exit 1
-}
 
 Help(){ # I:name,version
 	cat <<-EOH
@@ -34,6 +21,11 @@ Help(){ # I:name,version
 		  Line format in file (FILENAME is optional):  URL FILENAME
 		Repo: https://github.com/pepa65/misc
 	EOH
+}
+
+Error(){ # $1:message
+	echo -e "\n$1" >&2
+	exit 1
 }
 
 Check_deps(){ # O:dlcmd[opt],openssl_sup  I:bash_min
@@ -94,7 +86,8 @@ Hrk2hk(){ # $1:hex_raw_key
 Get_mc_link_info(){ # $1:link
 	local MC_API_URL=$(grep -i -E -o 'https?://[^/]+' <<<"$1")/api
 	local rtn error_code expire no_exp_token
-	local info_link=$($dlcmd --header 'Content-Type: application/json' $dlcmdopt "{\"m\":\"info\",\"link\":\"$1\"}" "$MC_API_URL")
+	local info_link=$($dlcmd --header 'Content-Type: application/json' \
+		$dlcmdopt "{\"m\":\"info\",\"link\":\"$1\"}" "$MC_API_URL")
 	rtn=$?
 	((rtn)) &&
 		echo -e "ERROR: Download exit code $rtn" && return 1
@@ -114,7 +107,7 @@ Get_mc_link_info(){ # $1:link
 	echo -n "$file_name@$path@$file_size@$mc_pass@$key@$no_exp_token"
 }
 
-Checkfile(){ # $1:filename $2:filesize $3:formattedsize [$4:md5_mclink]
+Checkfile(){ # $1:name $2:size $3:formattedsize [$4:md5_mclink]  O:DL_MSG
 	[[ ! -f $1 ]] && DL_MSG="\nDownloading $1 [$3] ...\n" && return
 	local actual_size=$(stat -c %s "$1")
 	if [[ $actual_size = $2 ]]
@@ -125,17 +118,17 @@ Checkfile(){ # $1:filename $2:filesize $3:formattedsize [$4:md5_mclink]
 	DL_MSG="\nFile $1 exists but with different size ($2 vs $actual_size bytes). Downloading [$3] ...\n"
 }
 
-Format_file_size(){ # $1:file_size
-	local file_size gb=1073741824 mb=1048576 kb=1024
+Format_file_size(){ # $1:filesize
+	local size gb=1073741824 mb=1048576 kb=1024
 	if (($1>=gb))
-	then file_size="$(bc <<<"scale=1; $1/$gb") GB"
+	then size="$(bc <<<"scale=1; $1/$gb") GB"
 	elif (($1>=mb))
-	then file_size="$(bc <<<"scale=1; $1/$mb") MB"
+	then size="$(bc <<<"scale=1; $1/$mb") MB"
 	elif (($1>=kb))
-	then file_size="$(bc <<<"scale=1; $1/$kb") kB"
-	else file_size="$1 B"
+	then size="$(bc <<<"scale=1; $1/$kb") kB"
+	else size="$1 B"
 	fi
-	echo -n "$file_size"
+	echo -n "$size"
 }
 
 Mc_pbkdf2(){ # $1:password $2:salt $3:iterations
@@ -144,7 +137,7 @@ Mc_pbkdf2(){ # $1:password $2:salt $3:iterations
 	echo -e "$python" |python
 }
 
-Mc_pass_check(){ # $1:mc_pass_info $2:pass_to_check
+Mc_pass_check(){ # $1:mc_pass_info $2:pass_to_check  I:openssl_AES256_CBC
 	local array iter_log2 key_check salt iv mc_pass_hash
 	IFS='#' read -a array <<<"$1"
 	iter_log2=${array[0]} key_check=${array[1]} salt=${array[2]} iv=${array[3]}
@@ -171,7 +164,17 @@ Regexi(){ # $1:pattern $2:subject $3:group
 	shopt -u nocasematch
 }
 
+
+self=$(readlink -e "$0")
+name=${self##*/}
+dir=.$name
+mega_api='https://g.api.mega.co.nz'
+openssl_AES128_CTR='openssl enc -d -aes-128-ctr'
+openssl_AES128_CBC='openssl enc -a -A -d -aes-128-cbc'
+openssl_AES256_CBC='openssl enc -a -A -d -aes-256-cbc'
+openssl_MD5='openssl md5'
 Check_deps
+
 list= password= output= speed= quiet=0 metadata=0
 eval set -- "$(getopt -o "l:p:k:o:s:qhm" -l "list:,password:,key:,output:,speed:,quiet,help,metadata" -n $0 -- "$@")"
 while :
@@ -185,7 +188,7 @@ do
 	-q|--quiet) quiet=1; shift ;;
 	-m|--metadata) metadata=1; shift ;;
 	--) shift; break ;;
-	*) Help; exit 2
+	*) Help; exit 1
 	esac
 done
 
