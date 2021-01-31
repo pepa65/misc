@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set +xv
+# instai - User-(un)install AppImage with icon and .desktop file
+# Usage:  instai [-l|--list] [-u|--uninstall] <AppImage>
+# Required: grep sed date coreutils(cd chmod mktemp readlink mkdir rm cp)
+
+# No arguments: help message
+((!$#)) &&
+	echo "instai - User-(un)install AppImage with icon and .desktop file" &&
+	echo "Usage:  instai [-l|--list] [-u|--uninstall] <AppImage>" && exit 0
+
+# -l/--list
+appdir=~/.local/share/applications
+if [[ $1 = -l || $1 = --list ]]
+then
+	apps=$(grep '^Exec=".*\.AppImage"$' "$appdir"/*.desktop)
+	for app in $apps
+	do
+		desktop=${app%%:Exec=*}
+		icon=$(grep '^Icon=' $desktop)
+		echo -e "${app%%:Exec=*}:\n Exec: ${app##*:Exec=}\n Icon: ${icon:5}"
+	done
+	exit 0
+fi
+
+# -u/--uninstall
+uninstall=0
+[[ $1 = -u || $1 = --uninstall ]] && uninstall=1 && shift
+
+dir=$(mktemp -d) log=~/${0##*/}.log
+cd "$dir"
+chmod +x "$1"
+! "$1" --appimage-extract &>/dev/null &&
+	echo "No AppImage: $1" >>"$log" && exit 1
+
+shopt -s nullglob
+desktop=$(echo squashfs-root/*.desktop)
+[[ -z $desktop ]] && echo "Abort: no .desktop file in root" && exit 2
+
+appname=${desktop##*/} appdesktop=$appdir/$appname
+icondir=~/.local/share/icons/hicolor/256x256/apps
+icon=$(readlink -e squashfs-root/.DirIcon) iconname=${icon##*/}
+[[ -z $iconname || $iconname = .DirIcon ]] &&
+	icon=$(echo squashfs-root/*.{png,xpm}) iconname=${icon##*/}
+
+app= ico=
+if ((uninstall))
+then
+	chmod -x "$1"
+	rm "$appdesktop" 2>/dev/null && app="\n $appname from $appdir"
+	[[ $iconname ]] && rm "$icondir/$iconname" 2>/dev/null &&
+		ico="\n $iconname from $icondir"
+	action=Uninstalled
+else
+	mkdir -p "$appdir"
+	cp "$desktop" "$appdir"
+	sed -i "s@^Exec=.*@Exec=\"$1\"@" "$appdesktop"
+	app="\n $appname into $appdir"
+	if [[ -z $iconname ]]
+	then echo "No icon found in root"
+	else
+		mkdir -p "$icondir"
+		cp "$icon" "$icondir"
+		sed -i "s@^Icon=.*@Icon=\"$icondir/$iconname\"@" "$appdesktop"
+		ico="\n $iconname into $icondir"
+	fi
+	action=Installed
+fi
+
+echo -e "-- $action '${appname%.desktop}' $(date)$app$ico" |tee -a "$log"
+rm -rf "$dir"
+exit 0

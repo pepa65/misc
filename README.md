@@ -551,3 +551,11 @@ Repo: https://github.com/pepa65/misc
 # buildsignal
 **Build Signal desktop AppImage**
 * Required: sudo
+
+# instai
+**User-(un)install AppImage with icon and .desktop file**
+
+* Usage: 'instai [-l|--list] [-u|--uninstall] <AppImage>'
+
+# makeself
+**Create self-extracting tar.gz archive**
