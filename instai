@@ -13,7 +13,7 @@ set +xv
 appdir=~/.local/share/applications
 if [[ $1 = -l || $1 = --list ]]
 then
-	apps=$(grep '^Exec=".*\.AppImage"$' "$appdir"/*.desktop)
+	apps=$(grep '^Exec=.*\.AppImage$' "$appdir"/*.desktop)
 	for app in $apps
 	do
 		desktop=${app%%:Exec=*}
@@ -27,15 +27,17 @@ fi
 uninstall=0
 [[ $1 = -u || $1 = --uninstall ]] && uninstall=1 && shift
 
+appimage=$(readlink -e "$1")
+[[ -z $appimage ]] && echo "Abort: no file: $1" && exit 1
 dir=$(mktemp -d) log=~/${0##*/}.log
 cd "$dir"
-chmod +x "$1"
-! "$1" --appimage-extract &>/dev/null &&
-	echo "No AppImage: $1" >>"$log" && exit 1
+chmod +x "$appimage"
+! "$appimage" --appimage-extract &>/dev/null &&
+	echo "No AppImage: $1" >>"$log" && exit 2
 
 shopt -s nullglob
 desktop=$(echo squashfs-root/*.desktop)
-[[ -z $desktop ]] && echo "Abort: no .desktop file in root" && exit 2
+[[ -z $desktop ]] && echo "Abort: no .desktop file in root" && exit 3
 
 appname=${desktop##*/} appdesktop=$appdir/$appname
 icondir=~/.local/share/icons/hicolor/256x256/apps
@@ -46,7 +48,7 @@ icon=$(readlink -e squashfs-root/.DirIcon) iconname=${icon##*/}
 app= ico=
 if ((uninstall))
 then
-	chmod -x "$1"
+	chmod -x "$appimage"
 	rm "$appdesktop" 2>/dev/null && app="\n $appname from $appdir"
 	[[ $iconname ]] && rm "$icondir/$iconname" 2>/dev/null &&
 		ico="\n $iconname from $icondir"
@@ -54,16 +56,18 @@ then
 else
 	mkdir -p "$appdir"
 	cp "$desktop" "$appdir"
-	sed -i "s@^Exec=.*@Exec=\"$1\"@" "$appdesktop"
+	sed -i "s@^Exec=.*@Exec=$appimage@" "$appdesktop"
 	app="\n $appname into $appdir"
 	if [[ -z $iconname ]]
 	then echo "No icon found in root"
 	else
 		mkdir -p "$icondir"
 		cp "$icon" "$icondir"
-		sed -i "s@^Icon=.*@Icon=\"$icondir/$iconname\"@" "$appdesktop"
+		sed -i "s@^Icon=.*@Icon=$icondir/$iconname@" "$appdesktop"
 		ico="\n $iconname into $icondir"
 	fi
+	desktop-file-install --dir=$appdir "$appdesktop"
+	update-desktop-database "$appdir"
 	action=Installed
 fi
 
