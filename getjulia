@@ -32,8 +32,7 @@ then
 	sudo rm -fv -- "$usr"/"$ics"/julia.svg
 	sudo rm -rfv -- "$usr"/share/julia
 	sudo rm -fv -- "$usr"/share/man/man1/julia.1
-	((purge)) && sudo rm -rfv -- /home/*/.julia /home/*/.juliarc.jl /etc/julia \
-			/root/.julia /root/.juliarc.jl
+	((purge)) && sudo rm -rfv -- /home/*/.julia /home/*/.juliarc.jl /etc/julia /root/.julia /root/.juliarc.jl
 else
 	xml=$(wget -O- "$url") versions=()
 	for v in $(grep -o [^/]*sha256 <<<"$xml")

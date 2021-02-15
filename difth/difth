@@ -102,12 +102,10 @@ then  ## html
 	>"$of" || Abort "Output file '$of' unwritable"
 	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$s1" >"$t1"
 	sed -e 's@  @\&nbsp; @g' -e 's@\t@<span class="t"></span> @g' <<<"$s2" >"$t2"
-	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$t1" "$t2" 2>"$stat" |\
-		sed -e "s@$d@@g" -e 's@^@<br>@g' -e "s@$e@</span>@g"\
-				-e "s@$n@<span class=\"n\">@g" -e "s@$o@<span class=\"o\">@g")
-	sed -i -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
-		-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ   @g' -e 's@inserted@แทรก@g'\
-		-e 's@changed@เปลี่ยน@g' "$stat"
+	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e "$t1" "$t2" 2>"$stat" |
+		sed -e "s@$d@@g" -e 's@^@<br>@g' -e "s@$e@</span>@g" -e "s@$n@<span class=\"n\">@g" -e "s@$o@<span class=\"o\">@g")
+	sed -i -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g' -e 's@common@ตรงกัน@g' -e 's@deleted@ลบ   @g' \
+			-e 's@inserted@แทรก@g' -e 's@changed@เปลี่ยน@g' "$stat"
 
 	cat <<-EOS >"$of"
 		<!DOCTYPE html>
@@ -197,14 +195,13 @@ then  ## html
 else  ## terminal
 	echo "$s1" >"$t1"
 	echo "$s2" >"$t2"
-	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e -I "$t1" "$t2" 2>"$stat" |\
-		sed -e "s@$d@@g" -e "s@$n@$(echo $'\o33\[7;4;32m')@g"\
-				-e "s@$o@$(echo $'\o33\[7;4;31m')@g" -e "s@$e@$(echo $'\o33\[0m')@g")
+	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e -I "$t1" "$t2" 2>"$stat" |
+		sed -e "s@$d@@g" -e "s@$n@$(echo $'\o33\[7;4;32m')@g" \
+			-e "s@$o@$(echo $'\o33\[7;4;31m')@g" -e "s@$e@$(echo $'\o33\[0m')@g")
 	echo -e "$out"
 	echo '--------------------------------------------------------------------------------'
-	cat "$stat" |sed -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g'\
-			-e 's@common@ตรงกัน@g' -e 's@deleted@ลบ  @g' -e 's@inserted@แทรก@g'\
-			-e 's@changed@เปลี่ยน@g'
+	cat "$stat" |sed -e 's@old@เก่า@g'  -e 's@new@ใหม่@g' -e 's@words@คำ@g' -e 's@common@ตรงกัน@g' \
+		-e 's@deleted@ลบ  @g' -e 's@inserted@แทรก@g' -e 's@changed@เปลี่ยน@g'
 fi
 
 rm -r -- "$tmp"

@@ -83,9 +83,8 @@ show_help(){
 }
 
 detect_subtitles(){ ## Needs $mplayer $movie $err, changes $sub1 $sub2
-	mapfile -t sub <<<\
-			"$($mplayer -sub-fuzziness 1 -frames 0 "$movie" 2>"$err" \
-			|sed -n "s/^SUB: Added subtitle file ([0-9]*): \(.*\)$/\1/p")"
+	mapfile -t sub <<<"$($mplayer -sub-fuzziness 1 -frames 0 "$movie" 2>"$err" |
+		sed -n "s/^SUB: Added subtitle file ([0-9]*): \(.*\)$/\1/p")"
 	[[ ${sub[0]} ]] && n=${#sub[@]} || n=0
 	echo " ${sub[@]}"
 	! ((n)) && echo "Aborting, no subtitles were found" && exit 1
@@ -124,28 +123,22 @@ convert_subs(){ ## Needs $mplayer $movie $sub1 $sub2 $err $output
 	# This would be slower but does not require the video file for conversion:
 	# mplayer /dev/zero -rawvideo pal:fps=25 -demuxer rawvideo -vc null -vo null -noframedrop -benchmark -sub "$movie" -dumpsrtsub
 	echo "Converting subtitle file $sub1 to a time-based format"
-	$mplayer -dumpsrtsub -noautosub -really-quiet -frames 0 -sub "$sub1" "$movie" 2>"$err" \
-			&& echo "Done"
+	$mplayer -dumpsrtsub -noautosub -really-quiet -frames 0 -sub "$sub1" "$movie" 2>"$err" && echo "Done"
 	! [[ -f dumpsub.srt ]] && echo "Aborting, conversion of $sub1 failed" && exit 3
-	sed -e "/ --> /s/,/./g" dumpsub.srt |tr -d "\r" \
-			|awk 'BEGIN{ORS="";print " "} / --> /,/^$/ {ORS=" ";print} /^$/{print "\n"}' \
-			|sed -e "s/ --> /,/g" \
-				-e "s/^ \([^ ]*\) \(.*\)/Dialogue: Marked=0,\1,lang1style,Cher,0000,0000,0000,,\2/" \
-				-e "s/,00:/,0:/g" -e "s/\([:,]\)0\([0-9]\)/\1\2/g" \
-				-e "s/\([0-9]\)\(\.\)\([0-9]\)\([0-9]\)0\(,\)/\1\2\3\4\5/g" \
+	sed -e "/ --> /s/,/./g" dumpsub.srt |tr -d "\r" |
+		awk 'BEGIN{ORS="";print " "} / --> /,/^$/ {ORS=" ";print} /^$/{print "\n"}' |
+		sed -e "s/ --> /,/g" -e "s/^ \([^ ]*\) \(.*\)/Dialogue: Marked=0,\1,lang1style,Cher,0000,0000,0000,,\2/" \
+			-e "s/,00:/,0:/g" -e "s/\([:,]\)0\([0-9]\)/\1\2/g" -e "s/\([0-9]\)\(\.\)\([0-9]\)\([0-9]\)0\(,\)/\1\2\3\4\5/g" \
 			>>"$output"
 	rm dumpsub.srt
 	echo "Converting subtitle file $sub2 to a time-based format"
-	$mplayer -dumpsrtsub -noautosub -really-quiet -frames 0 -sub "$sub2" "$movie" 2>"$err" \
-			&& echo "Done"
+	$mplayer -dumpsrtsub -noautosub -really-quiet -frames 0 -sub "$sub2" "$movie" 2>"$err" && echo "Done"
 	! [[ -f dumpsub.srt ]] && echo "Aborting, conversion of $sub2 failed" && exit 4
-	sed -e "/ --> /s/,/./g" dumpsub.srt |tr -d "\r" \
-			|awk 'BEGIN{ORS="";print " "} / --> /,/^$/ {ORS=" ";print} /^$/{print "\n"}' \
-			|sed -e "s/ --> /,/g" \
-				-e "s/^ \([^ ]*\) \(.*\)/Dialogue: Marked=0,\1,lang2style,Cher,0000,0000,0000,,\2/" \
-				-e "s/,00:/,0:/g" -e "s/^ *//g" -e "s/\([:,]\)0\([0-9]\)/\1\2/g" \
-				-e "s/\([0-9]\)\(\.\)\([0-9]\)\([0-9]\)0\(,\)/\1\2\3\4\5/g" \
-			>>"$output"
+	sed -e "/ --> /s/,/./g" dumpsub.srt |tr -d "\r" |
+		awk 'BEGIN{ORS="";print " "} / --> /,/^$/ {ORS=" ";print} /^$/{print "\n"}' |
+		sed -e "s/ --> /,/g" -e "s/^ \([^ ]*\) \(.*\)/Dialogue: Marked=0,\1,lang2style,Cher,0000,0000,0000,,\2/" \
+			-e "s/,00:/,0:/g" -e "s/^ *//g" -e "s/\([:,]\)0\([0-9]\)/\1\2/g" \
+			-e "s/\([0-9]\)\(\.\)\([0-9]\)\([0-9]\)0\(,\)/\1\2\3\4\5/g" >>"$output"
 	rm dumpsub.srt
 }
 

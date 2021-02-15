@@ -178,8 +178,7 @@ sudo chroot "$mntdir" mount -t vfat "${disk}p1" /boot/efi ||
 	Fail "cannot mount /boot/efi"
 sudo chroot "$mntdir" mount -t proc proc /proc || Fail "cannot mount /proc"
 sudo chroot "$mntdir" mount -t sysfs sysfs /sys || Fail "cannot mount /sys"
-LANG=C DEBIAN_FRONTEND=noninteractive sudo chroot "$mntdir" \
-		apt-get install -y -q $kern grub-efi ||
+LANG=C DEBIAN_FRONTEND=noninteractive sudo chroot "$mntdir" apt-get install -y -q $kern grub-efi ||
 	Fail "cannot install linux-image and grub packages"
 sudo chroot "$mntdir" grub-install "$disk" ||
 	Fail "cannot install grub bootloader"
@@ -191,8 +190,8 @@ sudo sed -i "s|${disk}p2|/dev/sda2|g" "$mntdir/boot/grub/grub.cfg"
 sudo chroot "$mntdir" chpasswd <<<"root:$pw"
 
 echo "Finishing grub installation..."
-sudo grub-install "$disk" --root-directory="$mntdir" \
-		--modules="biosdisk part_msdos" || Fail "cannot reinstall grub"
+sudo grub-install "$disk" --root-directory="$mntdir" --modules="biosdisk part_msdos" ||
+	Fail "cannot reinstall grub"
 
 Clean
 echo

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# vcf2jpg - Extract embedded image from .vcf file
+# Required: grep sed coreutils(tr base64)
+
+[[ ! -f $1 ]] && echo -e "${0##*/} - Extract embedded image from .vcf file\n  Usage: ${0##*/} <vcf-file>" && exit 1
+
+data=$(tr -d "\r\n" <"$1" |sed -e 's/.*TYPE=//' -e 's/END:VCARD.*//')
+((${#data} < 5)) && echo "No image found in $1" && exit 2
+
+ext=${data%%:*}
+[[ $ext = BEGIN ]] && echo "Failed to extract image" && exit 3
+
+[[ $ext = JPEG ]] && ext=jpg
+file=$(grep -m1 '^FN:' "$1") file=${file:3:-1}.$ext
+[[ -f $file ]] && read -rN1 -p "Overwrite existing '$file'? [Y/n] " && [[ $REPLY = n ]] &&
+	echo -e "\nNot written to '$file'" && exit 4
+[[ $REPLY = y ]] && echo
+! echo "${data#*:}" |base64 -id >"$file" && echo "Failed to decode image" && exit 5 || echo "Written '$file'"

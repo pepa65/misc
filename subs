@@ -28,10 +28,7 @@ Error(){ ## $1: Message; $2: exit number
 }
 
 Entry(){ ## $1: Message
-	((zen)) && echo "$($zenity --entry --text="$1")" || {
-		read -rp "$1"
-		echo "$REPLY"
-	}
+	((!zen)) && read -rp "$1" && echo "$REPLY" || echo "$($zenity --entry --text="$1")"
 }
 
 domain='https://subscene.com'
@@ -79,8 +76,7 @@ while ((i<n))
 do
 	((i++))
 	tit[$i]=${tit[$i]//$'\r'/}
-	((zen)) && titlez+="$i ${tit[$i]// /$'\xC2\xA0'} " \
-			|| titles+=$(printf "%*d: %s" $d $i "${tit[$i]}\n")
+	((zen)) && titlez+="$i ${tit[$i]// /$'\xC2\xA0'} " || titles+=$(printf "%*d: %s" $d $i "${tit[$i]}\n")
 done
 
 ((n==1)) && c=1 || {

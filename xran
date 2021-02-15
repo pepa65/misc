@@ -157,8 +157,7 @@ Xran(){ # $@: commandline arguments
 		[[ $save = @ ]] && saving="Saving as default: " ||
 			saving="Saving as '$save': "
 		[[ -f $config ]] ||
-			echo "# The last entry of a scheme name gets picked; '@' is default" \
-					>"$config"
+			echo "# The last entry of a scheme name gets picked; '@' is default" >"$config"
 		echo "$save $ld $rd $lp $rp $vo $ml $mr" >>"$config"
 	fi
 

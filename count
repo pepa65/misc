@@ -10,19 +10,19 @@ f=1
 ! [[ -f "$1" ]] && echo -e "Usage: $0 <file> [-s]\n (-s means sort by code point instead of frequency)\n\nNo input file: $1\nAborting" && exit 2
 [[ $2 = '-s' ]] && f=0
 
-((f)) && f1='s/\s*\([0-9][0-9]*\).*u\([0-9A-F]*\)/\1 U\2  u\2/' ||\
-		f1='s/\s*\([0-9][0-9]*\).*u\([0-9A-F]*\)/u\2 U\2  \1/'
-((f)) && f2="sort -n |sed 's/^ [ ]*\( .*\)/\1LF  u000A/' |sed 's/^/           /' |sed 's/ *\(.\{11,\}\) / \1 /'" ||\
-		f2="sed 's/^  \(.*\)/u000A LF  \1/' |sort"
+((f)) && f1='s/\s*\([0-9][0-9]*\).*u\([0-9A-F]*\)/\1 U\2  u\2/' ||
+	f1='s/\s*\([0-9][0-9]*\).*u\([0-9A-F]*\)/u\2 U\2  \1/'
+((f)) && f2="sort -n |sed 's/^ [ ]*\( .*\)/\1LF  u000A/' |sed 's/^/           /' |sed 's/ *\(.\{11,\}\) / \1 /'" ||
+	f2="sed 's/^  \(.*\)/u000A LF  \1/' |sort"
 
 ## Represent UTF-8 in \u-escaped hexadecimal ASCII (no newline)
-uni2ascii -psaU "$1" |\
+uni2ascii -psaU "$1" |
 		## Remove \ and insert newlines and remove empty lines
-		sed -e 's/\\u/\nu/g' |sed '/^$/d' |\
+		sed -e 's/\\u/\nu/g' |sed '/^$/d' |
 		## Sort and count unique first 5 characters
-		sort |uniq -c -w5 |\
+		sort |uniq -c -w5 |
 		## Replace whitespace by 1 tab + fill in the decimal & hexadecimal values:
-		sed -e 's/\W+/\t/g' -e "$f1" |\
+		sed -e 's/\W+/\t/g' -e "$f1" |
 		## Convert 0xHHHH unicode points to UTF-8 as <Uhhhh>, and sort
 		ascii2uni -aE |eval "$f2"
 

@@ -37,10 +37,8 @@ Wallpaper(){  # $1: imagefile
 	then gsettings set org.gnome.desktop.background picture-uri "file://$1"
 	elif pgrep -f xfce4-session >/dev/null
 	then
-		xfconf-query --channel xfce4-desktop --property \
-				/backdrop/screen0/monitor0/image-path --set "$1" 2>/dev/null
-		xfconf-query --channel xfce4-desktop --property \
-				/backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null
+		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/image-path --set "$1" 2>/dev/null
+		xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitor0/workspace0/last-image --set "$1" 2>/dev/null
 	elif type -p feh >/dev/null
 	then feh --bg-fill "$1"
 	elif type -p nitrogen >/dev/null
@@ -52,8 +50,7 @@ Wallpaper(){  # $1: imagefile
 	elif type -p habak >/dev/null
 	then habak -mS "$1"
 	elif [[ $(uname) = "Darwin" ]]
-	then osascript -e \
-			"Tell 'Finder' to set desktop picture to POSIX file '${1/#\~/$HOME}'"
+	then osascript -e "Tell 'Finder' to set desktop picture to POSIX file '${1/#\~/$HOME}'"
 	else  # trying GNOME..?
 		gsettings set org.gnome.desktop.background picture-uri "file://$1"
 	fi
@@ -79,8 +76,7 @@ Main(){
 	# available dimensions: 1600x770/887 1280x616 1024x493
 	width=1600
 	((pause)) && sleep 10
-	wget -qpO "$pictmp" -w 10 --connect-timeout=20 \
-			"https://static.die.net/earth/$proj/$width.jpg"
+	wget -qpO "$pictmp" -w 10 --connect-timeout=20 "https://static.die.net/earth/$proj/$width.jpg"
 	# If temporarily unavailable, skip
 	(($?==8)) && return 1
 	[[ -s $pictmp ]] && cp "$pictmp" "$pic" || return 2

@@ -4,8 +4,7 @@
 // Compile:
 //     cc -o sct sct.c -lX11 -lXrandr
 //   Or:
-//     cc -std=c99 -O2 -I /usr/X11R6/include -o sct sct.c \
-//       -L /usr/X11R6/lib -lm -lX11 -lXrandr
+//     cc -std=c99 -O2 -I /usr/X11R6/include -o sct sct.c -L /usr/X11R6/lib -lm -lX11 -lXrandr
 // Install: chmod +x sct && sudo mv sct /usr/local/bin/sct
 //
 // Bash usage (add these lines to .bashrc), requires yad:

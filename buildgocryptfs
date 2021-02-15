@@ -66,8 +66,7 @@ then
 	: ${arch:=$GO_ARCH}
 	: ${ver:=$GO_VERSION}
 	[[ -z $ver ]] &&
-		url=$(wget -qO- "https://golang.org/dl" |
-				grep -o "[^\"]*\.$os-$arch\.tar\.gz" |head -1) \
+		url=$(wget -qO- "https://golang.org/dl" |grep -o "[^\"]*\.$os-$arch\.tar\.gz" |head -1) &&
 		ver=${url%.$os-$arch.tar.gz} ver=${ver#/dl/go}
 	# Use the discovered or specified $ver
 	dl="go$ver.$os-$arch.tar.gz"

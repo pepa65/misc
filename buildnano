@@ -116,7 +116,6 @@ unset jumpyscrolling
 unset linenumbers
 unset locking
 set magic
-set markmatch
 #set matchbrackets "(<[{)>]}"
 set minibar
 ##set morespace

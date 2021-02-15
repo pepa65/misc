@@ -68,8 +68,7 @@ sox $layout "$tmpsampleaud" -n noiseprof "$tmpprofile"
 sox "$tmpinaud" "$tmpoutaud" noisered "$tmpprofile" "$sens"
 
 [[ $type = video ]] &&
-	ffmpeg -v warning -y -i "$tmpoutaud" -i "$tmpinvid" -vcodec copy \
-		-qscale:v 0 -qscale:a 0 "$2" ||
+	ffmpeg -v warning -y -i "$tmpoutaud" -i "$tmpinvid" -vcodec copy -qscale:v 0 -qscale:a 0 "$2" ||
 	ffmpeg -v warning -y -i "$tmpoutaud" "$2"
 
 exit 0
