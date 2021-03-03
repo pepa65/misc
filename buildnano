@@ -85,12 +85,12 @@ include /usr/local/share/nano/*.nanorc
 #  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal
 set errorcolor black,lightred
 set functioncolor cyan,white
-set highlightcolor black,yellow
+set spotlightcolor black,white
 set keycolor blue,yellow
 set numbercolor black,lightcyan
 set promptcolor black,lightyellow
 #set scrollercolor yellow,cyan
-set selectedcolor black,white
+set selectedcolor black,orange
 set statuscolor brightwhite,cyan
 set stripecolor brightred,normal
 set titlecolor black,lightgreen
