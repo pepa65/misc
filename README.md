@@ -123,6 +123,18 @@ merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]
     or: `merge2ass [-h | --help]
 ```
 
+## subshift
+**Subtitle conversion tool**
+
+Usage:
+```
+subshift <infile.sub/srt> <outfile.sub/srt> [action...]
+  action: (+|-)<frames>              [Shift in frames]
+          (+|-)<hh>:<mm>:<ss>.<ms>   [Shift in time]
+          *<s>.<ms>                  [Time stretch/contract factor in seconds]
+          @<framerate>               [like: 23.976 / 25 / 29.97]'
+```
+
 ## pair.c
 **Utility to pair Logitech USB unifying or nano receivers with wireless input devices**
 

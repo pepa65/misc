@@ -1,0 +1,210 @@
+#!/usr/bin/env perl
+
+# subshift - Subtitle conversion tool
+# Fedon Kadifeli 200211-200502, pepa65 202104
+
+use strict;
+use warnings;
+
+my $usage='Usage:	subshift <infile.sub/srt> <outfile.sub/srt> [action...]
+  action: (+|-)<frames>              [Shift in frames]
+          (+|-)<hh>:<mm>:<ss>.<ms>   [Shift in time]
+          *<s>.<ms>                  [Time stretch/contract factor in seconds]
+          @<framerate>               [like: 23.976 / 25 / 29.97]';
+
+my $shift = 0;
+my $shift_time_mode = 0;
+my $mult = 1.0;
+my $framerate = 1000;
+my $fromsub;
+my $tosub;
+my $total = 0;
+my $conv = 0;
+my $wconv = 0;
+my $o1;
+my $o2;
+my $subtitle;
+
+sub CheckLines {
+  my @lines = split /\|/, shift;
+  my $nl = 0;
+  my $ret = "";
+  for (@lines) {
+    my $ll = length;
+    if ($ll > 50) {
+      my $hl = int ($ll / 2);
+      s/^(.{$hl,}?.*?) (.*)$/$1|$2/;
+      warn "*** At $total. Too long ($ll char) subtitle split!\n";
+      $nl++;
+    }
+    $ret .= "|$_";
+    $nl++;
+  }
+  warn "*** At $total. $nl-line subtitle!\n" if ($nl > 3);
+  return substr($ret,1);
+} # CheckLines
+
+sub TimetoString {
+  my $t = shift;
+  my $dp = shift;
+  my $hh = int ($t / 3600);
+  my $mm = int (($t - $hh * 3600) / 60);
+  my $ss = int ($t - $hh * 3600 - $mm * 60);
+  my $ttt = int (($t - int ($t)) * 1000);
+  my $tstr = sprintf ("%02d:%02d:%02d%s%03d", $hh, $mm, $ss, $dp, $ttt);
+  return $tstr;
+} # TimetoString
+
+sub ReadSubtitle {
+  return 0 if (eof FH);
+  my $ret = 1;
+  if ($fromsub) {
+    $total++;
+    $_ = <FH>;
+    if (/^\{(\d*)}\{(\d*)}(.*?)\r?\n?$/) {
+      $o1 = $1;
+      $o2 = $2;
+      $subtitle = $3;
+      $conv++;
+    } else {
+      warn "*** At $total. Incorrect .sub format!\n";
+      $ret++;
+    }
+  } else {
+    $total++;
+    $_ = <FH>;
+    unless (/^ *\d+ *\s*$/) {
+      warn "*** At $total. Number expected. $_ found!\n";
+      $ret++;
+    }
+    return 0 if (eof FH);
+    $_ = <FH>;
+    if (/^(\d\d):(\d\d):(\d\d)[\.,](\d\d\d) --> (\d\d):(\d\d):(\d\d)[\.,](\d\d\d).*$/) {
+      $o1 = $1*3600 + $2*60 + $3 + $4 / 1000.0;
+      $o2 = $5*3600 + $6*60 + $7 + $8 / 1000.0;
+      $subtitle = "";
+      while (<FH>) {
+        last if (/^\s*$/);
+        $_ =~ s/\r?\n?$//;
+        $subtitle .= "|" . $_;
+      }
+      $subtitle =~ s#^\|##;
+      $conv++;
+    } else {
+      warn "*** At $total. .srt info expected. $_ found!\n";
+      $ret++;
+    }
+  }
+  return $ret;  # ==1 if OK; >1 if warning(s)
+} # ReadSubtitle
+
+sub WriteSubtitle {
+  $o1 *= $mult;
+  $o2 *= $mult;
+  $subtitle = "." if $subtitle eq "";
+  $subtitle = CheckLines($subtitle);
+  if ($tosub) {
+    if (!$fromsub) { # .srt -> .sub
+      $o1 *= $framerate;
+      $o2 *= $framerate;
+    }
+    if ($shift) {
+      my $shift_frames = $shift;
+      $shift_frames *= $framerate if $shift_time_mode;
+      $o1 += $shift_frames;
+      $o2 += $shift_frames;
+    }
+    if ($o1 > 0 && $o2 > 0) {
+      $o1 = int ($o1 + 0.5);
+      $o2 = int ($o2 + 0.5);
+      $wconv++;
+      print OFH "{$o1}{$o2}$subtitle\r\n";
+    }
+  } else {
+    if ($fromsub) { # .sub -> .srt
+      $o1 /= $framerate;
+      $o2 /= $framerate;
+    }
+    if ($shift) {
+      my $shift_time = $shift;
+      $shift_time /= $framerate if ! $shift_time_mode;
+      $o1 += $shift_time;
+      $o2 += $shift_time;
+    }
+    if ($o1 > 0 && $o2 > 0) {
+      $o1 = TimetoString ($o1, ',');
+      $o2 = TimetoString ($o2, ',');
+      $subtitle =~ s#\|#\r\n#g;
+      $wconv++;
+      print OFH "$wconv\r\n$o1 --> $o2\r\n$subtitle\r\n\r\n";
+    }
+  }
+} # WriteSubtitle
+
+if (($#ARGV < 1) || ($#ARGV > 4)) {
+	print "$usage\n";
+	exit 1;
+}
+
+my $inf = shift;
+my $outf = shift;
+
+for my $action (@ARGV) {
+  if ($action =~ /^([-+])(\d\d):(\d\d):(\d\d)[\.,](\d\d\d)$/) {
+    $shift = $2*3600 + $3*60 + $4 + $5 / 1000.0;
+    $shift = - $shift if ($1 eq "-");
+    $shift_time_mode = 1;
+  } elsif ($action =~ /^([-+])(\d*)$/) {
+    $shift = $action * 1.0;
+    $shift_time_mode = 0;
+  } elsif ($action =~ /^\*(\d*\.\d*)$/) {
+    $mult = $1 * 1.0;
+  } elsif ($action =~ /^\@(\d+.?\d*)$/) {
+    $framerate = $1 * 1.0;
+  } else {
+    die "Format of action ($action) is incorrect!\n$usage\nError";
+  }
+} # for
+
+if ($inf =~ /\.sub$/i) {
+  $fromsub = 1;
+} elsif ($inf =~ /\.srt$/i) {
+  $fromsub = 0;
+} else {
+  die "File extension of first file must be .sub or .srt!\n$usage\nError";
+}
+if ($outf =~ /\.sub$/i) {
+  $tosub = 1;
+} elsif ($outf =~ /\.srt$/i) {
+  $tosub = 0;
+} else {
+  die "File extension of second file must be .sub or .srt!\n$usage\nError";
+}
+my $frdisp = "";
+if ( ($fromsub != $tosub) ||
+     ($shift && $fromsub && $tosub && $shift_time_mode) ||
+     ($shift && !$fromsub && !$tosub && !$shift_time_mode) ) {
+  die "Framerate is not between 10 and 50!\n$usage\nError" if ($framerate < 10) || ($framerate > 50);
+  $frdisp = ",  at $framerate frames/s";
+}
+
+die "Cannot open input file!\n" unless (open(FH, "<$inf"));
+die "Output file $outf exists!\n" if (open(OFH, "<$outf"));
+close OFH;
+die "Cannot open output file!\n" unless (open(OFH, ">$outf"));
+
+warn "Convert '$inf' to '$outf'\n";
+warn "Action:  " .
+  "shift by $shift " . ($shift_time_mode?"seconds":"frames") .
+  ",  multiply by $mult" .
+  $frdisp . "\n";
+
+while (my $ret = ReadSubtitle) {
+  WriteSubtitle if $ret == 1;
+}
+
+close FH;
+close OFH;
+
+warn "*** Conversion error! Input file probably in wrong format!\n" if ($conv != $total);
+warn "Converted: $wconv out of $total lines.\n";

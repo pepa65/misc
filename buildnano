@@ -110,7 +110,7 @@ set constantshow # overrides: set quickblank
 unset cutfromcursor
 unset emptyline
 ##set fill -1 # conflicts with: set breaklonglines; last option given wins
-set guidestripe 80
+#set guidestripe 80
 set historylog
 unset indicator
 unset jumpyscrolling

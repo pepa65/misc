@@ -9,14 +9,44 @@ if ! type -p docker >/dev/null
 then $docker_install_cmd
 fi
 
-$elevate docker run --rm -it -v $PWD:/A -w /A node:12.13.0 bash -c '
+if [[ $1 = old ]]
+then $elevate docker run --rm -it -v $PWD:/A -w /A node:12.13.0 bash -c '
+	repo="https://github.com/signalapp/Signal-Desktop.git" b=v1.39.6 tmp=/data/tmp/Signal
 	set -euo pipefail
-	repo="https://github.com/signalapp/Signal-Desktop.git"
-	git clone --branch=v1.39.6 --depth=1 $repo /tmp/Signal-Desktop
-	cd /tmp/Signal-Desktop
+	git clone --branch=$b --depth=1 $repo $tmp
+	cd $tmp
 	sed -i "s@deb\"\$@appimage\"@" package.json
+	npm config set scripts-prepend-node-path true
+	npm install -g yarn@1.22.0
 	yarn install
+	yarn generate
+	yarn prepare-beta-build
 	yarn build-release
-	cp /tmp/Signal-Desktop/release/Signal-*.AppImage /A/
+	cp $tmp/release/Signal-*.AppImage /A/
 	chown $(stat -c %u:%g /A) /A/Signal-*.AppImage
 '
+else $elevate docker run --rm -it -v $PWD:/A -w /A ubuntu:bionic bash -c '
+	repo="https://github.com/signalapp/Signal-Desktop.git" b=master tmp=/data/tmp/Signal
+	set -euo pipefail
+	export DEBIAN_FRONTEND=noninteractive
+	apt-get update -y
+	apt-get install -y build-essential libssl-dev git-lfs python2.7 wget
+	git lfs install
+	update-alternatives --install /usr/bin/python2 python2 $(which python2.7) 10
+	update-alternatives --install /usr/bin/python python /usr/bin/python2 10
+	wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh |bash
+	. ~/.nvm/nvm.sh
+	git clone --branch=$b --depth=1 $repo $tmp
+	cd $tmp
+	sed -i "s@deb\"\$@appimage\"@" package.json
+	nvm use || nvm install
+	npm config set scripts-prepend-node-path true
+	npm install -g yarn@1.22.0
+	yarn install --frozen-lockfile
+	yarn generate
+	yarn prepare-beta-build
+	yarn build-release
+	cp $tmp/release/Signal-*.AppImage /A/
+	chown $(stat -c %u:%g /A) /A/Signal-*.AppImage
+'
+fi
