@@ -7,8 +7,8 @@ set +vx
 # Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN/GPGID
 #   (MGCFS_DIR and MGCFS_NAME can be overridden on the commandline)
 
-# Selected binary, if not specified with be found or even downloaded
-gcfs=~/gocryptfs
+# Selected gocryptfs binary, if not specified with be found or even downloaded
+gcfs=
 # Mountpoint, must start with '/'; can be overridden with $MGCFS_MOUNT
 mount="$HOME/Private"
 # Containing directory; can be overridden with $MGCFS_DIR
@@ -146,7 +146,7 @@ dn="$dir/$name"
 
 ((whiptail)) && ! type -P whiptail >/dev/null && whiptail=0
 [[ $gcfs && ! -x $gcfs ]] && Abort "Specified binary '$gcfs' is not executable"
-if -z $gcfs && ! type -P gocryptfs >/dev/null
+if [[ -z $gcfs ]] && ! type -P gocryptfs >/dev/null
 then
 	url=https://github.com/rfjakob/gocryptfs/releases/download/v1.8.0
 	file=gocryptfs_v1.8.0_linux-static_amd64.tar.gz
