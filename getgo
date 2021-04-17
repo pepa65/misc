@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set +vx
+# getgo - Install latest go(lang)
+
+# Usage getgo [<version>]
+# Required: wget sudo tar coreutils(mktemp mv rm tail)
+# When TMPDIR is set, it is used for the temporary directory
+
+goloc=/usr/local  # Install location for the go tree
+
+Abort(){ # $1:message
+	echo "ABORT: $1"
+	exit 1
+}
+
+Sudo(){ # $1:prompt $2..:command
+	local prompt="Privileges required" sudo=
+	[[ $1 ]] && prompt+=" $1:" || prompt+=':'
+	shift
+	((EUID)) && ! sudo=$(type -p sudo) &&
+		Abort "privileges required but 'sudo' not available"
+	$sudo -nv &>/dev/null || echo "$prompt"
+	$sudo $@
+}
+
+ver=$1
+[[ ${ver//[.0-9]} ]] &&
+	Abort "Version should only contain numbers and a dot, not: $ver"
+
+os=${GO_OS:-Linux} os=${os,,}
+[[ $(uname -m) = armv7l ]] && arch=armv6l || arch=amd64
+: ${arch:=$GO_ARCH}
+: ${ver:=$GO_VERSION}
+[[ -z $ver ]] &&
+	url=$(wget -qO- "https://golang.org/dl" |grep -o "[^\"]*\.$os-$arch\.tar\.gz" |head -1) &&
+	ver=${url%.$os-$arch.tar.gz} ver=${ver#/dl/go}
+# Use the discovered or specified $ver
+dl="go$ver.$os-$arch.tar.gz"
+url="https://golang.org/dl/$dl"
+echo "Installing go $ver on $arch $os"
+tmp=$(mktemp -d --tmpdir=$TMPDIR)
+trap "Sudo 'to cleanup' rm -rf -- '$tmp'" QUIT EXIT
+wget -qO "$tmp/$dl" "$url" || Abort "could not download go"
+tar xf "$tmp/$dl" -C "$tmp" || Abort "error unpacking $dl to $tmp"
+	Sudo 'to make root' chown root:root -R -- "$tmp"
+
+# Move install directory if it exists already
+if [[ -d $goloc/go ]]
+then
+	Sudo 'to move old go directory' mv -v -- "$goloc/go" \
+			"$goloc/$($goloc/go/bin/go version |cut -f3 -d' ')_old$RANDOM" ||
+		Abort "could not move $goloc/go out of the way"
+fi
+Sudo 'to install go directory' mv -v -- "$tmp/go" "$goloc" ||
+	Abort "could not move $tmp/go to $goloc"
+a="p='$goloc/go/bin' && [[ :\$PATH: != *:\$p:* ]] && export PATH=\$p:\$PATH"
+[[ $GOROOT ]] || a+="\nexport GOROOT='$goloc/go'"
+[[ $GOPATH ]] || a+="\nexport GOPATH=\$HOME/go"
+echo "Right now: GOROOT=$GOROOT GOPATH=$GOPATH PATH=$PATH"
+export GOROOT="$goloc/go" GOPATH=~/go
+echo -e "Add to ~/.bashrc:\n\n$a"
+eval "${a//\\n/;}"
+
+exit 0

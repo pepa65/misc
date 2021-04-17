@@ -1,24 +1,26 @@
 #!/usr/bin/env bash
 set +vx
-## mgcfs - Manage access to gocryptfs encrypted directory
-## Required: gocryptfs(http://github/com/rfjakob/gocryptfs) fuse grep procps
-##   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync)
-## Optional: zenity/whiptail/cryptsetup(askpass) gpg <run>
-## Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN/GPGID
-##   (MGCFS_DIR and MGCFS_NAME can be overridden on the commandline)
+# mgcfs - Manage access to gocryptfs encrypted directory
+# Required: gocryptfs(http://github/com/rfjakob/gocryptfs) fuse grep procps
+#   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync)
+# Optional: zenity/whiptail/cryptsetup(askpass) gpg <run>
+# Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN/GPGID
+#   (MGCFS_DIR and MGCFS_NAME can be overridden on the commandline)
 
-## Mountpoint, must start with '/'; can be overridden with $MGCFS_MOUNT
+# Selected binary, if not specified with be found or even downloaded
+gcfs=~/gocryptfs
+# Mountpoint, must start with '/'; can be overridden with $MGCFS_MOUNT
 mount="$HOME/Private"
-## Containing directory; can be overridden with $MGCFS_DIR
+# Containing directory; can be overridden with $MGCFS_DIR
 dir="$HOME/SECURE"
-## Name of encrypted directory; can be overridden with $MGCFS_NAME
-name="SECRET"
-## <run> is executed after mounting; can be overridden with $MGCFS_RUN
-run=""
-## Option used for Init: use plain (1) or encrypted (0) filenames;
-##   can be overridden with $MGCFS_PLAIN
+# Name of encrypted directory; can be overridden with $MGCFS_NAME
+name=SECRET
+# <run> is executed after mounting; can be overridden with $MGCFS_RUN
+run=
+# Option used for Init: use plain (1) or encrypted (0) filenames;
+#   can be overridden with $MGCFS_PLAIN
 plain=0
-## Logfile for gocryptfs operations
+# Logfile for gocryptfs operations
 log="$HOME/gocryptfs.log"
 
 Help(){
@@ -143,8 +145,16 @@ done
 dn="$dir/$name"
 
 ((whiptail)) && ! type -P whiptail >/dev/null && whiptail=0
-type -P gocryptfs >/dev/null ||
-	Abort "Install gocryptfs first: https://4e4.win/bgcfs"
+[[ $gcfs && ! -x $gcfs ]] && Abort "Specified binary '$gcfs' is not executable"
+if -z $gcfs && ! type -P gocryptfs >/dev/null
+then
+	url=https://github.com/rfjakob/gocryptfs/releases/download/v1.8.0
+	file=gocryptfs_v1.8.0_linux-static_amd64.tar.gz
+	wget -q "$url/$file"
+	tar xf "$file" gocryptfs
+	chmod +x gocryptfs
+	gcfs=./gocryptfs
+fi
 
 trap "[[ -s '$log' ]] || rm -f -- '$log'" EXIT QUIT
 if ((init))
@@ -167,7 +177,7 @@ then
 		Password "Confirm password:"
 		[[ "$(cat "$pass")" = "$first" ]] && break || cue="Passwords not the same!\n"
 	done
-	gocryptfs -passfile "$pass" -init $ptn -- "$dn" >"$log" &&
+	"$gcfs" -passfile "$pass" -init $ptn -- "$dn" >"$log" &&
 		shred -fu -- "$pass" &&
 		Info "Directory '$dn' initialized as gocryptfs directory" &&
 		exit 0 ||
@@ -209,7 +219,7 @@ pass=$(mktemp)
 cue="Mounting $name on $mount\n$cue\n\nPassword:"
 Password "$cue"
 ## Allow mounting over non-empty mountpoint with -nonempty
-while ! gocryptfs $q -nonempty -passfile "$pass" -- "$dn" "$mount" 2>"$log"
+while ! "$gcfs" $q -nonempty -passfile "$pass" -- "$dn" "$mount" 2>"$log"
 do
 	shred -fu -- "$pass"
 	Password "Decryption failed, try a different password!\n\n$cue"
