@@ -10,7 +10,7 @@ reported at runtime.
 **Show differences between 2 Thai language sources in html or terminal**
 
 * Required: swath dwdiff sed coreutils(cat type mkdir chmod mktemp rm)
-Usage:
+* Usage:
 ```
 difth [-n|--nojs] [-s|--strings] <in1> <in2> [<htmlout>|-|/]
     Arguments <in1> and <in2> must be existing filenames,
@@ -29,9 +29,8 @@ for hosting an online Thai text comparison service.
 **Count character occurrences in file**
 
 * Required: uni2ascii
-
-Usage: `count <file> [-s]`
-    `-s means sort by code point instead of frequency`
+* Usage: `count <file> [-s]`
+  - `-s means sort by code point instead of frequency`
 
 ## xran
 **Arrange 2 screens with different pixel densities beside each other**
@@ -56,7 +55,7 @@ xran [-h|-n] [:<lD> [:<rD>]] [<lP> [<rP>]] [+|-<O>] [-s][<S>]
 ## backup
 **back up a list of files and directories**
 
-Usage:
+* Usage:
 ```
 backup [-h|--help] | [<backup-list> [<backup-file> [<backup-log>]]]
     backup-list: file with list of all files to be backed up, one per line
@@ -76,7 +75,8 @@ backup [-h|--help] | [<backup-list> [<backup-file> [<backup-log>]]]
 
 # bacme
 **Simply request certificates from Let's Encrypt using ACME**
-Usage:
+
+* Usage:
 ```
 bacme [-h] [-v] [-t] [-e <email>] [-w <docroot>] [<domain>[...]]
 Options:
@@ -99,7 +99,7 @@ bacme -e me@mail.me -w me@server:/var/www/html example.com www.example.com
 ## duckdns
 **Update duckdns.org DDNS service**
 
-Usage:
+* Usage:
 ```
 duckdns [-d|--date | -h|--help]
   -d/--date:  add a timestamp in the log
@@ -109,14 +109,13 @@ duckdns [-d|--date | -h|--help]
 ## dg
 **Extended dig**
 
-Usage: `dg[x] <domain> [<dnsrecordtype>]`
-
-When called through a symlink other than 'dg' then subdomains get probed.
+* Usage: `dg[x] <domain> [<dnsrecordtype>]`
+  - When called through a symlink other than 'dg' then subdomains get probed.
 
 ## merge2ass
 **Merge 2 subtitle files into one**
 
-Usage:
+* Usage:
 ```
 merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]
     or: `merge2ass --detect <movie> [-p | --play-movie]
@@ -126,7 +125,7 @@ merge2ass <movie> <subtitle1> <subtitle2> [-p|--play-movie]
 ## subshift
 **Subtitle conversion tool**
 
-Usage:
+* Usage:
 ```
 subshift <infile.sub/srt> <outfile.sub/srt> [action...]
   action: (+|-)<frames>              [Shift in frames]
@@ -135,24 +134,20 @@ subshift <infile.sub/srt> <outfile.sub/srt> [action...]
           @<framerate>               [like: 23.976 / 25 / 29.97]'
 ```
 
-## pair.c
-**Utility to pair Logitech USB unifying or nano receivers with wireless input devices**
-
-See the file for instructions to compile and use.
-
 ## subs
 **Download subtitles from subscene.com**
 
-Usage: `subs -h|--help | <search terms>`
+* Usage: `subs -h|--help | <search terms>`
 
 ## yt2srt
 **Convert YouTube subtitles to .srt**
 
-Usage: `yt2srt <input file>`
+* Usage: `yt2srt <input file>`
 
 ## qemu-create-os-img
 **Create a fresh Debian/Ubuntu qemu image**
-Usage:
+
+* Usage:
 ```
 qemu-create-os-img [-h] [-r <release>] [-h <hostname>] [-i <img_file>]
                            [-s <disk_size>] [-b <boot_size>] [<debootstrap>]
@@ -177,7 +172,7 @@ Default values when options are not supplied:
 ## earthwallpaperlive
 **Set current earthimage as wallpaper**
 
-Usage:
+* Usage:
 ```
 earthwallpaperlive [<projection>]
   <projection> is one of: mercator (default), peters, rectangular, random
@@ -202,7 +197,7 @@ buildnano [<version> | -g|--git | -c|--current]
 ## getjulia
 **Installing Julia from the generic binaries**
 
-Usage:
+* Usage:
 ```
 getjulia [-u|--uninstall | -p|--purge]
   -u/--uninstall:  Remove Julia
@@ -222,7 +217,7 @@ getjulia [-u|--uninstall | -p|--purge]
 * Required: gocryptfs(http://github.com/rfjakob/gocryptfs) fuse grep procps tar coreutils(cat rm type ls mktemp stat shred mkdir chmod sleep sync)
 * Optional: zenity/whiptail/cryptsetup(askpass) <run>
 * Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
-Usage:
+* Usage:
 ```
 mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
       [-v|--verbose] [-u|--unmount <sleeplength>[<unit>]] | [-h|--help]
@@ -244,10 +239,9 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 ## buildgocryptfs
 **Build gocryptfs**
 
-Usage: `buildgocryptfs [-n|--new-go]`
-    `-n`/`--new-go`:  force the installation of go even if one is present
+* Usage: `buildgocryptfs [-n|--new-go]`
+  - `-n`/`--new-go`:  force the installation of go even if one is present
 * Required: go coreutils(ls) pkg-config libssl-dev [to install go: wget sudo tar coreutils(mktemp mv rm tail)]
-
 * Environment variables:
  - If GO_OS is not set to the OS, 'linux' will be used.
  - If GO_ARCH (architecture) is not set, 'amd64' or 'armv6l' will be used.
@@ -257,7 +251,7 @@ Usage: `buildgocryptfs [-n|--new-go]`
 ## bb
 **Wrapperscript around borgbackup**
 
-Usage:
+* Usage:
 ```
 bb [ init|check|help|unlock|prune | list [<prefix>] | info|delete <name> |
      backup [<dir>] | rename <name> <newname> | mount [<name>] | unmount ]
@@ -281,18 +275,18 @@ bb [ init|check|help|unlock|prune | list [<prefix>] | info|delete <name> |
 Yad GUI frontend for pass, the standard unix password manager.
 Can view, edit and delete.
 
-*Required: yad pass coreutils(type sleep shred ls) sed diffutils(diff).
+* Required: yad pass coreutils(type sleep shred ls) sed diffutils(diff).
 
 ## bitwarden2xml
 **Enter bitwarden data into keepassx database**
 
 * Required: csvtool
-
-Usage: `bitwarden2xml bitwarden.csv >keepassx.xml`
+* Usage: `bitwarden2xml bitwarden.csv >keepassx.xml`
 
 ## kpt2bitwarden
 **Enter keepassx text into bitwarden .csv format**
-Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
+
+* Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
 
 ## ffpw
 **Manage Firefox passwords: view, import, export**
@@ -300,8 +294,7 @@ Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
 * Required: python3-pyasn1 less
 * Copyright: 2018 Louis Abraham <louis.abraham@yahoo.fr> MIT License
 * Adapted: gitlab.com/pepa65/misc <pepa65@passchier.net> GPLv3
-
-Usage:
+* Usage:
 ```
 ffpw [<filter>] [<file>] [-v|--verbose] [-h|--help]
 	  <filter>:      [ -u|-url | -n|--username | -p|--password ] <regex>
@@ -321,29 +314,33 @@ ffpw [<filter>] [<file>] [-v|--verbose] [-h|--help]
 ## keepassx2pass.py
 **Convert KeePassX xml export to pass store**
 
-Usage: `keepassx2pass.py keepassx.xml`
+* Usage: `keepassx2pass.py keepassx.xml`
 
 ## keepassxml2json
 **Convert KeePassX xml export to json for Ironclad**
 
-Usage: `keepassxml2json [-d|--debug] <in.xml> <out.json>`
-
+* Usage: `keepassxml2json [-d|--debug] <in.xml> <out.json>`
 * Required: grep sed coreutils(tail tr cd mv rm ls)
 
 ## tpm
 **Terminal Password Manager (uses standard 'pass' database)**
+
 * Copyright: **2013-2016 Sören Tempel, 2019 pepa65**
 * License: **GPL3+**
-
-Usage: 'tpm <command> <entry>'
-    command: help / show / insert / delete
-
-* Environment variables: **TPM_DIR TPM_KEY**
+* Usage: 'tpm <command> <entry>'
+  - command: help / show / insert / delete
+* Environment variables: `TPM_DIR` `TPM_KEY`
 
 ## safetext
 **Sanitize potentially identifying invisible characters**
 
 * Default spelling lists included: `US.safetext` and `UK.safetext`
+
+## spc2tab
+**Convert leading spaces into tabs**
+
+* Usage: `spc2tab [TABSIZE]  <INPUTFILE`
+  - Pipe/redirect input to stdin!
 
 ## savedio
 **Export saved.io links through the API into a json file, and convert it into 3 formats:
@@ -352,15 +349,13 @@ Usage: 'tpm <command> <entry>'
 - An html5 page with links**
 
 * Required: wget date jq gzip coreutils(base64 head tail)
-
-* Environment variables: SAVEDIO_KEY SAVEDIO_DEVKEY SAVEDIO_DIR
+* Environment variables: `SAVEDIO_KEY` `SAVEDIO_DEVKEY` `SAVEDIO_DIR`
 
 ## healbitrot
 **Automatic check and self-healing for bitrot**
 
 * Required: bitrot par2 grep find libc-bin(getconf) coreutils(rm mv cp mkdir cd du)
-
-Usage:
+* Usage:
 ```
 healbitrot [-h|--help] [<dir>...]
       <dir>:  directory to check; only if none given, the file in \$BITROT_DIRS
@@ -368,7 +363,12 @@ healbitrot [-h|--help] [<dir>...]
       -h/--help:  display this help text
 ```
 
-*The python script `bitrot` is included*
+**The python script `bitrot` is included**
+
+## pair.c
+**Utility to pair Logitech USB unifying or nano receivers with wireless input devices**
+
+See the file for instructions to compile and use.
 
 ## sct.c
 **Utility to set the screen "temperature" to adjust the red-blue balance**
@@ -377,7 +377,8 @@ See the file for instructions on how to compile and use.
 
 ## a5toa4
 **Print an A5 document on A4 size pages for booklet folding**
-Usage:
+
+* Usage:
 ```
 a5toa4 [<Options>] <a5.pdf> [<a4.pdf>]
     Options:  -h/--help:                  Display this help text
@@ -402,7 +403,8 @@ a5toa4 [<Options>] <a5.pdf> [<a4.pdf>]
 
 ## pdfslice
 **Make a pdf from a page range in a source document**
-Usage:
+
+* Usage:
 ```
 Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
     Where <range> is:  [<from>],[<to>] | [<from>][+[<number>]]
@@ -415,11 +417,13 @@ Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 
 ## rmkernels
 **Remove old kernels from Debian/Ubuntu**
-Usage: `rmkernels`
+
+* Usage: `rmkernels`
 
 ## bootctlu
 **Setting up and registering gummiboot on Ubuntu/Void/Arch**
-Usage:
+
+* Usage:
 ```
 bootctlu - Install & register gummiboot/systemd-boot on Ubuntu/Void/Arch
 
@@ -446,14 +450,14 @@ bootctlu [-h|--help] [-I|--install] [-U|--uninstall]
 
 ## noiseclean
 **Filter out noise based on sample**
+
 * Required: ffmpeg(ffmpeg ffprobe) sox
 
 ## fillform
 **Auto fill form for multiple cases**
-* Required: flpsed sed ghostscrips(ps2pdf) poppler-utils(pdfunite)
-coreutils(cd wc rm ls)
 
-Usage:
+* Required: flpsed sed ghostscrips(ps2pdf) poppler-utils(pdfunite) coreutils(cd wc rm ls)
+* Usage:
 ```
 fillform [-s|--separate] [<dir>]
   When -s/--separate is given, the separate .pdf files for each form are kept
@@ -462,11 +466,13 @@ fillform [-s|--separate] [<dir>]
 
 ## w2usb
 **Write image/hybridiso to (USB) disk device**
-Usage: 'w2usb <dev> <file>'
+
+* Usage: 'w2usb <dev> <file>'
 
 ## spd
 **Commandline interface for testing internet bandwidth using speedtest.net**
-Usage:
+
+* Usage:
 ```
 spd [-h] [-u] [-d] [-1] [-B] [-I] [-b] [-c] [-C CHAR] [-H] [-j] [-L] [-l]
     [-m STR] [-x INT] [-s ID] [-X ID] [-M URL] [-i IP] [-t SECS] [-S] [-N] [-V]
@@ -516,14 +522,25 @@ optional arguments:
   -V, --version         Show the version number and exit
 ```
 
+# transfer
+**Transfer files via transfer.sh**
+
+* Features:
+  - For upload (files and directories) and download (https:// links)
+  - En/decryption option (gpg)
+  - Gives a single link for multiple files or directories (tar/zip)
+  - Display QR code option for links (qrencode)
+* Required: `curl`
+* Optional: `gpg tar qrencode`
+
 # tn
 **Try TCP on host & port**
+
 * Required: perl
 
 # kenburns
 * Required: ruby ffmpeg
-
-Usage:
+* Usage:
 ```
 kenburns [options] input1 [input2...] output
     -h, --help                       Prints this help
@@ -543,7 +560,7 @@ kenburns [options] input1 [input2...] output
 # megadl
 **Download mega.nz and MegaCrypter files**
 
-Usage:
+* Usage:
 ```
 megadl v2.1 - Download mega.nz and MegaCrypter files
 
@@ -562,6 +579,7 @@ Repo: https://github.com/pepa65/misc
 
 # buildsignal
 **Build Signal desktop AppImage**
+
 * Required: sudo
 
 # instai

@@ -4,7 +4,7 @@
 # Usage: fillform [-s|--separate] [<dir>]
 #   When -s/--separate is given, the separate .pdf files for each form are kept
 #   as well as the concatenated file. Directory <dir> has the input files.
-# Required: flpsed sed ghostscrips(ps2pdf) poppler-utils(pdfunite)
+# Required: flpsed sed ghostscript(ps2pdf) poppler-utils(pdfunite)
 #   coreutils(cd wc rm ls)
 #
 # In the (current or given) directory there should be 1 file with the .flpsed

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set +vx
 # mgcfs - Manage access to gocryptfs encrypted directory
-# Required: gocryptfs(http://github/com/rfjakob/gocryptfs) fuse grep procps
-#   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync)
-# Optional: zenity/whiptail/cryptsetup(askpass) gpg <run>
-# Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN/GPGID
+# Required: gocryptfs[github/com/rfjakob/gocryptfs] fuse grep procps
+#   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync) $run
+# Optional: zenity/whiptail/cryptsetup(askpass) encp[github.com/pepa65/encp]
+# Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
 #   (MGCFS_DIR and MGCFS_NAME can be overridden on the commandline)
 
-# Selected gocryptfs binary, if not specified with be found or even downloaded
+# Gocryptfs binary, will be downloaded if not specified here nor found in PATH
 gcfs=
 # Mountpoint, must start with '/'; can be overridden with $MGCFS_MOUNT
 mount="$HOME/Private"
@@ -37,7 +37,7 @@ Help(){
 		Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
 		  (and optionally <run>), or set the corresponding environment variables
 		  MGCFS_MOUNT, MGCFS_DIR, MGCFS_NAME (and optionally MGCFS_RUN);
-		  if MGCFS_GPGID is set, the tar (backup) archive is encrypted.
+		  if 'encp' is present, the tar (backup) archive will be encrypted.
 		As a run-by-run backup, <dir>/<name>.tar will be used.
 		When during 'init' MGCFS_PLAIN is 1, filenames will not be encrypted.
 		<sleeplength> is in minutes if no unit is given; <unit> can be:
@@ -98,6 +98,7 @@ Password(){  ## $1: text, Using: zenity whiptail title pass
 		echo "Exited: empty password" && cancel=1
 	((cancel)) || return 0
 	shred -fu -- "$pass"
+	sync
 	exit 1
 }
 
@@ -109,12 +110,12 @@ dir=${MGCFS_DIR:-$dir}
 name=${MGCFS_NAME:-$name}
 run=${MGCFS_RUN:-$run}
 plain=${MGCFS_PLAIN:-$plain}
-gpgid=$MGCFS_GPGID
 
 title="Manage encryption of $name"
 ## Try zenity unless -c or -w or not present or no GUI
-zenity=1 init=0 sleep= q='-q'
+zenity=1 encp=1 init=0 sleep= q='-q'
 type -P zenity >/dev/null && xrandr &>/dev/null || zenity=0
+type -p encp >/dev/null || encp=0
 
 while (($#))
 do
@@ -145,8 +146,8 @@ done
 dn="$dir/$name"
 
 ((whiptail)) && ! type -P whiptail >/dev/null && whiptail=0
-[[ $gcfs && ! -x $gcfs ]] && Abort "Specified binary '$gcfs' is not executable"
-if [[ -z $gcfs ]] && ! type -P gocryptfs >/dev/null
+[[ $gcfs && ! -x $gcfs ]] && Abort "Can't execute specified binary '$gcfs'"
+if [[ -z $gcfs ]] && ! gcfs=$(type -p gocryptfs)
 then
 	url=https://github.com/rfjakob/gocryptfs/releases/download/v1.8.0
 	file=gocryptfs_v1.8.0_linux-static_amd64.tar.gz
@@ -194,44 +195,47 @@ else  ## $mount could not be created: abort
 	Abort "Mount point $mount could not be created or\nalready exists and isn't a directory"
 fi
 
-## If $name is no directory or is empty, unpack $name.tar[.gpg] if present
-ungpg=0
-if [[ ! -d $dn || -z $(ls -A "$dn") ]]
-then
-	if [[ $gpgid && -f $dn.tar.gpg ]]
-	then
-		Info "No files in '$dn'\n,decrypting '$dn.tar.gpg'"
-		gpg -r "$gpgid" -o "$dn.tar" -d "$dn.tar.gpg"
-		ungpg=1
-	fi
-	if [[ -f $dn.tar ]]
-	then
-		((ungpg)) || Info "No files in '$dn'\n,unpacking '$dn.tar'"
-		tar xf "$dn.tar" -C "$dir"
-		shred -fu "$dn.tar"
-	fi
-fi
-[[ -s $dn/gocryptfs.conf ]] || Abort "$dn is not a gocryptfs directory"
-
 pass=$(mktemp)
 [[ $sleep ]] && cue="(Will auto-unmount $name after $sleep)" ||
 	cue="(Run again to manually unmount $name!)"
 cue="Mounting $name on $mount\n$cue\n\nPassword:"
 Password "$cue"
+
+## If $name is no directory or is empty, unpack $name.tar[.encp] if present
+unencp=0 dnt=$dn.tar dnte=$dnt.encp
+if [[ ! -d $dn || -z $(ls -A "$dn") ]]
+then
+	if ((encp)) && [[ -f $dnte ]]
+	then
+		Info "No files in '$dn'\n,decrypting '$dnte'"
+		encp -d "$dnte" -k "$pass" >"$dnt"
+		unencp=1
+	fi
+	if [[ -f $dnt ]]
+	then
+		((unencp)) || Info "No files in '$dn'\n,unpacking '$dnt'"
+		tar xf "$dnt" -C "$dir"
+		shred -fu "$dnt"
+		sync
+	fi
+fi
+[[ -s $dn/gocryptfs.conf ]] || Abort "$dn is not a gocryptfs directory"
+
 ## Allow mounting over non-empty mountpoint with -nonempty
 while ! "$gcfs" $q -nonempty -passfile "$pass" -- "$dn" "$mount" 2>"$log"
 do
 	shred -fu -- "$pass"
+	sync
 	Password "Decryption failed, try a different password!\n\n$cue"
 done
-shred -fu -- "$pass"
-sync
 
 [[ $run ]] && DISPLAY=:0.0 $run &
 ## Tar up the encrypted directory for backup
-tar cfC "$dn.tar" "$dir" "$name" ||
-	Info "Return code on creating backup archive\n'$dn.tar': $?"
-[[ $gpgid ]] && gpg --yes -r "$gpgid" -e "$dn.tar" && shred -fu -- "$dn.tar"
+tar cfC "$dnt" "$dir" "$name" ||
+	Info "Return code on creating backup archive\n'$dnt': $?"
+((encp)) && encp "$dnt" -k "$pass" >"$dnte" && shred -fu -- "$dnt" && sync
+shred -fu -- "$pass"
+sync
 
 [[ $sleep ]] && sleep $sleep && Unmount &
 sync

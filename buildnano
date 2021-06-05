@@ -314,7 +314,7 @@ rc=$HOME/.nanorc
 
 echo -e "$nanorc" >"$rc.tmp"
 [[ -f $rc ]] && ! diff $rc $rc.tmp && mv -v --backup=t "$rc.tmp" "$rc"
-hash -r nano
+hash -p /usr/local/bin/nano nano
 echo "Installed $(nano -V)"
 
 exit 0

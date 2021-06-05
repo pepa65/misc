@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# spc2tab - Convert leading spaces into tabs
+# Required: sed
+# Usage: spc2tab <file
+
+[[ $1 && ${1//[0-9]} || $2 ]] && echo "Abort: at most 1 numerical argument (default: 4)" &&
+	echo "spc2tab - Convert leading spaces into tabs" &&
+	echo "Usage:  spc2tab [TABSIZE]  <INPUTFILE  #  Pipe/redirect input to stdin!" &&
+	exit 1
+#nanoconf=~/.nanorc s='[[:blank:]]'
+#tabsize=$(grep -eo "^$s*set$s+tabsize$s+[1-9][0-9]*" "$nanoconf" |tail -1 |grep -o '[0-9]*$')
+# Use given tabsize or 8 as (nano) default
+tabsize=${1:-8}
+
+spc=$(printf '%*s' $tabsize) tab=$'\t'
+sed ":a;s@^\($tab*\)$spc@\1$tab@;ta" </dev/stdin
