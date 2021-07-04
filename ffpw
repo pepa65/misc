@@ -258,7 +258,7 @@ def getDir():
 		profile = config[profiles[0]]
 		G_dir = path / profile["Path"]
 		G_dir = G_dir.expanduser()
-		if G_verbose and len(profiles) > 1:
+		if len(profiles) > 1:
 			print("More than one profile, picking first.", file=sys.stderr)
 	elif G_verbose:
 		print("Automatic profile selection not supported for platform",
