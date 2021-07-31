@@ -589,3 +589,7 @@ Repo: https://github.com/pepa65/misc
 
 # makeself
 **Create self-extracting tar.gz archive**
+
+# chmc
+**Change Mojang Minecraft name for local LAN play with TLauncher**
+* Usage: `chmc [OLD NEW]` (Without arguments, display current name(s))
