@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# chmc - Change Mojang Minecraft name for local LAN play with TLauncher
+# Usage: chmc [OLD NEW]
+#   Without arguments, display current name(s)
+
+Usage(){ # $1: message
+	echo "Change Mojang Minecraft name for local LAN play with TLauncher"
+	echo "Usage: $0 OLD NEW"
+	echo "$1"
+	exit
+}
+
+file=/data/Minecraft/tlauncher_profiles.json
+if [[ $1 ]]
+then
+	[[ $1 && -z $2 ]] && Usage "Need OLD and NEW name!"
+	[[ $3 ]] && Usage "Can only use OLD and NEW, not '$3'"
+	[[ $1 = $2 ]] && Usage "Names can't be the same!"
+	names=$'\n'$(grep displayName "$file" |cut -d'"' -f4)$'\n'
+	names=${names//$'\n'/ }
+	[[ ! $names = *' '$1' '* ]] &&
+		Usage "The first argument needs to be an existing name, not '$1'!"
+	sed -i "s%\(\"displayName\": \"\)$1\",$%\1$2\",%" "$file"
+fi
+names=$'\n'$(grep displayName "$file" |cut -d'"' -f4)$'\n'
+names=${names//$'\n'/ }
+Usage "Current names:$names"
