@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 set +vx
 # mgcfs - Manage access to gocryptfs encrypted directory
+#   The directory `$dir/$name` holds the latest gocryptfs-encrypted files,
+#   and `$dir/$name.tar` (and `$dir/$name.tar,encp`) is the previous backup.
 # Required: gocryptfs[github/com/rfjakob/gocryptfs] fuse grep procps
 #   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync) $run
 # Optional: zenity/whiptail/cryptsetup(askpass) encp[github.com/pepa65/encp]
 # Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
 #   (MGCFS_DIR and MGCFS_NAME can be overridden on the commandline)
+
 
 # Gocryptfs binary, will be downloaded if not specified here nor found in PATH
 gcfs=
@@ -46,24 +49,20 @@ Help(){
 	exit 0
 }
 
-Info(){  ## $1: Info message, Using: zenity whiptail
-	if ((zenity))
-	then
-		zenity --info --width=360 --title="$title" --text="<b>$1</b>" 2>/dev/null
-	elif ((whiptail))
-	then
-		whiptail --title="$title" --msgbox "$1" 11 78
-	else
-		echo -e "=== $title ===\n$1"
-	fi
+Info(){ # $1:Message I:zenity,whiptail
+	case 1 in
+	$zenity) zenity --info --width=360 --title="$title" --text="<b>$1</b>" 2>/dev/null ;;
+	$whiptail) whiptail --title="$title" --msgbox "$1" 11 78 ;;
+	*) echo -e "=== $title ===\n$1"
+	esac
 }
 
-Abort(){  ## $1: Error message
+Abort(){ # $1:Message
 	Info "ERROR: $1"
 	exit 2
 }
 
-Unmount(){  ## Using: mount name
+Unmount(){ # I:mount,name
 	## When mounted: keep trying to unmount
 	if grep "$mount" <<<"$(mount)" |grep -q ' fuse\.gocryptfs '
 	then
@@ -77,7 +76,7 @@ Unmount(){  ## Using: mount name
 	fi
 }
 
-Password(){  ## $1: text, Using: zenity whiptail title pass
+Password(){ # $1:Text I:zenity,whiptail,title,pass
 	local cancel=0 console=0
 	if ((zenity))
 	then
@@ -93,7 +92,7 @@ Password(){  ## $1: text, Using: zenity whiptail title pass
 		/lib/cryptsetup/askpass ""
 		echo
 	fi >"$pass"
-	## Cancel -c/--console mode with empty password
+	# Cancel -c/--console mode with empty password
 	((console)) && [[ $(echo $(hexdump -b "$pass")) = "0000000 012 0000001" ]] &&
 		echo "Exited: empty password" && cancel=1
 	((cancel)) || return 0
@@ -102,7 +101,7 @@ Password(){  ## $1: text, Using: zenity whiptail title pass
 	exit 1
 }
 
-## Main
+# Main
 
 self=$(basename $0)
 mount=${MGCFS_MOUNT:-$mount}
@@ -112,7 +111,7 @@ run=${MGCFS_RUN:-$run}
 plain=${MGCFS_PLAIN:-$plain}
 
 title="Manage encryption of $name"
-## Try zenity unless -c or -w or not present or no GUI
+# Try zenity unless -c or -w or not present or no GUI
 zenity=1 encp=1 init=0 sleep= q='-q'
 type -P zenity >/dev/null && xrandr &>/dev/null || zenity=0
 type -p encp >/dev/null || encp=0
@@ -185,13 +184,14 @@ then
 		Abort "Initializing '$dn' as gocryptfs directory failed"
 fi
 
-## When mounted: unmount+exit
+# When already mounted: unmount+exit
 Unmount
-## Directory not FUSE-mounted
+
+# Directory not FUSE-mounted
 if mkdir -p "$mount" 2>/dev/null
-then  ## Directory now exists
+then # Directory now exists
 	chmod 700 "$mount"  ## Force access restriction
-else  ## $mount could not be created: abort
+else # $mount could not be created: abort
 	Abort "Mount point $mount could not be created or\nalready exists and isn't a directory"
 fi
 
@@ -201,8 +201,8 @@ pass=$(mktemp)
 cue="Mounting $name on $mount\n$cue\n\nPassword:"
 Password "$cue"
 
-## If $name is no directory or is empty, unpack $name.tar[.encp] if present
-unencp=0 dnt=$dn.tar dnte=$dnt.encp
+# If $name is no directory or is empty, unpack $name.tar[.encp] if present
+unencp=0 dnt=$dn.tar dnbt=$dn.backup.tar dnte=$dnt.encp
 if [[ ! -d $dn || -z $(ls -A "$dn") ]]
 then
 	if ((encp)) && [[ -f $dnte ]]
@@ -215,13 +215,13 @@ then
 	then
 		((unencp)) || Info "No files in '$dn'\n,unpacking '$dnt'"
 		tar xf "$dnt" -C "$dir"
-		shred -fu "$dnt"
+		#shred -fu "$dnt"
 		sync
 	fi
 fi
 [[ -s $dn/gocryptfs.conf ]] || Abort "$dn is not a gocryptfs directory"
 
-## Allow mounting over non-empty mountpoint with -nonempty
+# Allow mounting over non-empty mountpoint with -nonempty
 while ! "$gcfs" $q -nonempty -passfile "$pass" -- "$dn" "$mount" 2>"$log"
 do
 	shred -fu -- "$pass"
@@ -230,10 +230,13 @@ do
 done
 
 [[ $run ]] && DISPLAY=:0.0 $run &
-## Tar up the encrypted directory for backup
-tar cfC "$dnt" "$dir" "$name" ||
-	Info "Return code on creating backup archive\n'$dnt': $?"
-((encp)) && encp "$dnt" -k "$pass" >"$dnte" && shred -fu -- "$dnt" && sync
+# Tar up the encrypted directory for backup
+tar cfC "$dnbt" "$dir" "$name" ||
+	Info "Return code $? on creating backup archive '$dnbt'"
+if diff "$dnt" "$dnbt" >/dev/null
+then shred -fu -- "$dnbt" && sync
+else ((encp)) && encp "$dnbt" -k "$pass" >"$dnte" && mv "$dnbt" "$dnt" && sync
+fi
 shred -fu -- "$pass"
 sync
 
