@@ -2,10 +2,10 @@
 set +vx
 # mgcfs - Manage access to gocryptfs encrypted directory
 #   The directory `$dir/$name` holds the latest gocryptfs-encrypted files,
-#   and `$dir/$name.tar` (and `$dir/$name.tar,encp`) is the previous backup.
+#   and `$dir/$name.tar` is the previous backup.
 # Required: gocryptfs[github/com/rfjakob/gocryptfs] fuse grep procps
 #   tar coreutils(cat type ls mktemp stat shred mkdir chmod sleep sync) $run
-# Optional: zenity/whiptail/cryptsetup(askpass) encp[github.com/pepa65/encp]
+# Optional: zenity/whiptail/cryptsetup(askpass)
 # Optional environment variables: $MGCFS_MOUNT/DIR/NAME/RUN/PLAIN
 #   (MGCFS_DIR and MGCFS_NAME can be overridden on the commandline)
 
@@ -40,7 +40,6 @@ Help(){
 		Either set or adjust <mount>, <dir> and <name> as hardcoded in this script
 		  (and optionally <run>), or set the corresponding environment variables
 		  MGCFS_MOUNT, MGCFS_DIR, MGCFS_NAME (and optionally MGCFS_RUN);
-		  if 'encp' is present, the tar (backup) archive will be encrypted.
 		As a run-by-run backup, <dir>/<name>.tar will be used.
 		When during 'init' MGCFS_PLAIN is 1, filenames will not be encrypted.
 		<sleeplength> is in minutes if no unit is given; <unit> can be:
@@ -112,9 +111,8 @@ plain=${MGCFS_PLAIN:-$plain}
 
 title="Manage encryption of $name"
 # Try zenity unless -c or -w or not present or no GUI
-zenity=1 encp=1 init=0 sleep= q='-q'
+zenity=1 init=0 sleep= q='-q'
 type -P zenity >/dev/null && xrandr &>/dev/null || zenity=0
-type -p encp >/dev/null || encp=0
 
 while (($#))
 do
@@ -201,21 +199,14 @@ pass=$(mktemp)
 cue="Mounting $name on $mount\n$cue\n\nPassword:"
 Password "$cue"
 
-# If $name is no directory or is empty, unpack $name.tar[.encp] if present
-unencp=0 dnt=$dn.tar dnbt=$dn.backup.tar dnte=$dnt.encp
+# If $name is no directory or is empty, unpack $name.tar if present
+dnt=$dn.tar dnbt=$dn.backup.tar
 if [[ ! -d $dn || -z $(ls -A "$dn") ]]
 then
-	if ((encp)) && [[ -f $dnte ]]
-	then
-		Info "No files in '$dn'\n,decrypting '$dnte'"
-		encp -d "$dnte" -k "$pass" >"$dnt"
-		unencp=1
-	fi
 	if [[ -f $dnt ]]
 	then
-		((unencp)) || Info "No files in '$dn'\n,unpacking '$dnt'"
+		Info "No files in '$dn'\n,unpacking '$dnt'"
 		tar xf "$dnt" -C "$dir"
-		#shred -fu "$dnt"
 		sync
 	fi
 fi
@@ -228,15 +219,13 @@ do
 	sync
 	Password "Decryption failed, try a different password!\n\n$cue"
 done
-
+hexdump -C "$pass" >~/hexkey
 [[ $run ]] && DISPLAY=:0.0 $run &
 # Tar up the encrypted directory for backup
 tar cfC "$dnbt" "$dir" "$name" ||
 	Info "Return code $? on creating backup archive '$dnbt'"
-if diff "$dnt" "$dnbt" >/dev/null
-then shred -fu -- "$dnbt" && sync
-else ((encp)) && encp "$dnbt" -k "$pass" >"$dnte" && mv "$dnbt" "$dnt" && sync
-fi
+! diff "$dnt" "$dnbt" >/dev/null && cp "$dnbt" "$dnt" && sync
+shred -fu -- "$dnbt"
 shred -fu -- "$pass"
 sync
 
