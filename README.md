@@ -375,6 +375,19 @@ See the file for instructions to compile and use.
 
 See the file for instructions on how to compile and use.
 
+## scrypt.c
+**Mount LUKS encrypted vault as non-root**
+
+* Install as root:
+  - `gcc scrypt.c -o /usr/local/bin/scrypt`
+  - `chmod u+s /usr/local/bin/scrypt`
+* Adjust the variables below before compiling
+* Example vault:
+  - `truncate -s 400M /data/MyDocuments/SECURE/vault`
+  - `sudo cryptsetup -I hmac-sha256 luksFormat /data/MyDocuments/SECURE/vault`
+  - `sudo cryptsetup luksOpen /data/MyDocuments/SECURE/vault vault`
+  - `sudo mkfs.ext4 /dev/mapper/vault`
+
 ## a5toa4
 **Print an A5 document on A4 size pages for booklet folding**
 

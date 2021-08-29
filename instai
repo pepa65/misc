@@ -15,10 +15,8 @@ if [[ $1 = -l || $1 = --list ]]
 then
 	apps=$(grep '^Exec=.*\.AppImage$' "$appdir"/*.desktop)
 	for app in $apps
-	do
-		desktop=${app%%:Exec=*}
-		icon=$(grep '^Icon=' $desktop)
-		echo -e "${app%%:Exec=*}:\n Exec: ${app##*:Exec=}\n Icon: ${icon:5}"
+	do desktop=${app%%:Exec=*} icon=$(grep '^Icon=' $desktop) name=${desktop##*/}
+		echo -e "${name%.*}:\n  Desktop: $desktop\n  Exec: ${app##*:Exec=}\n  Icon: ${icon:5}"
 	done
 	exit 0
 fi
