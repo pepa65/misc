@@ -2,6 +2,7 @@
 // Install:
 //  sudo gcc scrypt.c -o /usr/local/bin/scrypt
 //  sudo chmod u+s /usr/local/bin/scrypt
+//  sudo ln -s /usr/local/bin/scrypt /usr/local/bin/uscrypt
 // Adjust the variables below before compiling
 // Example vault:
 //  truncate -s 400M /data/MyDocuments/SECURE/vault
