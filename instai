@@ -9,11 +9,14 @@ set +xv
 	echo "instai - User-(un)install AppImage with icon and .desktop file" &&
 	echo "Usage:  instai [-l|--list] [-u|--uninstall] <AppImage>" && exit 0
 
-# -l/--list
 appdir=~/.local/share/applications
+
+# -l/--list
 if [[ $1 = -l || $1 = --list ]]
 then
-	apps=$(grep '^Exec=.*\.AppImage$' "$appdir"/*.desktop)
+	apps=$(grep '^Exec=.*\.AppImage\b' "$appdir"/*.desktop)
+echo "$apps"
+exit
 	for app in $apps
 	do desktop=${app%%:Exec=*} icon=$(grep '^Icon=' $desktop) name=${desktop##*/}
 		echo -e "${name%.*}:\n  Desktop: $desktop\n  Exec: ${app##*:Exec=}\n  Icon: ${icon:5}"
@@ -54,7 +57,7 @@ then
 else
 	mkdir -p "$appdir"
 	cp "$desktop" "$appdir"
-	sed -i "s@^Exec=.*@Exec=$appimage@" "$appdesktop"
+	sed -i "s@^Exec=.*@Exec=$appimage --no-sandbox@" "$appdesktop"
 	app="\n $appname into $appdir"
 	if [[ -z $iconname ]]
 	then echo "No icon found in root"

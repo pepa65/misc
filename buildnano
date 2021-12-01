@@ -23,7 +23,7 @@ conf=(
 	#disable-color
 	disable-comment
 	disable-extra
-	disable-help
+	#disable-help
 	#disable-histories
 	disable-justify
 	#disable-libmagic
@@ -153,12 +153,14 @@ unset unix # overridden by: set noconvert
 unset wordbounds # overridden by: set wordchars
 #set wordchars <string> # overrides: set wordbounds
 #set zap
+#set zero
 
 #bind ^\ nextbookmark all
 # ^@ ^] ^\ ^, ^_ ^Space M-[^[] F1-16
 unbind ^H all
-##bind ^H help all
-##bind ^H exit help
+bind ^H help all
+bind ^H exit help
+bind Sh-M-W zero
 bind M-X cancel all
 bind Sh-M-L refresh main
 bind ^Q exit all
@@ -313,7 +315,8 @@ Sudo make install || Abort "error in Install"
 rc=$HOME/.nanorc
 
 echo -e "$nanorc" >"$rc.tmp"
-[[ -f $rc ]] && ! diff $rc $rc.tmp && mv -v --backup=t "$rc.tmp" "$rc"
+[[ -f $rc ]] && ! diff $rc $rc.tmp && mv -v --backup=t "$rc.tmp" "$rc" ||
+	mv "$rc.tmp" "$rc"
 hash -p /usr/local/bin/nano nano
 echo "Installed $(nano -V)"
 
