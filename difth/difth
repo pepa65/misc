@@ -33,13 +33,13 @@ nfont="black" npap="#cfc" nbg=$npap
 #nfont="darkgreen" npap=$pap nbg="lightgreen"
 
 ## Messages
-back="&#11013;" # Backarrow
+back="&#11013;" # Back-arrow
 backc="กลับ" # Back
-download="&#11141;" # Downarrow
-downloadc="เดาน์โหลด" # Download
-cycle="&#8634;" # Cyclicarrow
+download="&#11141;" # Down-arrow
+downloadc="ดาวน์โหลด" # Download
+cycle="&#8634;" # Cyclic-arrow
 cyclec="เปลี่ยนโหมดแสดง" # Change the display mode
-new="&#128978;" # Newsymbol
+new="&#128978;" # New-symbol
 newc="เริ่มใหม่" # Start afresh
 newl="/"
 n1='ต้นฉบับ' n2='แก้ไข' # Original, corrected
