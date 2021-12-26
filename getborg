@@ -20,7 +20,7 @@ case $arch in
 	$pi) url=$(wget -qO- $urlpi |grep armv6 |tail -1 |egrep -o '>[^<]+')
 		url=$urlpi${url:1: -4} ;;
 	$pc) url=$(wget -qO- $urlpc |grep linux64 |head -1| grep -o '/download[^"]*')
-		url="https://https://github.com/$url" ;;
+		url="https://github.com/$url" ;;
 	*) echo "Unknown hardware: $arch"
 		exit 2
 esac
