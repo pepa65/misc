@@ -49,8 +49,8 @@ gitdir=${GITDIR:=~/git}
 # URL of nano git repo
 nanogit="http://git.savannah.gnu.org/git/nano.git"
 
-# URL of latest release
-nanosrcdir="https://nano-editor.org/dist/latest"
+# URL of release downloads
+nanoreldir="https://ftp.gnu.org/gnu/nano"
 
 # Required packages
 req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff build-essential"
@@ -287,14 +287,17 @@ else
 	tmpdir=$(readlink -e "$tmpdir") here=$PWD
 	trap "cd '$here'; rm -rf -- '$tmpdir'" QUIT EXIT
 	cd "$tmpdir" || Abort "could not enter directory $tmpdir"
-	wget -q "$nanosrcdir/ChangeLog" ||
-		Abort "could not download nano changelog"
-	[[ $ver ]] || ver=$(head -1 ChangeLog) ver=${ver##* v} ver=${ver%:}
-	wget -q "$nanosrcdir/nano-$ver.tar.xz" ||
-		Abort "could not download nano source archive version $ver"
-	file="nano-$ver.tar.xz"
-	tar xf "$file" || Abort "could not unpack $file"
+	if [[ -z $ver ]]
+	then # Get latest version
+		ver=$(wget -qO- "$nanogit/info/refs" |grep '[0-9]$' |tail -1) ver=${ver##*v}
+		[[ $ver ]] ||
+			Abort "could not find latest version: $ver"
+	fi
 	dir="nano-$ver"
+	file="$dir.tar.xz"
+	wget -q "$nanoreldir/$file" ||
+		Abort "could not download nano source archive version $ver"
+	tar xf "$file" || Abort "could not unpack $file"
 	cd "$dir" || Abort "could not enter directory $tmpdir/$dir"
 fi
 
