@@ -33,7 +33,7 @@ hookidir=/etc/kernel/postinst.d hooki=$hookidir/$hook
 hookrdir=/etc/kernel/postrm.d hookr=$hookrdir/$hook
 
 # Downloads
-gumurl='4e4.win/gummi' memurl='4e4.win/memtest.tgz' memver='8.1'
+gumurl='good4.eu/gummi' memurl='good4.eu/memtest.tgz' memver='8.1'
 
 # SecureBoot binaries PreLoader.efi and HashTool.efi urls
 preloader='https://apt.blobfolio.com/other/PreLoader/PreLoader.efi'
