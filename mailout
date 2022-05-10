@@ -21,6 +21,7 @@ subject="Subject line not containing any double quotes"
 emailheader='email'
 template=mail.template
 csv=mail.csv
+mailsperhour=100
 # Optional (can be left empty)
 firstnameheader='first name'
 lastnameheader='last name'
@@ -37,6 +38,7 @@ wcs=$(csvtool square "$csv" |wc) wc=$(csvtool col 1- "$csv" |wc)
 ncol=$(csvtool width "$csv")
 nrow=$(csvtool height "$csv")
 echo "CSV file '$csv' has $ncol columns and $nrow rows"
+((pause=3600/mailsperhour))
 
 # Get CSV headers, index starts at 1
 n=0 nemail=0 nfirstname=0 nlastname=0 headers=('')
@@ -68,7 +70,7 @@ do body=$(<"$template")
 	if ((send))
 	then
 		mailer --message "$body" $replyto --to "$to" --subject "$subject" --user "$user" --password "$password" --from "$from" &&
-			echo "Sent to: \"$to\""
+			sleep $pause && echo "Sent to: \"$to\""
 	else
 		echo "To: $to"
 		echo -e "$body"
