@@ -37,8 +37,9 @@ wcs=$(csvtool square "$csv" |wc) wc=$(csvtool col 1- "$csv" |wc)
 [[ $reply ]] && replyto="--reply \"$reply\"" || replyto=
 ncol=$(csvtool width "$csv")
 nrow=$(csvtool height "$csv")
-echo "CSV file '$csv' has $ncol columns and $nrow rows"
 ((pause=3600/mailsperhour))
+echo "CSV file '$csv' has $ncol columns and $nrow rows"
+echo "----------------------------------------------"
 
 # Get CSV headers, index starts at 1
 n=0 nemail=0 nfirstname=0 nlastname=0 headers=('')
@@ -73,8 +74,8 @@ do body=$(<"$template")
 			sleep $pause && echo "Sent to: \"$to\""
 	else
 		echo "To: $to"
-		echo -e "$body"
 		echo "----------------------------------------------"
+		echo -e "$body\n=============================================="
 	fi
 done <<<"$(sed 1d "$csv")"
 
