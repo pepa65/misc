@@ -2,7 +2,7 @@
 set +xv
 # mailout - Send mail according to template and CSV
 # Input files: $csv $template (set below)
-# Required: mailer[github.com/pepa65/mailer] sed csvtool coreutils(wc)
+# Required: mailer[github.com/pepa65/mailer] sed grep csvtool coreutils(wc head sleep)
 # Usage: mailout [-s|--send]
 #  If the -s/--send flag is not given, no mails will be actually be sent.
 #  The file mail.template is the body of the email and contains CSV header
@@ -71,7 +71,8 @@ do body=$(<"$template")
 	if ((send))
 	then
 		mailer --message "$body" $replyto --to "$to" --subject "$subject" --user "$user" --password "$password" --from "$from" &&
-			sleep $pause && echo "Sent to: \"$to\""
+			sleep $pause && echo "To: $to" ||
+			echo "Failed: $to"
 	else
 		echo "To: $to"
 		echo "----------------------------------------------"
