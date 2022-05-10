@@ -606,3 +606,20 @@ Repo: https://github.com/pepa65/misc
 # chmc
 **Change Mojang Minecraft name for local LAN play with TLauncher**
 * Usage: `chmc [OLD NEW]` (Without arguments, display current name(s))
+
+# forks
+**Check forks of significance on github**
+
+# mailout
+**Send mail according to template and CSV**
+* Usage: `mailout [-s|--send]`
+If the -s/--send flag is not given, no mails will be actually be sent.
+The file mail.template is the body of the email and contains CSV header
+names enclosed by "{{" and "}}", like: {{password}}. The CSV header field
+designated by the variable 'emailheader' must be present and is used to send
+the emails to. If variables 'firstnameheader' and 'lastnameheader' are set
+(to a header field of the CSV file), then the mails will be addressed to:
+"{{$firstname}} {{$lastname}} <{{$email}}>" instead of "{{$email}}".
+* Input files: `$csv` `$template` (set in script)
+* Required: mailer[github.com/pepa65/mailer] sed csvtool coreutils(wc)
+* Set appropriate values to all required variables in the script.

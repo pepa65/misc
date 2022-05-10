@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set +xv
+# mailout - Send mail according to template and CSV
+# Input files: $csv $template (set below)
+# Required: mailer[github.com/pepa65/mailer] sed csvtool coreutils(wc)
+# Usage: mailout [-s|--send]
+#  If the -s/--send flag is not given, no mails will be actually be sent.
+#  The file mail.template is the body of the email and contains CSV header
+#  names enclosed by "{{" and "}}", like: {{password}}. The CSV header field
+#  designated by the variable 'emailheader' must be present and is used to send
+#  the emails to. If variables 'firstnameheader' and 'lastnameheader' are set
+#  (to a header field of the CSV file), then the mails will be addressed to:
+#  "{{$firstname}} {{$lastname}} <{{$email}}>" instead of "{{$email}}".
+# Other variables are set below.
+
+# Set these to appropriate values
+from="Example sender <sender@example.com>"
+user=authenticated@smtpuser.com
+password='Password not containing any single quotes'
+subject="Subject line not containing any double quotes"
+emailheader='email'
+template=mail.template
+csv=mail.csv
+# Optional (can be left empty)
+firstnameheader='first name'
+lastnameheader='last name'
+reply=replyto@fancy.domain
+
+
+[[ $1 = -s || $1 == --send ]] && send=1 && shift || send=0
+[[ $1 ]] && echo "Abort: Unknonw argument(s): $@" && exit 1
+[[ ! -f $template ]] && echo "Email template '$template' not found" && exit 2
+[[ ! -f $csv ]] && echo "CSV file '$csv' not found" && exit 3
+wcs=$(csvtool square "$csv" |wc) wc=$(csvtool col 1- "$csv" |wc)
+[[ ! $wcs = $wc ]] && echo -e "Abort: CSV file '$csv' not entirely square:\n$wcs\n$wc" && exit 4
+[[ $reply ]] && replyto="--reply \"$reply\"" || replyto=
+ncol=$(csvtool width "$csv")
+nrow=$(csvtool height "$csv")
+echo "CSV file '$csv' has $ncol columns and $nrow rows"
+
+# Get CSV headers, index starts at 1
+n=0 nemail=0 nfirstname=0 nlastname=0 headers=('')
+while ((++n<=ncol))
+do header="$(head -1 "$csv" |csvtool col $n -)"
+	((${#header}==0)) && "Abort: header field $n is empty" && exit 5
+	[[ $header = $emailheader ]] && nemail=$n
+	[[ $header = $firstnameheader ]] && nfirstname=$n
+	[[ $header = $lastnameheader ]] && nlastname=$n
+	headers+=("{{$header}}")
+done
+
+((!nemail)) && echo "Abort: CSV file does not contain header '$emailheader'" && exit 5
+
+echo -e "Account: $user\nFrom: $from"
+[[ $reply ]] && echo "Reply-to: $reply"
+echo -e "Subject: $subject\n=============================================="
+
+while read -r line
+do body=$(<"$template")
+	for ((n=1; n<=ncol; ++n))
+	do val=$(csvtool col $n - <<<"$line")
+		body=$(sed "s#${headers[n]}#$val#g" <<<"$body")
+		((n==nemail)) && to=$val
+		((n==nfirstname)) && fn=$val
+		((n==nlastname)) && ln=$val
+	done
+	((nfirstname && nlastname)) && to="$fn $ln <$to>"
+	if ((send))
+	then
+		mailer --message "$body" $replyto --to "$to" --subject "$subject" --user "$user" --password "$password" --from "$from" &&
+			echo "Sent to: \"$to\""
+	else
+		echo "To: $to"
+		echo -e "$body"
+		echo "----------------------------------------------"
+	fi
+done <<<"$(sed 1d "$csv")"
+

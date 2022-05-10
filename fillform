@@ -27,7 +27,7 @@ sep=0 dir=
 [[ $dir ]] && cd "dir"
 
 form=$(echo *.flpsed)
-[[ ! -f $form ]] && echo "Need input file $form" && exit 3
+[[ ! -f $form ]] && echo "Need single input file $form" && exit 3
 lines=$(wc -l <<<$(flpsed -d "$form")) unite=
 
 for name in *.flp
@@ -41,7 +41,7 @@ do
 	cmd="flpsed -b $(echo $fields) \"$form\" \"$ps\""
 	#echo "$cmd"
 	eval $cmd
-	pdf=${name%flp}pdf
+	pdf=${name%.flp}.pdf
 	ps2pdf "$ps" "$pdf" && rm -- "$ps"
 	unite+="$pdf "
 done
