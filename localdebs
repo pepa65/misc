@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# localdebs - Create a local repo for deb packages
+# Usage:  localdebs
+#   Run once, and add URLs to $hookscript as desired
+# Required: apt-utils
+
+repodir=/usr/local/deb
+hookscript=/etc/apt/preinvoke
+hook=/etc/apt/apt.conf.d/10update_local_packages
+list=/etc/apt/sources.list.d/localdebs.list
+
+# Install needed package if not installed
+req=apt-utils
+dpkg -s $req &>/dev/null || sudo apt-get install -y $req
+
+# Create the local repo directory
+sudo mkdir -p "$repodir"
+
+# Create the preinvoke script
+! [[ -f $hookscript ]] && sudo cat <<-EOF >"$hookscript"
+	#!/usr/bin/env bash
+	set -e  # Fail on any error
+	# preinvoke - Run before dpkg/apt
+
+	urls=(
+		'https://zoom.us/client/latest/zoom_amd64.deb'
+		'https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb'
+	)
+
+	# Local deb packages directory
+	cd /usr/local/deb
+	for url in "${urls[@]}"
+	do wget -qN "$url"
+	done
+	apt-ftparchive packages . >Packages
+	apt-ftparchive release . >Release
+	#gzip --keep --force -9 Packages
+EOF
+
+# Create the hook
+! [[ -f $hook ]] && sudo printf "APT::Update::Pre-Invoke {\"$hookscript\";};\n" >"$hook"
+
+# Create the sources.list entry
+! [[ -f $list ]] && sudo printf "deb [trusted=yes lang=none] file:$repodir ./\n" >"$list"
+

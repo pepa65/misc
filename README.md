@@ -623,3 +623,6 @@ the emails to. If variables 'firstnameheader' and 'lastnameheader' are set
 * Input files: `$csv` `$template` (set in script)
 * Required: mailer[github.com/pepa65/mailer] sed csvtool coreutils(wc)
 * Set appropriate values to all required variables in the script.
+
+# localdebs
+**Create a local repo for deb packages**
