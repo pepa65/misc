@@ -17,7 +17,7 @@ dpkg -s $req &>/dev/null || sudo apt-get install -y $req
 sudo mkdir -p "$repodir"
 
 # Create the preinvoke script
-! [[ -f $hookscript ]] && sudo cat <<-EOF >"$hookscript"
+! [[ -f $hookscript ]] && cat <<-EOF |tee "$hookscript"
 	#!/usr/bin/env bash
 	set -e  # Fail on any error
 	# preinvoke - Run before dpkg/apt
@@ -38,8 +38,8 @@ sudo mkdir -p "$repodir"
 EOF
 
 # Create the hook
-! [[ -f $hook ]] && sudo printf "APT::Update::Pre-Invoke {\"$hookscript\";};\n" >"$hook"
+! [[ -f $hook ]] && echo "APT::Update::Pre-Invoke {\"$hookscript\";};" |tee "$hook"
 
 # Create the sources.list entry
-! [[ -f $list ]] && sudo printf "deb [trusted=yes lang=none] file:$repodir ./\n" >"$list"
+! [[ -f $list ]] && echo "deb [trusted=yes lang=none] file:$repodir ./" |tee "$list"
 
