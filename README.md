@@ -378,10 +378,10 @@ See the file for instructions on how to compile and use.
 ## scrypt.c
 **Mount LUKS encrypted vault as non-root**
 
+* Adjust the variables at the top of `scrypt.c` before compiling
 * Install as root:
   - `gcc scrypt.c -o /usr/local/bin/scrypt`
   - `chmod u+s /usr/local/bin/scrypt`
-* Adjust the variables below before compiling
 * Example vault:
   - `truncate -s 400M /data/MyDocuments/SECURE/vault`
   - `sudo cryptsetup -I hmac-sha256 luksFormat /data/MyDocuments/SECURE/vault`
