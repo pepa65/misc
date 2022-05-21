@@ -195,7 +195,7 @@ then  ## html
 else  ## terminal
 	echo "$s1" >"$t1"
 	echo "$s2" >"$t2"
-	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e -I "$t1" "$t2" 2>"$stat" |
+	out=$(dwdiff -s -R -A best -d $d -w $o -x $e -y $n -z $e -- "$t1" "$t2" 2>"$stat" |
 		sed -e "s@$d@@g" -e "s@$n@$(echo $'\o33\[7;4;32m')@g" \
 			-e "s@$o@$(echo $'\o33\[7;4;31m')@g" -e "s@$e@$(echo $'\o33\[0m')@g")
 	echo -e "$out"

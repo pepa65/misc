@@ -4,50 +4,51 @@
 #   Run once, and add URLs to $hookscript as desired
 # Required: apt-utils jq
 
+# Overwriting $hookscript $hook $list if they exist
 repodir=/usr/local/deb
 hookscript=/etc/apt/preinvoke
 hook=/etc/apt/apt.conf.d/10update_local_packages
 list=/etc/apt/sources.list.d/localdebs.list
 
-# Install needed package if not installed
+# Install needed packages
 req='apt-utils jq'
-dpkg -s $req &>/dev/null || sudo apt-get install -y $req
+sudo apt-get install -y $req
 
 # Create the local repo directory
 sudo mkdir -p "$repodir"
 
 # Create the preinvoke script
-! [[ -f $hookscript ]] && cat <<-EOF |tee "$hookscript"
-	#!/usr/bin/env bash
-	set -e  # Fail on any error
-	# preinvoke - Run before dpkg/apt
+echo '#!/usr/bin/env bash
+set -e  # Fail on any error
+# preinvoke - Run before dpkg/apt
 
-	urls=(
-		'https://zoom.us/client/latest/zoom_amd64.deb'
-		'https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb'
-		'github.com/schollz/croc'
-	)
+urls=(
+	"https://zoom.us/client/latest/zoom_amd64.deb"
+	"https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+	"github.com/schollz/croc"
+)
 
-	# Local deb packages directory
-	cd /usr/local/deb
-	for url in "${urls[@]}"
-	do case $url in
-		github.com/schollz/croc)
-			latest=$(wget -qO- api.github.com/repos/schollz/croc/releases/latest)
-			u=$(jq '{assets}' <<<"$latest" |grep browser_download_url |grep -o https.*Linux-64bit.deb)
-			wget -qO croc_Linux-64bit.deb "$u"
-		*) wget -qN "$url"
-		esac
-	done
-	apt-ftparchive packages . >Packages
-	apt-ftparchive release . >Release
-	#gzip --keep --force -9 Packages
-EOF
+# Local deb packages directory
+cd /usr/local/deb
+for url in "${urls[@]}"
+do case $url in
+	github.com/schollz/croc)
+		latest=$(wget -qO- api.github.com/repos/schollz/croc/releases/latest)
+		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*Linux-64bit.deb)
+		wget -qO croc_Linux-64bit.deb "$u" ;;
+	*) wget -qN "$url"
+	esac
+done
+
+apt-ftparchive packages . >Packages
+apt-ftparchive release . >Release
+#gzip --keep --force -9 Packages
+' |sudo tee "$hookscript" >/dev/null
 sudo chmod +x "$hookscript"
 
 # Create the hook
-! [[ -f $hook ]] && echo "APT::Update::Pre-Invoke {\"$hookscript\";};" |sudo tee "$hook"
+echo "APT::Update::Pre-Invoke {\"$hookscript\";};" |sudo tee "$hook" >/dev/null
 
 # Create the sources.list entry
-! [[ -f $list ]] && echo "deb [trusted=yes lang=none] file:$repodir ./" |sudo tee "$list"
+echo "deb [trusted=yes lang=none] file:$repodir ./" |sudo tee "$list" >/dev/null
 
