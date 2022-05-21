@@ -43,10 +43,11 @@ sudo mkdir -p "$repodir"
 	apt-ftparchive release . >Release
 	#gzip --keep --force -9 Packages
 EOF
+sudo chmod +x "$hookscript"
 
 # Create the hook
-! [[ -f $hook ]] && echo "APT::Update::Pre-Invoke {\"$hookscript\";};" |tee "$hook"
+! [[ -f $hook ]] && echo "APT::Update::Pre-Invoke {\"$hookscript\";};" |sudo tee "$hook"
 
 # Create the sources.list entry
-! [[ -f $list ]] && echo "deb [trusted=yes lang=none] file:$repodir ./" |tee "$list"
+! [[ -f $list ]] && echo "deb [trusted=yes lang=none] file:$repodir ./" |sudo tee "$list"
 
