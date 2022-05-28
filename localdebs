@@ -25,20 +25,21 @@ set -e  # Fail on any error
 urls=(
 	"https://zoom.us/client/latest/zoom_amd64.deb"
 	"https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
-	"github.com/schollz/croc"
-	"github.com/rclone/rclone"
+	"https://launcher.mojang.com/download/Minecraft.deb"
+	"schollz/croc"
+	"rclone/rclone"
 )
 
 # Local deb packages directory
 cd /usr/local/deb
 for url in "${urls[@]}"
 do case $url in
-	github.com/rclone/rclone)
-		latest=$(wget -qO- api.github.com/repos/rclone/rclone/releases/latest)
+	rclone/rclone)
+		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
 		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*-linux-amd64.deb)
 		wget -qO rclone-linux-amd64.deb "$u" ;;
-	github.com/schollz/croc)
-		latest=$(wget -qO- api.github.com/repos/schollz/croc/releases/latest)
+	schollz/croc)
+		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
 		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*Linux-64bit.deb)
 		wget -qO croc_Linux-64bit.deb "$u" ;;
 	*) wget -qN "$url"
