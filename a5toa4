@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 set +vx
-# a5toa4 - Print an A5 size document on A4 for booklet folding
+# a5toa4 - Print an A5/Statement size document on A4/Letter for booklet folding
 # Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf)
 #           psutils(pstops/psnup)
 
 Usage(){ # $1: code for exit
 	cat <<-EOS
-		a5toa4 - Print an A5 document on A4 size pages for booklet folding
+		a5toa4 - Print A5/Statement document on A4/Letter pages for booklet folding
 		Usage: a5toa4 [<Options>] <a5.pdf> [<a4.pdf>]
 		Options:  -h/--help:                  Display this help text
 		          -v/--verbose:               Verbose output of processing steps
+              -l/--letter:                Use Letter & Statement, not A4 & A5
 		          -s/--split & -r/--reverse:  See below
-		Print the resulting A4 document on a single-sided printer by:
+		Print the resulting A4/Letter document on a single-sided printer by:
 		  1. Printing all the even pages.
 		  2. Reinserting the stack of printed pages in such a way that the blank
 		     sides will now be used to print the rest of the pages in step 3.
@@ -30,10 +31,11 @@ Usage(){ # $1: code for exit
 }
 
 # process commandline
-verbose=0 split=0 reverse=0 in= out= stdout=/dev/null
+verbose=0 split=0 reverse=0 in= out= stdout=/dev/null half=a5 full=a4
 while (($#))
 do
 	case $1 in
+	-l|--letter) half=statement full=letter ;;
 	-h|--help) Usage 0 ;;
 	-v|--verbose) verbose=1 stdout=/dev/stdout ;;
 	-s|--split) split=1 ;;
@@ -41,19 +43,14 @@ do
 	*) [[ $out ]] && echo "Too many arguments" && Usage 1
 		[[ $in ]] && out=$1 || in=$1
 		[[ ! -f $in ]] &&
-			echo "Filename of A5 sized pdf required, not a file: '$in'" &&
+			echo "Filename of ${half^} sized pdf required, not a file: '$in'" &&
 			Usage 2
 	esac
 	shift
 done
-[[ -z $in ]] && echo "No filename for A5 sized pdf given" && Usage 3
-if [[ -z $out ]]
-then
-	out=$(basename "$in")
-	[[ ${in: -6:6} = "A5.pdf" ]] &&
-		out="${out%A5.pdf}A4.pdf" ||
-		out="${out%.pdf}A4.pdf"
-fi
+[[ -z $in ]] && echo "No filename for ${half^} sized pdf given" && Usage 3
+[[ -z $out ]] &&
+	out=$(basename "$in") out=${out%.pdf} out=${out%.PDF} out.=_${full^}.pdf
 
 missingcmd=
 for cmd in psselect pdf2ps ps2pdf psnup
@@ -63,9 +60,12 @@ done
 	echo "Missing commands:$missingcmd, install ghostscript/psutils" &&
 	exit 4
 
-((verbose)) && echo "Convert A5 pdf to ps..."
-tmp=$(mktemp -d)
-trap "rm -r -- '$tmp'" EXIT QUIT
+((verbose)) && echo "Convert ${half^} pdf to ps..."
+tmp=$(mktemp -d) papersize=$(</etc/papersize)
+[[ ! $full = $papersize ]] &&
+	restore='echo -n "Set " && echo $papersize |sudo tee /etc/papersize' &&
+	echo -n "Set " && echo $full |sudo tee /etc/papersize
+trap "rm -r -- '$tmp'; $restore" EXIT QUIT
 ! pdf2ps "$in" "$tmp/a5.ps" && echo "Problem converting $in" && exit 5
 
 # Get number of pages
@@ -73,9 +73,9 @@ cd "$tmp"
 p=$(psselect -p- a5.ps 2>&1 >/dev/null) p=${p#*Wrote } p=${p%% *}
 ((!p)) && echo "No pages found in $in" && exit 6
 
-# p: number pages in A5 document; n: full number of A5-pages (multiple of 4)
+# p: number pages in A5/Statement document; n: full number of A5/Statement-pages (multiple of 4)
 ((n=p,r=p%4)) && ((r=4-r,n+=r))
-# s: number of A4-sheets; m: number of A4 page sides
+# s: number of A4/Letter-sheets; m: number of A4/Letter page sides
 ((s=n/4,m=n/2))
 i=0
 while ((i++<n))
@@ -97,7 +97,7 @@ nor=${nor% } rev=${rev% }
 
 if ((s>1 && split))
 then  # Split requested and more than 1 sheet
-	# Take the odd A4 pages and then the even A4 pages
+	# Take the odd A4/Letter pages and then the even A4/Letter pages
 	i=0 odd= even= na=($nor) ra=($rev)
 	while ((i<n))
 	do
@@ -111,19 +111,22 @@ then  # Split requested and more than 1 sheet
 	((reverse)) && r=$srev || r=$snor
 fi
 
-# Put the A5 pages on A4
-((verbose)) && echo "Convert A5 ps to A4..."
+# Put the A5/Statement pages on A4/Letter
+((verbose)) && echo "Convert ${half^} ps to ${full^}..."
 r=${r// /,}
 ! psselect -p $r a5.ps a5c.ps &>"$stdout" &&
 	echo "Reordering failed" && exit 7
-! PAPERSIZE=a4 psnup -2 -Pa5 -pa4 a5c.ps a4.ps &>"$stdout" &&
-	echo "Conversion A5 to A4 failed" && exit 8
-#pstops -pA4 "2:0L(21cm,0cm)+1L(21cm,14.85cm)" a5c.ps a4.ps
+	[[ $full = a4 ]] && size='-Pa5 -pa4' ||
+		size='-W5.5in -H8.5in -w8.5in -h11in'
+! PAPERSIZE=$full psnup -2 $size a5c.ps a4.ps &>"$stdout" &&
+	echo "Conversion ${half^} to ${full^} failed" && exit 8
+#pstops -pa4 "2:0L(21cm,0cm)+1L(21cm,14.85cm)" a5c.ps a4.ps
+#pstops -w11in -h8.5in "2:0L(21cm,1cm)+1L(21cm,6in)" a5c.ps a4.ps
 
 cd - >/dev/null
-((verbose)) && echo "Convert A4 ps to pdf..."
-! PAPERSIZE=a4 ps2pdf "$tmp/a4.ps" "$out" &>"$stdout" &&
-	echo "Conversion A4 ps to pdf failed" && exit 9
+((verbose)) && echo "Convert ${full^} ps to pdf..."
+! PAPERSIZE=$full ps2pdf "$tmp/a4.ps" "$out" &>"$stdout" &&
+	echo "Conversion ${full^} ps to pdf failed" && exit 9
 
 if ((verbose))
 then
