@@ -53,7 +53,7 @@ nanogit="http://git.savannah.gnu.org/git/nano.git"
 nanoreldir="https://ftp.gnu.org/gnu/nano"
 
 # Required packages
-req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff build-essential"
+req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff build-essential dialog"
 
 
 Abort(){ # $1:message
