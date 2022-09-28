@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # localdebs - Create a local repo for deb packages
 # Usage:  localdebs
-#   Run once, and add URLs to $hookscript as desired
+#   Run once, and add URLs to $hookscript as desired.
+#   Can be run again when updated
 # Required: apt-utils jq
 
 # Overwriting $hookscript $hook $list if they exist
@@ -28,6 +29,7 @@ urls=(
 	"https://launcher.mojang.com/download/Minecraft.deb"
 	"schollz/croc"
 	"rclone/rclone"
+	"caddyserver/caddy"
 )
 
 # Local deb packages directory
@@ -38,6 +40,10 @@ do case $url in
 		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
 		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*-linux-amd64.deb)
 		wget -qO rclone-linux-amd64.deb "$u" ;;
+	caddyserver/caddy)
+		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
+		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*_linux_amd64.deb |head -1)
+		wget -qO caddy-linux-amd64.deb "$u" ;;
 	schollz/croc)
 		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
 		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*Linux-64bit.deb)
