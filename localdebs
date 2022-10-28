@@ -6,7 +6,7 @@
 # Required: apt-utils jq
 
 # Overwriting $hookscript $hook $list if they exist
-repodir=/usr/local/deb
+repodir=/var/local/deb
 hookscript=/etc/apt/preinvoke
 hook=/etc/apt/apt.conf.d/10update_local_packages
 list=/etc/apt/sources.list.d/localdebs.list
@@ -19,6 +19,7 @@ sudo apt-get install -y $req
 sudo mkdir -p "$repodir"
 
 # Create the preinvoke script
+# =vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv=
 echo '#!/usr/bin/env bash
 set -e  # Fail on any error
 # preinvoke - Run before dpkg/apt
@@ -27,35 +28,36 @@ urls=(
 	"https://zoom.us/client/latest/zoom_amd64.deb"
 	"https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
 	"https://launcher.mojang.com/download/Minecraft.deb"
-	"schollz/croc"
-	"rclone/rclone"
 	"caddyserver/caddy"
+	"rclone/rclone"
+	"schollz/croc"
 )
 
 # Local deb packages directory
-cd /usr/local/deb
+cd "%%"
 for url in "${urls[@]}"
 do case $url in
-	rclone/rclone)
-		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
-		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*-linux-amd64.deb)
-		wget -qO rclone-linux-amd64.deb "$u" ;;
 	caddyserver/caddy)
 		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
 		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*_linux_amd64.deb |head -1)
 		wget -qO caddy-linux-amd64.deb "$u" ;;
+	rclone/rclone)
+		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
+		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*-linux-amd64.deb)
+		wget -qO rclone-linux-amd64.deb "$u" ;;
 	schollz/croc)
 		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
 		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*Linux-64bit.deb)
 		wget -qO croc_Linux-64bit.deb "$u" ;;
-	*) wget -qN "$url"
+	http*) wget -qN "$url" ;;
+	*) echo "ERROR: unhandled URL: $url"
 	esac
 done
 
 apt-ftparchive packages . >Packages
 apt-ftparchive release . >Release
-#gzip --keep --force -9 Packages
-' |sudo tee "$hookscript" >/dev/null
+' |sed "s@%%@$repodir@" |sudo tee "$hookscript" >/dev/null
+# =^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^=
 sudo chmod +x "$hookscript"
 
 # Create the hook
