@@ -8,6 +8,7 @@ set -e  # Stop on any error
 #   option. The <container_options> can be provided, and if they are not, the
 #   original options are used for: --volume --publish --expose & --env.
 # Output: <container_id>.tar <container_id>-volumes.tgz <container_id>.opts
+# Required: docker.io(docker) coreutils(umask touch head sort tr)
 
 # Uncomment mgr=podman to use podman instead of docker
 mgr=docker
@@ -25,18 +26,18 @@ Getopts(){ # I:container IO:options
 	[[ $options ]] || options=$(docker inspect -f '--name {{printf "%q" .Name}}{{- with .HostConfig}}{{- range $b := .Binds}} -v {{printf "%q" $b}}{{- end}}{{- with .RestartPolicy}} --restart "{{.Name -}}{{- if eq .Name "on-failure"}}:{{.MaximumRetryCount}}{{- end}}" {{- end}}{{- end}}{{- with .NetworkSettings -}}{{- range $p, $conf := .Ports}}{{- with $conf}} -p " {{- if $h := (index $conf 0).HostIp}}{{$h}}: {{- end}}{{- (index $conf 0).HostPort}}:{{$p}}" {{- end}}{{- end}}{{- end}}{{- with .Config}}{{- range $p, $conf := .ExposedPorts}} --expose {{printf "%q" $p}}{{- end}}{{- range $e := .Env}} -e {{printf "%q" $e}}{{- end}}{{- end}}' $container)
 }
 
-Savevols(){ # I:volsfile,mgr,container,cmd,tmpvols O:containervolumes
+Savevols(){ # I:volsfile,mgr,container,cmd,vols O:containervolumes
 	[[ -f $volsfile ]] && Err 1 "file $volsfile already exists"
 	umask 077
 	touch -- $volsfile
 	$mgr inspect --type container -f '{{range .Mounts}}{{printf "%v\x00" .Destination}}{{end}}' $container |\
-		head -c -1 |sort -uz |$cmd $base tar -c -a -v --null -T- -f $tmpvols
+		head -c -1 |sort -uz |$cmd $base tar -c -a -v --null -T- -f /$vols
 }
 
-Loadvols(){ # 1:container I:volsfile,cmd,base,tmpvols
+Loadvols(){ # 1:container I:volsfile,cmd,base,vols
 	local container=$1
 	[[ ! -f $volsfile ]] && Err 2 "file $volsfile not found"
-	$cmd:ro $base tar -xp -v -S -f $tmpvols -C / --overwrite
+	$cmd:ro $base tar -xp -v -S -f /$vols -C / --overwrite
 }
 
 [[ $1 = '-i' || $1 = '--install' ]] && shift && install=1 || install=0
@@ -47,25 +48,25 @@ options=$@
 ((!install)) && [[ $options ]] &&
 	Err 4 "no install, so no <container_options> needed: $options"
 
-imagefile=$container.tar volumesfile=$container-volumes.tgz volsfile=$PWD/$volumesfile
-tmpdir=$(mktemp -du) tmpvols=$tmpdir/$volumesfile
+imagefile=$container.tar vols=$container-volumes.tgz volsfile=$PWD/$vols
 image=image-$container opts=$container.opts
-cmd="$mgr run --rm -i --volumes-from $container -e LC_ALL=C.UTF-8 -v $volsfile:$tmpvols"
+cmd="$mgr run --rm -i --volumes-from $container -e LC_ALL=C.UTF-8 -v $volsfile:/$vols"
 if ((!install))
 then # Backup to files, no install
-	#docker stop $container
-	#docker commit $container $image
-	docker commit -p $container $image
+	running=$(docker inspect --format '{{json .State.Running}}' $container)
+	[[ $running = true ]] && docker stop $container
+	docker commit $container $image
 	docker save -o $imagefile $image
+	[[ $running = true ]] && docker start $container
 	Savevols
-	echo "Now move '$imagefile', '$volumesfile' & '$opts' to the other server"
+	echo "Now move '$imagefile', '$vols' & '$opts' to the other server"
 	echo "And then do:  $0 --install $container [<container_options>]"
 	Getopts
 	tr -d '"' <<<"$options" >"$opts"
 	echo -e "  If <container_options> are not provided, these are used:\n$options"
 else # Install from files
-	[[ ! -f $imagefile || ! -f $volumesfile ]] &&
-		Err 4 "need files '$imagefile' and '$volumesfile'"
+	[[ ! -f $imagefile || ! -f $vols ]] &&
+		Err 4 "need files '$imagefile' and '$vols'"
 	docker load -i $imagefile
 	[[ $options ]] || options=$(<"$opts")
 	newcontainer=$(docker create $options $image)
