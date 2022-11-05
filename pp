@@ -1,0 +1,340 @@
+# pp - Settings to be included in .bashrc
+
+# Recommended packages:
+# CLI:
+#  aria2 ne dfc dcfldd iftop pv w3m htop source-highlight colordiff dwdiff
+#  tty-clock rdiff caca-utils git tmux aptitude gpgsm rsync ghostscript csvtool
+#  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx
+#  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
+#  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii
+#  php-fpm php-xml php-gd shellcheck
+
+# X:
+#  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
+#  galculator virtualbox keepassxc googleearth gnumeric #libgtk3-nocsd0
+#  photofilmstrip vcdimager skype zoom feh flameshot
+# numlockx:
+#  (if /etc/lightdm/lightdm.conf empty, start with: '[SeatDefaults]')
+#  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf
+#alias getyoutube-dl='sudo curl -qL https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl; sudo chmod +x /usr/local/bin/youtube-dl'
+alias getytdl='sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/ytdl && sudo chmod a+rx /usr/local/bin/ytdl'
+
+# Best adjust them in the terminal used
+#eval $(dircolors |sed 's/:di=01;34:/:di=01;33:/; s/:ow=34;42:/:ow=34;40:/')
+
+shopt -s interactive_comments
+shopt -s dotglob extglob
+set +H  # no more history expansion, use ! safely in strings
+
+export PROMPT_COMMAND='hasjobs=$(jobs -p); printf "⏎%$((COLUMNS-1))s\\r \\r"'
+export PS1='\[\033[01;36m\]${hasjobs:+\j }\[\033[01;32m\]\w \[\033[01;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\033[01;36m\]\$ \[\033[00m\]'
+export WINEPREFIX=~/.wine
+export EDITOR=nano
+export LESSOPEN="| /usr/share/source-highlight/src-hilite-lesspipe.sh %s"
+export QUOTING_STYLE=literal
+export DISPLAY=:0.0
+#export CHROME_DEVEL_SANDBOX=/usr/local/sbin/chrome-devel-sandbox
+export PAGER='less -Gg -~RXQFP"%pB\% %f - press Q to exit"'
+export GOPATH=~/go GOROOT=/usr/local/go GOBIN=~/go/bin
+export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /:}")
+export LESS_TERMCAP_mb=$'\E[01;31m' LESS_TERMCAP_md=$'\E[01;31m' LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_se=$'\E[0m' LESS_TERMCAP_so=$'\E[01;44;33m' LESS_TERMCAP_ue=$'\E[0m' LESS_TERMCAP_us=$'\E[01;32m'
+export TERM=xterm-256color
+export LANG="en_US.UTF-8"
+export LC_COLLATE="en_US.UTF-8"
+export SCT
+sct(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
+}
+
+addpath(){ for p; do [[ ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
+addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin $HOME/.cargo/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin
+ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
+ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
+	echo "ds needs a valid blockdevice that refers to a harddrive!";}
+qr(){ zbarimg --raw -q $1;}
+bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
+c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
+ff(){ [[ $2 ]] && d="$2" || d='.'; find "$d" |grep -s --color=auto --devices=skip -I "$1";}
+pdfc(){ (($#<2 || $#>3)) && echo "PDF Resize needs: <input.pdf> <output.pdf> [1] (third argument optional, gives better quality)" && return 1; [[ $3 = 1 ]] && q=ebook || q=screen; gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/"$q" -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" "$1";}
+pdfcl(){ (($#!=2)) && echo "PDF Clean needs 2 arguments: <input.pdf> and <output.pdf>" && return 1; t=$(mktemp); pdf2ps "$1" "$t"; ps2pdf "$t" "$2"; rm -- "$t";}
+qv(){ qpdfview --unique "$@" &}
+d2u(){ # Remove all CR/^M/\r at the end of lines (before newline/NL/^J/\n)
+	for f; do sed -i 's/\r$//' "$f"; done;}
+u2d(){ sed -i 's@$@\r@' $1;}
+md(){ mkdir -p "$1" && cd "$1"; }
+al(){ local f="$(declare -f $1)" a="$(alias $1 2>/dev/null)"; [[ "$f" ]] && echo "$f"; [[ "$a" ]] && echo "$a";}
+sk(){ ((sk)) && sk=0 && xmodmap -e "pointer = 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16" && echo "mousekeys normal" && return
+	export sk=1; xmodmap -e "pointer = 2 1 3 4 5 6 7 8 9 10 11 12 13 14 15 16"; echo "mousekeys 1 and 2 swapped";}
+asf(){ apt-cache search $1 |egrep --color=auto $1;}
+s5(){ # $1:country(us|nl|th|ca|cr|sg) # entries s5nl/s5th/s5us/s5ca/s5cr/s5sg must be defined in .ssh/config
+	! [[ $1 = nl || $1 = th || $1 = us || $1 = de || $1 = cr || $1 = ca || $1 = sg ]] &&
+		echo "Usage: s5 nl | th | us | ca | cr | sg" && return 1
+	ssh -N s5$1 & ssh=$!
+    sleep 1
+    pgrep -c falkon > /dev/null || falkon & falkon=$!
+    wait $falkon
+    kill $ssh
+}
+sc4(){
+	echo -e "Copying to brain4:\n$@"
+	scp -p -r "$@" b4:.
+}
+sc3(){
+	echo -e "Copying to brain3:\n$@"
+	scp -p -r "$@" b3:.
+}
+dif(){ [[ $3 ]] && arg=$1 && shift; local c=$(colordiff $arg -u "$1" "$2"); [[ "$c" ]] && less -r <<<"$c" || echo "Same: $1 $2";}
+dy(){ colordiff -y "$1" "$2" |less -r;}
+gr(){
+ [[ $2 ]] && d=$2 || d=$PWD
+ egrep -r -s --color=auto --devices=skip -I "$1" "$d"
+}
+as(){ r=$(apt-cache search "$1" |egrep --color=always "$1") && less -Rm <<<"$r";}
+ass(){ apt-cache show "$@" |less -r;}
+asp(){ apt-cache showpkg "$@" |less -r;}
+u(){
+	[[ -d "$1" ]] && d="$1" || d="."
+	du -h --max-depth=1 "$d" |sort -h
+}
+joinpdf(){ gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=$*;}
+rotvidr(){ mencoder -ovc lavc -vf rotate=1 -oac copy ${1} -o ${1}.avi;}
+rotvidl(){ mencoder -ovc lavc -vf rotate=2 -oac copy ${1} -o ${1}.avi;}
+reduce4e(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 28 "$b"; ls -AFl "$a" "$b";}
+reduce4(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 24 "$b"; ls -AFl "$a" "$b";}
+reduce3(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/3:ih/3" -vcodec libx265 -crf 24 "$b"; ls -AFl "$a" "$b";}
+reduce2(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/2:ih/2" -vcodec libx265 -crf 24 "$b"; ls -AFl "$a" "$b";}
+reduce(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vcodec libx265 -crf 24 "$b"; ls -AFl "$a" "$b";}
+adb(){ # adb - analyse max-decibel; USAGE: adb <inputmp3> # if neg, increase possible
+	ffmpeg -i "$1" -af "volumedetect" -vn -sn -dn -f null /dev/null 2>&1 |grep -o 'max_volume.*';}
+bv(){ ffmpeg -i "$1" -af "volume=$2dB" "$1.mp3";}
+clipvid(){
+	# $1:src $2:start(time) $3:fadein(s) $4:end(time) $5:fadeout(s) [$6:dst]
+	local tmp out=$1.mp4 i b e bd ed
+	local usage="Usage: clipvid <videofile> <start(0 | h:mm:ss[.mmm])>"
+	usage+=" <fadein(s[.mmm])> <fadeout(s[.mmm])> <end(h:mm:ss[.mmm])> <outfile>"
+	[[ -z $1 || $1 = -h || $1 = --help ]] &&
+		echo $usage && return 0
+	[[ ! -f $1 ]] &&
+		echo -e "$usage\nSource video not a file: '$1'" && return 1
+	b=$2 e=$5 bd=$(cut -s -d. -f2 <<<"$b") ed=$(cut -s -d. -f2 <<<"$e")
+	[[ $b = 0 ]] && b=0:00:00
+	[[ ! $b = [0-9]:[0-5][0-9]:[0-5][0-9]* ]] &&
+		echo -e "$usage\nStarttime '$2' not in time format h:mm:ss[.mmm]" && return 2
+	[[ -z $3 || ${3//[0-9.]} ]] &&
+		echo -e "$usage\nFade-in seconds '$3' not numerical" && return 3
+	[[ -z $4 || ${4//[0-9.]} ]] &&
+		echo -e "$usage\nFade-out seconds '$4' not numerical" && return 4
+	[[ ! $e = [0-9]:[0-5][0-9]:[0-5][0-9]* ]] &&
+		echo -e "$usage\nEndtime '$e' not in time format h:mm:ss[.mmm]" && return 5
+	[[ $6 ]] && out=$6
+	i=$(bc -l <<<"$(date -d $e +%s).$ed-$(date -d $b +%s).$bd-$4")
+	tmp=$(mktemp).mp4
+	ffmpeg -i "$1" -ss "$b" -to "$e" -async 1 $tmp
+	echo "ffmpeg -i '$1' -ss '$b' -to '$e' -async 1 $tmp"
+	ffmpeg -i $tmp -vf "fade=t=in:st=0:d=$3,fade=t=out:st=$i:d=$4" \
+		-af "afade=t=in:st=0:d=$3,afade=t=out:st=$i:d=$4" "$out"
+	rm $tmp
+}
+speedvid(){
+	(($#!=2)) && echo "Usage: speedvid <video> <speed>" && return 1
+	[[ ! -f $1 ]] && echo "Not a video file: $1" && return 2
+	[[ ${2//[0-9.]} ]] && echo "Speed not a rational number: $2" && return 3
+	local a=$2
+	[[ ${a:0:1} = . ]] && a=0$a
+	local v=$(bc -l <<<"1/$a")
+	[[ ${v:0:1} = . ]] && v=0$v
+	ffmpeg -i "$1" -filter_complex "[0:v]setpts=$v*PTS[v];[0:a]atempo=$a[a]" -map "[v]" -map "[a]" "$1.mp4"
+}
+tn(){ : &>/dev/null <"/dev/tcp/$1/$2" && echo open || echo closed;}
+cd(){ # Print working directory after `cd`
+	[[ $@ == '-' ]] && builtin cd "$@" >/dev/null || builtin cd "$@"; echo -e "   \033[1;30m"`pwd`"\033[0m";}
+addpk(){ # add PUBKEY
+ gpg --keyserver subkeys.pgp.net --recv-keys $1;  gpg --armor --export $1 | sudo apt-key add -;}
+ah(){ # hold package (no upgrades)
+	while [[ "$1" ]]; do sudo apt-mark hold "$1"; shift; done;}
+alias ach='dpkg --get-selections | egrep hold$' # check holds
+arh(){ # unhold package
+	while (($#)); do sudo apt-mark unhold "$1"; shift; done;}
+thcc(){ # Thai character count
+	echo -n "$@" |sed "s@[\xe0\xb8\xb1|\xe0\xb8\xb4|\xe0\xb8\xb5|\xe0\xb8\xb6|\xe0\xb8\xb7|\xe0\xb8\xb8|\xe0\xb8\xb9|\xe0\xb8\xba|\xe0\xb9\x87\xe0\xb9\x88|\xe0\xb9\x89|\xe0\xb9\x8a|\xe0\xb9\x8b|\xe0\xb9\x8c|\xe0\xb9\x8d|\xe0\xb9\x8e]@@g" |wc -m;}
+spinner(){ (set +m && coproc $@; local pid=$! spinstr='/-\|'; while [ "$(ps a |awk '{print $1}' |grep $pid)" ]; do local temp=${spinstr#?}; printf " [%c]  " "${spinstr}"; local spinstr=${temp}${spinstr%"$temp"}; sleep 1; printf "\b\b\b\b\b\b"; done; printf "    \b\b\b\b");}
+exin(){ [[ -f "$1" ]] && f="$1" || f=/initrd.img; f=$(readlink -e "$f"); d="${f##*/}_$(date -r "$f"  '+%F_%T')"; mkdir $d; cd $d; n=$(cpio -iF "$f" 2>&1 |grep ' blocks$'); dd if="$f" of=i.gz bs=512 skip=${n%% *}; gunzip i.gz; cpio -iF i; rm i;}
+aenc(){ for f in "$@"; do if [[ -n ${f%%*.enchive} ]]; then [[ -d "$f" ]] && tar cJf "$f.txz" "$f" && enchive a "$f.txz" && rm "$f.txz" || enchive a "$f"; else enchive e "$f"; [[ -z ${f%%*.txz.enchive} ]] && tar xf "${f%%.enchive}" && rm "${f%%.enchive}"; fi; done;}
+difch(){ (($#!=3)) && o=/dev/stdout || o="$3"
+	[[ ! -f $1 || ! -f $2 ]] && echo "ERROR: $1 and $2 must be files" && return 1
+	echo -e "<html lang=\"th\">\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<title>$o</title>\n<style>\n.f1{background-color:red}\n.f2{background-color:darkgreen}\n</style>" >"$o"
+	git diff -U100000 --word-diff=color --word-diff-regex=. "$1" "$2" |tail -n +6 |ansi2htm --body-only 2>/dev/null |sed 's@^@<br>@' >>"$o";}
+difw(){ (($#!=3)) && echo -e "USAGE: difch <file1> <file2> <outfile>\nERROR: 3 arguments required" && return 1
+	[[ ! -f $1 || ! -f $2 ]] && echo "ERROR: $1 and $2 must be files" && return 2
+	echo -e "<html lang=\"th\">\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<title>$3</title>\n<style>\n.f1{color:red}\n.f2{color:darkgreen}\n</style>" >"$3"
+	git diff -U100000 --word-diff=color --word-diff "$1" "$2" |tail -n +6 |ansi2htm --body-only 2>/dev/null |sed 's@^@<br>@' >>"$3";}
+wgt(){ wget -qO- "$1"; echo;}
+togglepad(){ local id=$(xinput list |grep 'PS/2 Logitech Wheel Mouse' |grep -o '=[0-9]*'); id=${id#=}; local s=$(xinput list-props $id |head -n 2 |tail -c 2); xinput set-prop $id "Device Enabled" $((!s)); echo -n "Touchpad "; ((s)) && echo "off" || echo "on";}
+prompt(){ [[ $1 ]] && { local a=($1); while true; do echo -en "$2"; read -r; [[ " ${a[@]} " = *" ${REPLY// /} "* ]] && return 0; echo -en "$3"; done;} || echo "USAGE: prompt \"<space-delimited input>\" [\"<prompt message>\" [\"<error message>\"]]";}
+trim(){ while (($#)); do read -rd '' $1 <<<"${!1}"; shift; done; }
+fixusb3(){ # i=0000:00:10.0
+	local i d=/sys/bus/pci/drivers/xhci_hcd
+	# cd "$d"
+	for i in $(ls "$d" |grep :)
+	do
+		echo -n "$i" |sudo tee "$d/unbind" >/dev/null
+		# ln -s "../../../../devices/pci0000:00/$i" .
+		echo -n "$i" |sudo tee "$d/bind" >/dev/null
+	done
+}
+getmasterkey(){ # when root and device decrypted
+	xxd -r -p <$(sudo dmsetup table --showkeys |grep '^lvmcrypt: 0' |cut -d' ' -f6) masterkey;}
+smv(){ # Shred-move
+	[[ -z $2 ]] && echo "ABORT: shred-move requires at least 2 arguments" &&
+		return 1
+	local argv=("$@")
+	local a dir=${argv[-1]}
+	unset argv[-1]
+	[[ -e $dir && ! -d $dir ]] &&
+		echo "ABORT: last argument is not a directory: $dir" && return 2
+	[[ ! -e $dir ]] && mkdir -p "$dir"
+	[[ ! -d $dir ]] && echo "ABORT: directory $dir inaccessible" && return 3
+	for a in "${argv[@]}"; do cp -a "$a" "$dir"; done;
+	bleachbit -s "${argv[@]}";}
+srm(){ # Shred
+	bleachbit -s "$@";}
+geo(){ # $1:(optional)ip-quadroctet
+	[[ $1 && ! $1 =~ ^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$ ]] &&
+		echo "commandline argument not a numerical IP address in dot notation" &&
+		return 1
+	wget -qO- ipinfo.io/$1 |grep ':' |sed -e 's/"//g' -e 's/,$//';}
+myip(){ #PUREBASH: exec 3<> /dev/tcp/icanhazip.com/80 && echo 'GET /' >&3 && read -u 3 && echo $REPLY && exec 3>&-
+	dig +short @resolver1.opendns.com myip.opendns.com;}
+pb(){ [[ -z $1 ]] && echo "Missing filename to termbin.com:9999" && return
+	while (($#)); do cat $1 |nc termbin.com 9999; shift; done;}
+backlight(){ # $1:level (0/1/2, if empty: toggle)
+	local b='/sys/class/leds/dell::kbd_backlight/brightness' l=$1
+	! [[ -z $l || $l = 0 || $l = 1 || $l = 2 ]] &&
+		echo -e "Invalid argument\nUsage: backlight [0|1|2]" && return 1
+	[[ -z $l ]] && l=$((($(<"$b")+1)%3))
+	echo $l |sudo tee "$b"
+}
+assh(){ #$1:host
+	[[ -z $1 ]] && echo "ERROR: hostname as argument needed" && return 1
+	autossh -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -o "ControlMaster auto" -o "ControlPersist 2h" -o "ExitOnForwardFailure yes" -R 2222:localhost:5691 -l PeterPasschier1965 $1;}
+kd(){ reset; local o; o=$(kdbxviewer -t "$@") && less -R <<<"$o" && reset;}
+bzlist(){ [[ ! -f "$1" ]] && echo "not a file: '$1'" && return; local d=$(mktemp -d); s=$(stat -c %s "$1")00; cp "$1" "$d" || return 2; bunzip2 "$d"/* || return 3; i=$(stat -c "%n %s" "$d"/* |sed "s@$d/@@"); echo "$i $((s/${i##* }))%"; rm -r "$d";}
+gcd(){ (($1%$2)) && gcd $2 $(($1%$2)) || echo $2;}
+aspect(){ identify -format "%[fx:(w/h)]:%M\n" "$@" |sort -n;}
+transfer(){ # Required: tty curl zip cd cat
+  transferUsage(){
+    echo "Usage:  transfer <name>" >&2
+    echo "  Outputs a link where file/directory <name> can be downloaded." >&2
+    echo "  (if <name> is a directory, the download will be <name>.zip)" >&2
+    echo "  Data can also be piped into 'transfer', like:  ls |transfer listing" >&2
+  }
+  test x$1 = x && transferUsage && return 1
+  ! tty -s && curl --progress-bar --upload-file "-" "https://transfer.sh/$1" && return
+  test ! -e "$1" && echo "No such file or directory: $1" >&2 && transferUsage && return 2
+  test ! -d "$1" && cat "$file" |curl --progress-bar --upload-file "-" "https://transfer.sh/${1##*/}" && return
+  (cd "$1" && zip -r -q - .) |curl --progress-bar --upload-file "-" "https://transfer.sh/${1##*/}.zip"
+}
+2bin(){ bc <<<"obase=2;$1";}
+#di(){ [[ ! $1 ]] && echo "Need docker container_id to inspect" && return ||
+#	docker inspect --format "$(grep -v '^#' ~/git/misc/docker.tpl)" "$1";}
+di(){ [[ ! -n $1 ]] && echo "Need docker container_id to inspect" && return || docker inspect -f 'docker run --name {{printf "%q" .Name}} {{- with .HostConfig}} {{- if .Privileged}} --privileged {{- end}} {{- if .AutoRemove}} --rm {{- end}} {{- if .Runtime}} --runtime {{printf "%q" .Runtime}} {{- end}} {{- range $b := .Binds}} --volume {{printf "%q" $b}} {{- end}} {{- range $v := .VolumesFrom}} --volumes-from {{printf "%q" $v}} {{- end}} {{- range $l := .Links}} --link {{printf "%q" $l}} {{- end}} {{- if .PublishAllPorts}} --publish-all {{- end}} {{- if .UTSMode}} --uts {{printf "%q" .UTSMode}} {{- end}} {{- with .LogConfig}} --log-driver {{printf "%q" .Type}} {{- range $o, $v := .Config}} --log-opt {{$o}}={{printf "%q" $v}} {{- end}} {{- end}} {{- with .RestartPolicy}} --restart "{{.Name -}} {{- if eq .Name "on-failure"}}:{{.MaximumRetryCount}} {{- end}}" {{- end}} {{- range $e := .ExtraHosts}} --add-host {{printf "%q" $e}} {{- end}} {{- range $v := .CapAdd}} --cap-add {{printf "%q" $v}} {{- end}} {{- range $v := .CapDrop}} --cap-drop {{printf "%q" $v}} {{- end}} {{- range $d := .Devices}} --device {{printf "%q" (index $d).PathOnHost}}:{{printf "%q" (index $d).PathInContainer}}:{{(index $d).CgroupPermissions}} {{- end}} {{- end}} {{- with .NetworkSettings -}} {{- range $p, $conf := .Ports}} {{- with $conf}} --publish " {{- if $h := (index $conf 0).HostIp}}{{$h}}: {{- end}} {{- (index $conf 0).HostPort}}:{{$p}}" {{- end}} {{- end}} {{- range $n, $conf := .Networks}} {{- with $conf}} --network {{printf "%q" $n}} {{- range $a := $conf.Aliases}} --network-alias {{printf "%q" $a}} {{- end}} {{- end}} {{- end}} {{- end}} {{- with .Config}} {{- if .Hostname}} --hostname {{printf "%q" .Hostname}} {{- end}} {{- if .Domainname}} --domainname {{printf "%q" .Domainname}} {{- end}} {{- range $p, $conf := .ExposedPorts}} --expose {{printf "%q" $p}} {{- end}} {{- range $e := .Env}} --env {{printf "%q" $e}} {{- end}} {{- range $l, $v := .Labels}} --label {{printf "%q" $l}}={{printf "%q" $v}} {{- end}} {{- if not (or .AttachStdin (or .AttachStdout .AttachStderr))}} --detach {{- end}} {{- if .AttachStdin}} --attach stdin {{- end}} {{- if .AttachStdout}} --attach stdout {{- end}} {{- if .AttachStderr}} --attach stderr {{- end}} {{- if .Tty}} --tty {{- end}} {{- if .OpenStdin}} --interactive {{- end}} {{- if .Entrypoint}} {{- if eq (len .Entrypoint) 1 }} --entrypoint " {{- range $i, $v := .Entrypoint}} {{- if $i}} {{end}} {{- $v}} {{- end}}" {{- end}} {{- end}} {{printf "%q" .Image}} {{range .Cmd}}{{printf "%q " .}}{{- end}} {{- end}}' "$1" |sed 's/ --/ \\\n  --/g' |less;}
+vp(){ ffprobe "$1" 2>&1 |grep -e Duration: -e Video:;}
+
+alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
+alias python3='PYTHONPATH=/usr/lib/python3/dist-packages; python3'
+alias lesspipe='file “$1” | grep -q text && /usr/share/source-highlight/src-hilite-lesspipe.sh “$1”'
+alias mpr='abduco -n mpr mate-panel --replace'
+alias glr='gsettings list-recursively'
+alias lockscreen='DISPLAY=:0.0 xdotool key Ctrl+alt+l'
+alias panellock='gsettings set org.mate.panel locked-down true'
+alias panelunlock='gsettings set org.mate.panel locked-down false'
+alias pc='/usr/share/vim/vim74/macros/less.sh'
+alias buildfontcache='fc-cache -f -v'
+alias resetwl='sudo rmmod rtl8192ce rtl_pci rtl8192c_common rtlwifi mac80211 cfg80211; sleep 1; sudo modprobe rtl8192ce'
+alias csv="csvtool -t ';' -u ';'"
+alias fdisk4k='fdisk -H 224 -S 56'
+alias filedefrag='shake --bigsize=0 --old=0 -C 0 '
+alias tt='echo "$(TZ=Asia/Bangkok LC_TIME="th_TH.UTF-8" date +"%T วัน%A วันที่ %d %B พ.ศ.") $(($(date +%Y)+543))"'
+alias vlcs='vlc -R -f --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
+alias vlcp='vlc -R -f --video-on-top --no-video-title-show --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
+alias renamecanon="(cd /media/pp/CANON_DC/DCIM && rename 's#^[0-9][0-9][0-9]___#2020#' *)"
+alias renamepentax="(cd /media/pp/disk/DCIM && rename 's#^[0-9][0-9][0-9]_#2016#' *)"
+alias renamenikon="(cd /media/pp/disk/DCIM/100NIKON/ && rename 's#DSCN#DSCNc#' DSCN[0-9]*)"
+alias solus='qemu -enable-kvm -m 1024m -redir tcp:2222::22 -vga std -no-frame -hda /data/iso/qemu/s2q2.vdi &'
+alias lb='lsblk -o NAME,FSTYPE,LABEL,MOUNTPOINT,SIZE,OWNER,GROUP,MODE,PHY-SEC,SCHED'
+alias is='bc -l <<<'
+alias m="mount |sed 's/ on / /g' |sed 's/ type / /g' |column -t"
+alias be='(head -5; echo; tail -5) <'  ## requires a file to 'analyze'
+alias ripvcd='vcdxrip -i /dev/sr0 -v -p -t 0'
+alias dd='dcfldd statusinterval=2048'
+alias it='sudo iftop -BP -i' # specify a network interface
+alias b='pv -s' ## for use in a pipe: dd if=a|b 200M|dd of=b
+alias cp='cp -i'
+alias alsa='alsamixer; sudo alsactl store && echo "settings saved"'
+alias say="DISPLAY=:0.0  notify-send"
+alias qiso='qemu -no-kvm -cdrom'
+alias makejpg='gs -sDEVICE=jpeg -dNOPAUSE -dBATCH -dSAFER -r600x600 -sOutputFile=p%03d.jpg'
+alias makepdf='gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dSAFER -r600x600 -sOutputFile=p%03d.jpg'
+alias resizepdf='gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=resized.pdf'
+alias shrinkpdf='gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dQUIET -dBATCH -sOutputFile=shrunk.pdf'
+alias sdn='shutdown -t3 -H now'
+alias killpp='killall -9 -u pp'
+alias chpp='chown pp:pp -R'
+alias telco='whois -h whois.telcodata.us'
+alias sc='scp -P 5691 -p -r -o User=PeterPasschier1965'
+alias scb='scp -P 21865 -p -r -o User=PeterPasschier1965'
+#alias s='screen -D -R'
+alias s='tmux a || tmux'
+alias tmuxclean='for u in $(echo $(tmux ls |grep -v ^pp: |grep -v "(group 0) (attached)$" |sed "s/:.*//g")); do tmux kill-ses -t $u; done'
+alias e='nano'
+alias ee='dte'
+alias eth='luit -encoding tis-620 ne'  ## Edit with tis-620/windows-874 encoding
+alias E='ne'
+alias w='w3m https://google.com'
+alias f='find .|egrep --color=auto --devices=skip'
+alias ft='find . -type f -print0|xargs -0 egrep'
+alias h='hexdump -C'
+alias l='ls -AF --color=auto'
+alias ll='ls -AFl --time-style=long-iso --color=auto'
+alias lt='ls -tr -AFl --time-style=long-iso --color=auto'
+alias sr='sudo -i'
+alias g='egrep -s --color=auto --devices=skip -I'
+alias p='ps wwaux -H'
+alias pg='ps faux|egrep --color=auto --devices=skip -I'
+alias t='htop'
+alias ap='apt-cache policy'
+alias ad='apt-cache showpkg'
+alias dra='sudo dpkg-reconfigure -a'
+alias aar='sudo apt-get --purge autoremove'
+alias adr='apt-cache rdepends'
+alias afi='sudo apt-get -f install'
+alias aup='sudo apt-get update'
+alias adu='sudo apt-get dist-upgrade'
+alias au='sudo apt-get update; sudo apt-get dist-upgrade'
+alias ai='sudo apt-get install'
+alias ain='sudo apt-get --no-install-recommends install'
+alias ar='sudo apt-get remove'
+alias air='sudo apt-get --reinstall install'
+alias ais='aptitude -y -s install'
+alias apr='sudo apt-get purge'
+alias alg='dpkg -l|grep' ## list installed packages and filter
+alias af='dpkg -S' ## file: which package?
+alias alf='dpkg -L' ## package: which files?
+alias ak='sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys'
+alias apurge='dpkg -l|gr ^rc|cut -d" " -f3|xargs sudo dpkg -P'
+alias d='dfc -d -T -b -t-tmpfs,devtmpfs -f; swapon --show=NAME,TYPE,SIZE,USED,PRIO,UUID'
+alias da='df -ahT'
+alias rs='rsync -vrptzlOuP --partial-dir=.rsync-partial --exclude="*/.~*" -e "ssh"'
+alias rb='rsync -vrptzlPO --delete -e "ssh"'
+alias qip='wget -q -O - "http://ip-api.com/csv/"'
+alias ffx='/usr/lib/firefox/firefox'
+alias lsdm='ls -AFl /dev/disk/by-id |gr dm-name |sed "s@.*dm-name-\([^ ]*\) -> \.\./\.\./\(.*\)@\2 \1@" |sort'
+alias reset='\reset;  tmux clear'
+alias memes='wget -O - -q reddit.com/r/memes.json | jq ".data.children[] |.data.url" | grep -v "/\"$" |xargs feh -xZ.'
+alias tf=twofat
+alias i=feh
+alias sun='sunclock -map -dottedlines -twilight -meridianmode 3 -tropics -decimal'
+alias clk='tty-clock -sSbcC6'
+alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
+alias flush='sudo systemd-resolve --flush-caches'
+alias itt='img2txt -f utf8'

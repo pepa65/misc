@@ -434,6 +434,9 @@ Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 ```
 * Required: poppler-utils(pdfseparate pdfunite pdfinfo) coreutils(mktemp rm ls)
 
+## pp
+**Settings to be included in .bashrc**
+
 ## qemu-create-os-img
 **Create a fresh Debian/Ubuntu qemu image**
 
