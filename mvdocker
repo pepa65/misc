@@ -26,18 +26,19 @@ Getopts(){ # I:container IO:options
 	[[ $options ]] || options=$(docker inspect -f '--name {{printf "%q" .Name}}{{- with .HostConfig}}{{- range $b := .Binds}} -v {{printf "%q" $b}}{{- end}}{{- with .RestartPolicy}} --restart "{{.Name -}}{{- if eq .Name "on-failure"}}:{{.MaximumRetryCount}}{{- end}}" {{- end}}{{- end}}{{- with .NetworkSettings -}}{{- range $p, $conf := .Ports}}{{- with $conf}} -p " {{- if $h := (index $conf 0).HostIp}}{{$h}}: {{- end}}{{- (index $conf 0).HostPort}}:{{$p}}" {{- end}}{{- end}}{{- end}}{{- with .Config}}{{- range $p, $conf := .ExposedPorts}} --expose {{printf "%q" $p}}{{- end}}{{- range $e := .Env}} -e {{printf "%q" $e}}{{- end}}{{- end}}' $container)
 }
 
-Savevols(){ # I:volsfile,mgr,container,cmd,vols O:containervolumes
+Savevols(){ # I:volsfile,mgr,container,cmd,vols,base O:containervolumes
 	[[ -f $volsfile ]] && Err 1 "file $volsfile already exists"
 	umask 077
 	touch -- $volsfile
 	$mgr inspect --type container -f '{{range .Mounts}}{{printf "%v\x00" .Destination}}{{end}}' $container |\
-		head -c -1 |sort -uz |$cmd $base tar -c -a -v --null -T- -f /$vols
+		head -c -1 |sort -uz |\
+		$mgr run --rm -i --volumes-from $container -e LC_ALL=C.UTF-8 -v $volsfile:/$vols $base tar -c -a -v --null -T- -f /$vols
 }
 
 Loadvols(){ # 1:container I:volsfile,cmd,base,vols
 	local container=$1
 	[[ ! -f $volsfile ]] && Err 2 "file $volsfile not found"
-	$cmd:ro $base tar -xp -v -S -f /$vols -C / --overwrite
+	$mgr run --rm -i --volumes-from $container -e LC_ALL=C.UTF-8 -v $volsfile:/$vols:ro $base tar -xp -v -S -f /$vols -C / --overwrite
 }
 
 [[ $1 = '-i' || $1 = '--install' ]] && shift && install=1 || install=0
@@ -50,7 +51,6 @@ options=$@
 
 imagefile=$container.tar vols=$container-volumes.tgz volsfile=$PWD/$vols
 image=image-$container opts=$container.opts
-cmd="$mgr run --rm -i --volumes-from $container -e LC_ALL=C.UTF-8 -v $volsfile:/$vols"
 if ((!install))
 then # Backup to files, no install
 	running=$(docker inspect --format '{{json .State.Running}}' $container)
