@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set +vx
+# srtshift - Shift times in a .srt subtitle file
+# Usage:  srtshift <srt-file> [-]<shift>
+#   <srt-file> is the .srt subtitle filename
+#   <shift> is the timeshift in full milliseconds
+# Output: stdout
+
+Usage(){ # 1:message
+	cat <<-EOM
+		Usage:  $self <srt-file> [-]<shift>
+		  <srt-file> is the .srt subtitle filename
+		  <shift> is the timeshift in full milliseconds
+		Output: stdout
+
+		Error: $1
+	EOM
+	exit
+}
+
+self=$(basename "$0") srt=$1 shift=$2
+
+(($#!=2)) && Usage "must have 2 arguments"
+[[ ! -f $srt ]] && Usage "not a file: $srt"
+sh=${shift#-}  # Strip minus if present
+[[ ${sh//[0-9]} ]] &&  # Strips all valid digits
+	Usage "invalid timeshift value: $shift"
+
+
+Shift(){ # 1:time I:shift O:newtime
+	local time=$1 new h m s ms newsec newms
+	IFS=':,' read h m s ms <<<"$time"
+	h=${h#0} m=${m#0} s=${s#0} ms=${ms#0} ms=${ms#0}
+	((newms=h*3600000+m*60000+s*1000+ms+shift))
+	newsec=${newms:0: -3} ms=${newms: -3}
+	((h=newsec/3600))
+	((m=newsec%3600/60))
+	((s=newsec%60))
+	printf "%02d:%02d:%02d,%s\n" $h $m $s $ms
+}
+
+while read -r line
+do # Check if line is a time or text
+	if [[ $line =~ ^[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]\ --\>\ [0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9].?$ ]]
+	then # Read the times and arrow into variables
+		read -r start arrow end <<<"$line"
+		printf "%s %s %s\n" $(Shift $start) "$arrow" $(Shift $end)
+	else # Render the text
+		printf "%s\n" "$line"
+	fi
+done < <(tr -d '\r' <"$srt")

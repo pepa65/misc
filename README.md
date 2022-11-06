@@ -555,6 +555,13 @@ optional arguments:
   -V, --version         Show the version number and exit
 ```
 
+## srtshift
+**Shift times in a .srt subtitle file**
+* Usage:  `srtshift <srt-file> <time>`
+* `<srt-file>` is the .srt subtitle filename
+* `<shift>` is the timeshift in full milliseconds
+* Output: stdout
+
 ## subs
 **Download subtitles from subscene.com**
 
