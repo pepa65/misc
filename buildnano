@@ -256,7 +256,7 @@ pkgs=$(dpkg -l) inst=
 for p in $req
 do grep -q "^ii  $p[ :]" <<<$pkgs || inst+=" $p"; done
 [[ $inst ]] && echo "Need to install$inst" &&
-	! Sudo apt-get install $inst && Abort "could not install packages:$inst"
+	! Sudo apt-get install -y $inst && Abort "could not install packages:$inst"
 
 if ((cur))
 then

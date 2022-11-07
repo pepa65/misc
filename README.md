@@ -285,10 +285,15 @@ healbitrot [-h|--help] [<dir>...]
 
 **The python script `bitrot` is included**
 
-# instai
+## instai
 **User-(un)install AppImage with icon and .desktop file**
 
 * Usage: 'instai [-l|--list] [-u|--uninstall] <AppImage>'
+
+## parsejson
+**Parse JSON with bash**
+* Usage:  `parsejson [ -h|--help | <string> | <filename> ]`
+* When no argument is given, input is read on stdin.
 
 ## keepassx.sh
 **Unpack selfmake archive script**
