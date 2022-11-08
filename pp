@@ -338,3 +338,4 @@ alias clk='tty-clock -sSbcC6'
 alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
 alias flush='sudo systemd-resolve --flush-caches'
 alias itt='img2txt -f utf8'
+alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
