@@ -33,24 +33,28 @@ a5toa4 [<Options>] <a5.pdf> [<a4.pdf>]
 * Required: coreutils(cat mktemp) ghostscript(psselect pdf2ps ps2pdf) psutils(psnup)
 
 ## backup
-**back up a list of files and directories**
+**Backup a list of files and directories**
 
 * Usage:
 ```
-backup [-h|--help] | [<backup-list> [<backup-file> [<backup-log>]]]
-    backup-list: file with list of all files to be backed up, one per line
-      multiple file/dir(s) possible with bash globbing (with * ? and [...])
-    backup-file: output file name (.txz will be appended)
-      backup-file can also be specified in the first line of backup-list, like:
-      @<backup-file> but will be overridden by the command-line if set
-   backup-log: log file
+backup - Backup a list of files and directories
 
-   Lines in backup-list are file/dirnames, except when the first character is:
-     '@' (at):       <backup-file> (only in the very first line)
-     ' ' (space):    skipped line
-     '#' (pound):    comment line
-     '$' (dollar):   command line
-     '%' (percent):  gpg-password
+Usage: backup [-h|--help | <backup-list> [<backup-file> [<backup-log>]]]
+  backup-list:  File with list of all files to be backed up, one per line
+      Multiple file/dir(s) possible with bash globbing (with * ? and [...]).
+      (default:  ./backup.lst)
+  backup-file:  Output file name (.txz will be appended if not ending in .txz)
+      Backup-file can also be specified in the first line of backup-list, like:
+        @<backup-file> but will be overridden by the command-line if given
+      (default:  backup.txz)
+  backup-log:   Log file  (default:  backup.log)
+Lines in backup-list are file/dirnames, except when the first character is:
+  '@' (at):       <backup-file> (only in the very first line)
+  ' ' (space):    skipped line
+  '#' (pound):    comment line
+  '$' (dollar):   command line
+  '%' (percent):  gpg-password
+Links are followed to backup the actual file contents if possible.
 ```
 
 # bacme

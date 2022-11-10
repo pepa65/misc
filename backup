@@ -1,37 +1,39 @@
 #!/usr/bin/env bash
 set +vx
+# backup - Backup a list of files and directories
 # Required: coreutils(cat readlink) tar less xz gpg
 
 Help(){ # $1:message $2:exitcode
-cat <<-EOH
-	 $Self - backup a list of files and directories (links are followed)
-	
-	 Usage: $Self [-h|--help] | [<backup-list> [<backup-file> [<backup-log>]]]
-	   backup-list: file with list of all files to be backed up, one per line
-	     multiple file/dir(s) possible with bash globbing (with * ? and [...])
-	   backup-file: output file name (.txz will be appended)
-	     backup-file can also be specified in the first line of backup-list, like:
-	     @<backup-file> but will be overridden by the command-line if set
-	   backup-log: log file
-	 Lines in backup-list are file/dirnames, except when the first character is:
-	   '@' (at):       <backup-file> (only in the very first line)
-	   ' ' (space):    skipped line
-	   '#' (pound):    comment line
-	   '$' (dollar):   command line
-	   '%' (percent):  gpg-password
-EOH
+	cat <<-EOH
+		${self##*/} - Backup a list of files and directories
+
+		Usage: ${self##*/} [-h|--help | <backup-list> [<backup-file> [<backup-log>]]]
+		  backup-list:  File with list of all files to be backed up, one per line
+		      Multiple file/dir(s) possible with bash globbing (with * ? and [...]).
+		      (default:  ./backup.lst)
+		  backup-file:  Output file name (.txz will be appended if not ending in .txz)
+		      Backup-file can also be specified in the first line of backup-list, like:
+		        @<backup-file> but will be overridden by the command-line if given
+		      (default:  backup.txz)
+		  backup-log:   Log file  (default:  backup.log)
+		Lines in backup-list are file/dirnames, except when the first character is:
+		  '@' (at):       <backup-file> (only in the very first line)
+		  ' ' (space):    skipped line
+		  '#' (pound):    comment line
+		  '$' (dollar):   command line
+		  '%' (percent):  gpg-password
+		Links are followed to backup the actual file contents if possible.
+	EOH
 	[[ $1 ]] && echo -e "\nABORT: $1"
-	[[ $2 ]] && exit $2 || exit 0
-END
+	[[ $2 ]] && exit $2
+	exit 0
 }
 
 self=$(readlink -e "$0")
-Self=${self##*/}
-root="$HOME"
-list="$root/backup.lst"
-txz="$root/backup.txz"
+list="$PWD/backup.lst"
+txz="$PWD/backup.txz"
 tar="$txz-$RANDOM.tar"
-log="$root/backup.log"
+log="$PWD/backup.log"
 pw=$(mktemp)
 
 [[ $1 = -h || $1 = --help ]] && Help
@@ -39,7 +41,8 @@ pw=$(mktemp)
 [[ $2 ]] && txz="$2"
 [[ $3 ]] && log="$3"
 
-[[ ! -f "$list" ]] && Help "no backup list file $list present" 1
+[[ ! -f $list ]] && Help "no backup list file $list present" 1
+[[ $txz = ${txz%.txz} ]] && txz+=.txz
 ! >"$txz" && Help "can't write to backup file $txz" 2
 ! >"$log" && Help "can't write to log file $log" 3
 
@@ -47,7 +50,7 @@ list=$(readlink -e "$list")
 readarray -t files <"$list"
 ! tar cPf "$tar" "$list" && Help "can't write to temporary file $tar" 4
 trap "rm $tar" EXIT
-tar rPf "$tar" "$self"  ## This script
+tar rPf "$tar" "$self"  # This script
 
 n_files=${#files[@]}
 n=0
@@ -57,52 +60,46 @@ out=$(
 	while ((n<n_files))
 	do
 		line=${files[$((n++))]}
-		! [[ $line ]] && echo && continue  ## empty line
-		[[ ${line:0:1} = ' ' ]] && continue  ## start with space
-		[[ ${line:0:1} = '#' ]] && echo "    $line" && continue  ## comment
-		[[ ${line:0:1} = '%' ]] && echo "${line:1}">"$pw" && continue  ## password
+		! [[ $line ]] && echo && continue  # empty line
+		[[ ${line:0:1} = ' ' ]] && continue  # skip
+		[[ ${line:0:1} = '#' ]] && echo "    $line" && continue  # comment
+		[[ ${line:0:1} = '%' ]] && echo "${line:1}">"$pw" && continue  # password
 		if [[ ${line:0:1} = '$' ]]
-		then  ## command
+		then  # command
 			eval "${line:1}"
 			echo " RUN ${line:1}"
 			continue
 		fi
-		## files/dirs for backup
+		# files/dirs for backup
 		shopt -s dotglob nullglob
 		none=1
-		for file in $line  ## in case of globbing
+		for file in $line  # in case of globbing
 		do
 			none=0
 			real=$(readlink -e "$file")
 			if [[ $real ]]
-			then  ## file/dir exists
-				[[ -d "$real" ]] && echo -n ' DIR' || echo -n 'FILE'
-				if [[ $file = "$real" ]]
-				then  ## no link
+			then  # file/dir exists
+				[[ -d $real ]] && echo -n ' DIR' || echo -n 'FILE'
+				if [[ $file = $real ]]
+				then  # no link
 					tar rPf "$tar" "$real"
 					echo " $real"
 				else  # link
-					## file not in data: tar file
-					if [[ ${real:0:6} = '/data/' ]]
-					then
-						echo -n '-'
-					else
-						echo -n '+'
-						tar rhPf "$tar" "$real"  ## tar link
-					fi
+					echo -n '+'
+					tar rhPf "$tar" "$real"  # tar link
 					echo -e "LINK $file\n  TO $real"
 				fi
-			else  ## link/file doesn't exist
-				if [[ -L "$file" ]]
+			else  # link/file doesn't exist
+				if [[ -L $file ]]
 				then
-					tar rhPf "$tar" "$file"  ## tar dangling link
+					tar rhPf "$tar" "$file"  # tar dangling link
 					echo -e "DANGLING $file"
 				else
 					echo -e "!!NO $file"
 				fi
 			fi
 		done
-		((none)) && echo "!!NONE $line"  ## No files/dirs
+		((none)) && echo "!!NONE $line"  # No files/dirs
 	done
 )
 ! less -KPs"Press Q to make the backup, Ctrl-C to abort" <<<"$out" &&
