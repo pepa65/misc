@@ -82,7 +82,7 @@ do
 		[[ $prefix && ! $mnt = $prefix* ]] && continue
 		[[ $mnt = / ]] && pass=1 || pass=2
 		[[ ! $tdev = $dev ]] && echo "# $dev"
-		echo -e "$tdev $mnt $fs $options ${dump:-0} $pass\n"
+		echo "$tdev $mnt $fs $options ${dump:-0} $pass"
 	fi
 done </proc/mounts
 
@@ -94,6 +94,6 @@ do [[ $dev = /* ]] || continue
 		read <"/sys/class/block/${dev#/dev/}/dm/name"
 		dev=/dev/mapper/$REPLY
 	fi
-	echo -e "$dev swap swap $options 0 0\n"
+	echo "$dev swap swap $options 0 0"
 done </proc/swaps
 

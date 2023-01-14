@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+set -eu
+# mkuki - Create EFI Unified Kernel Image
+# Required: tr grep sed coreutils(mktemp uname cat)
+# Repp: https://gitlab.com/pepa65/misc
+# From: https://github.com/jirutka/efi-mkuki
+
+Usage(){ # I:self,efistubdir
+	cat<<-EOH
+		$self - Create EFI Unified Kernel Image
+		An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
+		combine an EFI stub loader, a kernel image, an initramfs image, a splash
+		image, the kernel commandline, and CPU microcode images.
+
+		Usage: $self [<option>...]
+			<option>:
+	    -h|--help                Only display this help text
+	    -V|--version             Only display the version
+		  -k|--kernel <file>       Linux kernel file (default: '/boot/vmlinuz')
+		  -i|--initrd <file>       Initramfs file (default: '/boot/initrd.img')
+		  -m|--microcode <file>    Microcode file (optional, multiple allowed)
+		  -c|--cmdline <txt/file>  Kernel cmdline in quotes, or a file containing
+                               it, start with / or . (default: '/proc/cmdline')
+		  -o|--output <file>       Output file (default: 'vmlinuz.efi')
+		  -r|--release <file>      Release file (default: '/etc/os-release')
+		  -s|--splash <file>       Splash image (optional)
+		  -e|--efistub <file>      EFI stub file (default: 'linux<march>.efi.stub')
+		                           in '$efistubdir', <march>: x64|ia32|aa64|arm
+	EOH
+}
+
+Die(){ # 1:msg
+	echo "$self abort: $1" >&2
+	exit 1
+}
+
+self=${0##*/} version=0.1.1 efistubdir=/usr/lib/systemd/boot/efi
+efistub= output= imgs= linux=/boot/vmlinuz init=/boot/initrd.img
+commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null
+
+while (($#))
+do # Process commandline
+	case $1 in
+	-h|--help) Usage; exit 0 ;;
+	-V|--version) echo "$self $version"; exit 0 ;;
+	-k|--kernel)
+		[[ ! -f $2 ]] || Die "kernel file not found: '$2'"
+		linux=$2; shift ;;
+	-i|--initrd) # An empty initrd could be specified like: --initrd ''
+		[[ $2 && ! -f $2 ]] && Die "initramfs file not found: '$2'"
+		init=$2; shift ;;
+	-m|--microcode)
+		[[ -f $2 ]] || Die "microcode file not found: '$2'"
+		imgs+="$2 "; shift ;;
+	-c|--cmdline) commandline=$2; shift ;;
+	-o|--output) output=$2; shift ;;
+	-r|--release) osrel=$2; shift ;;
+	-w|--splash) splash=$2; shift ;;
+	-e|--efistub) efistub=$2; shift ;;
+	-*) Die "unknown commandline flag: '$1'" ;;
+	*) Die "unknown commandline argument: '$1'"
+	esac
+	shift
+done
+
+[[ $init && ! -f $init ]] && Die "initramfs file not found: '$init'"
+[[ -f $linux ]] || Die "kernel file not found: '$linux'"
+[[ -f $osrel ]] || Die "OS release file not found: '$osrel'"
+[[ -e $splash ]] || Die "splash image not found: '$splash'"
+[[ $output ]] || output=${linux##*/}.efi
+
+if [[ -z $efistub ]]
+then # Determine architecture for efistub
+	arch=$(uname -m)
+	case $arch in
+	aarch64) march=aa64 ;;
+	arm*) march=arm ;;
+	x86|i686) march=ia32 ;;
+	x86_64) march=x64 ;;
+	*) Die "Unsupported machine architecture: '$arch'"
+	esac
+	efistub="$efistubdir/linux$march.efi.stub"
+fi
+[[ -f $efistub ]] || Die "no EFI stub file: '$efistub'"
+
+tmpdir=$(mktemp -dt $self.XXXXXX) initrd=$tmpdir/initrd cmdline=$tmpdir/cmdline
+#trap "rm -rf $tmpdir" EXIT HUP INT TERM
+imgs+=$init
+[[ $imgs ]] && cat $imgs >"$initrd" || initrd=/dev/null
+
+if [[ ${commandline:0:1} = [/.] ]]
+then # File
+	[[ -f $commandline ]] || Die "no cmdline-file: '$commandline'"
+	cmd=$(grep -v '^ *#' "$commandline" |tr -s '\n' ' ')
+else cmd=$commandline
+fi
+sed -e 's/initrd=[^ ]*//g' -e 's/BOOT_IMAGE=[^ ]*//g' <<<"$cmd" >"$cmdline"
+
+# Might need privileges to get access to some files
+sudo objcopy \
+	--add-section .osrel="$osrel" --change-section-vma .osrel=0x20000    \
+	--add-section .cmdline="$cmdline" --change-section-vma .cmdline=0x30000  \
+	--add-section .splash="$splash" --change-section-vma .splash=0x40000   \
+	--add-section .linux="$linux" --change-section-vma .linux=0x2000000  \
+	--add-section .initrd="$initrd" --change-section-vma .initrd=0x3000000 \
+	"$efistub" "$output"
+
+# Show the result
+for v in osrel cmdline splash linux initrd efistub output
+do
+	declare -n val=$v
+	printf "%-9s" $v
+	ls -lH "$val"
+done

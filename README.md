@@ -414,6 +414,33 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
    s (seconds), m (minutes), h (hours), d (days).
 ```
 
+## mkuki
+**Create EFI Unified Kernel Image**
+
+An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
+combine an EFI stub loader, a kernel image, an initramfs image, a splash
+image, the kernel commandline, and CPU microcode images.
+
+* Required: `tr grep sed coreutils`(`mktemp uname cat`)
+* From: https://github.com/jirutka/efi-mkuki
+* Usage:
+```
+Usage: mkuki [<option>...]
+<option>:
+    -h|--help                Only display this help text
+    -V|--version             Only display the version
+  -k|--kernel <file>       Linux kernel file (default: '/boot/vmlinuz')
+  -i|--initrd <file>       Initramfs file (default: '/boot/initrd.img')
+  -m|--microcode <file>    Microcode file (optional, multiple allowed)
+  -c|--cmdline <txt/file>  Kernel cmdline in quotes, or a file containing
+                               it, start with / or . (default: '/proc/cmdline')
+  -o|--output <file>       Output file (default: 'vmlinuz.efi')
+  -r|--release <file>      Release file (default: '/etc/os-release')
+  -s|--splash <file>       Splash image (optional)
+  -e|--efistub <file>      EFI stub file (default: 'linux<march>.efi.stub')
+                           in '/usr/lib/systemd/boot/efi', <march>: x64|ia32|aa64|arm
+```
+
 ## mvdocker
 **Move docker container including volumes**
 
