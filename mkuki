@@ -18,6 +18,7 @@ Usage(){ # I:self,efistubdir
 	    -h|--help                Only display this help text
 	    -V|--version             Only display the version
 		  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
+		  -l|--label <txt>         UEFI label in quotes for install (optional)
 		  -d|--device <device>     '<esp>' to use for install (optional)
 		  -k|--kernel <file>       Linux kernel file (default: '/boot/vmlinuz')
 		  -i|--initrd <file>       Initramfs file (default: '/boot/initrd.img')
@@ -26,7 +27,7 @@ Usage(){ # I:self,efistubdir
                                it, start with / or . (default: '/proc/cmdline')
 		  -o|--output <file>       Output file (default: 'vmlinuz.efi')
 		  -r|--release <file>      Release file (default: '/etc/os-release')
-		  -s|--splash <file>       Splash image: BMP max.800x600 <1.4M (optional)
+		  -s|--splash <file>       Splash image: BMP 800x600 24bit (optional)
 		  -e|--efistub <file>      EFI stub file (default: 'linux<march>.efi.stub')
 		                           in '$efistubdir', <march>: x64|ia32|aa64|arm
 	EOH
@@ -38,8 +39,8 @@ Die(){ # 1:msg
 }
 
 self=${0##*/} version=0.1.1 efistubdir=/usr/lib/systemd/boot/efi
-efistub= output= imgs= device= install=0
-linux=/boot/vmlinuz init=/boot/initrd.img
+efistub= output= imgs= device= label=
+linux=/boot/vmlinuz init=/boot/initrd.img install=0
 commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null
 
 while (($#))
@@ -48,6 +49,7 @@ do # Process commandline
 	-h|--help) Usage; exit 0 ;;
 	-V|--version) echo "$self $version"; exit 0 ;;
 	-I|--install) install=1 ;;
+	-l|--label) label=$2; shift ;;
 	-d|--device)
 		[[ ! -b $2 ]] || Die "No blockdevice found: '$2'"
 		device=$2; shift ;;
@@ -138,13 +140,16 @@ then # Determine <esp>, move the UKI and register
 	[[ $mount = $tmpdir/mnt ]] && sudo umount "$mount"
 	partition=$(grep -o '[0-9]*$' <<<"$esp") disk=${esp%$partition}
 	[[ ${disk: -1} = p && ${disk: -2:1} = [0-9] ]] && disk=${disk%p}
-	_=$(grep PRETTY_NAME "$osrel") _=${_//\"} entry=${_#*=}
-	if [[ -z $entry ]]
-	then # No PRETTY_NAME specified
-		_=$(grep ^NAME "$osrel") _="${_//\"} entry=${_#*=}
-		_=$(grep ^VERSION "$osrel") _=${_//\"} entry+=" ${_#*=}
+	if [[ -z $label ]]
+	then # Construct label for entry
+		_=$(grep PRETTY_NAME "$osrel") _=${_//\"} label=${_#*=}
+		if [[ -z $label ]]
+		then # No PRETTY_NAME specified
+			_=$(grep ^NAME "$osrel") _="${_//\"} label=${_#*=}
+			_=$(grep ^VERSION "$osrel") _=${_//\"} label+=" ${_#*=}
+		fi
 	fi
-	sudo efibootmgr -c -d $disk -p $partition -l "/EFI/Linux/$output" -L "$entry" |grep "$entry"
+	sudo efibootmgr -c -d $disk -p $partition -l "/EFI/Linux/$output" -L "$label" |grep "$label"
 fi
 
 # Show the result
