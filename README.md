@@ -108,36 +108,37 @@ bb [ init|check|help|unlock|prune | list [<prefix>] | info|delete <name> |
 * Usage: `bitwarden2xml bitwarden.csv >keepassx.xml`
 
 ## bootctlu
-**Setting up and registering systemd-boot on Ubuntu/Void/Arch**
+**Install/register systemd-boot on Ubuntu/Void/Arch**
 
 * Usage:
 ```
-bootctlu - Install & register systemd-boot on Ubuntu/Void/Arch
+bootctlu v0.2.1 - Install/register systemd-bootmanager on Ubuntu/Void/Arch
 
 Usage:  bootctlu [<option>...]
   <option>:
     -h/--help:          Only display this help text.
-    -q/--quiet:         Only fatal errors output to the terminal.
+    -V/--version:       Only display the version.
     -v/--verbose:       Show more detail of the actions.
+    -q/--quiet:         Fatal errors only output to the terminal.
     -n/--nogo:          No writing to the system at all.
-    -I/--install:       Only install the script and kernel install hooks
-    -U/--uninstall:     Only uninstall the script and kernel install hooks
+    -I/--install:       Only install the script and kernel install hooks.
+    -U/--uninstall:     Only uninstall the script and kernel install hooks.
+    -M/--maxkernels:    Maximum number of kernels to install (1..9).
     -i/--imgdir <dir>:  Kernel & initrd images directory, default:
                         /boot, overrides BOOTCTLU_BOOT.
     -e/--esp <dir>:     EFI System Partition mountpoint, default:
                         /boot/efi, overrides BOOTCTLU_ESP.
     -m/--memtest:       Also download and set up a MemTest86 entry.
     -s/--secureboot:    Also install secureboot files.
-    -r/--register:      Also register the efi-loader with UEFI.
+    -r/--register:      Also register the bootmanager with UEFI.
   Extra arguments ignored so this can work as install/remove kernel hook.
 ```
 
-* Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp s rm cd ls diff)
-  grep sed systemd(file:systemd-boot*.efi) uuid-runtime(uuidgen)
-  - non-root or nogo: sudo
+* Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp mv rm cd ls diff)
+  grep sed systemd(systemd-boot*.efi) uuid-runtime(uuidgen) xargs
   - memtest: wget tar
-  - [register: efibootmgr
-  - [install: diffutils(diff)
+  - register: efibootmgr
+  - install: diffutils(diff)
 
 ## buildgocryptfs
 **Build gocryptfs**
@@ -421,28 +422,32 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 ## mkuki
 **Create EFI Unified Kernel Image**
 
-An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
-combine an EFI stub loader, a kernel image, an initramfs image, a splash
-image, the kernel commandline, and CPU microcode images.
-
-* Required: `tr grep sed coreutils`(`mktemp uname cat`)
+* Required: `coreutils`(`tr mktemp uname cat readlink wc mkdir cp ls head`) `grep sed`
+  - install: `sudo efibootmgr fdisk mount`
 * From: https://github.com/jirutka/efi-mkuki
 * Usage:
 ```
+mkuki v0.1.5 - Create EFI Unified Kernel Image
+  An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
+  combine an EFI stub loader, a kernel image, an initramfs image, a splash
+  image, the kernel commandline, and CPU microcode images.
 Usage: mkuki [<option>...]
 <option>:
-    -h|--help                Only display this help text
-    -V|--version             Only display the version
+  -h|--help                Only display this help text
+  -V|--version             Only display the version
+  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
+  -l|--label <txt>         UEFI label in quotes for install (optional)
+  -d|--device <device>     '<esp>' to use for install (optional)
   -k|--kernel <file>       Linux kernel file (default: '/boot/vmlinuz')
   -i|--initrd <file>       Initramfs file (default: '/boot/initrd.img')
   -m|--microcode <file>    Microcode file (optional, multiple allowed)
   -c|--cmdline <txt/file>  Kernel cmdline in quotes, or a file containing
                                it, start with / or . (default: '/proc/cmdline')
-  -o|--output <file>       Output file (default: 'vmlinuz.efi')
+  -o|--output <file>       Output file (default: '')
   -r|--release <file>      Release file (default: '/etc/os-release')
-  -s|--splash <file>       Splash image (optional)
-  -e|--efistub <file>      EFI stub file (default: 'linux<march>.efi.stub')
-                           in '/usr/lib/systemd/boot/efi', <march>: x64|ia32|aa64|arm
+  -s|--splash <file>       Splash image: BMP 800x600 24bit (optional)
+  -e|--efistub <file>      EFI stub file (default: 'linux*.efi.stub') in
+                           '/usr/lib/systemd/boot/efi', *: x64 | ia32 | aa64 | arm
 ```
 
 ## mvdocker

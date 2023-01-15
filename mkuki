@@ -6,9 +6,11 @@ set -eu
 # Repp: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
+version=0.1.5
+
 Usage(){ # I:self,efistubdir
 	cat<<-EOH
-		$self - Create EFI Unified Kernel Image
+		$self v$version - Create EFI Unified Kernel Image
 		  An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
 		  combine an EFI stub loader, a kernel image, an initramfs image, a splash
 		  image, the kernel commandline, and CPU microcode images.
@@ -37,7 +39,7 @@ Die(){ # 1:msg
 	exit 1
 }
 
-version=0.1.4 self=${0##*/} efistubdir=/usr/lib/systemd/boot/efi
+self=${0##*/} efistubdir=/usr/lib/systemd/boot/efi
 efistub= output= imgs= device= label=
 linux=/boot/vmlinuz init=/boot/initrd.img install=0
 commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null

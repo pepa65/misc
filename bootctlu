@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
-set +vx
-# bootctlu - Setting up and registering systemd-boot on Ubuntu/Void/Arch
+set -u +vx
+# bootctlu - Install/register systemd-bootmanager on Ubuntu/Void/Arch
 # Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp mv rm cd ls diff)
 #           grep sed systemd(systemd-boot*.efi) uuid-runtime(uuidgen) xargs
 #   [memtest]: wget tar  [register]: efibootmgr  [install]: diffutils(diff)
 
+version=0.2.1
+
 Help(){
 	cat <<-EOH
-		$self - Install & register systemd-boot on Ubuntu/Void/Arch
+		$self v$version - Install/register systemd-bootmanager on Ubuntu/Void/Arch
 
 		Usage:  $self [<option>...]
 		  <option>:
 		    -h/--help:          Only display this help text.
-		    -q/--quiet:         Only fatal errors output to the terminal.
+		    -V/--version:       Only display the version.
 		    -v/--verbose:       Show more detail of the actions.
+		    -q/--quiet:         Fatal errors only output to the terminal.
 		    -n/--nogo:          No writing to the system at all.
 		    -I/--install:       Only install the script and kernel install hooks.
 		    -U/--uninstall:     Only uninstall the script and kernel install hooks.
@@ -24,14 +27,14 @@ Help(){
 		                        $defesp, overrides BOOTCTLU_ESP.
 		    -m/--memtest:       Also download and set up a MemTest86 entry.
 		    -s/--secureboot:    Also install secureboot files.
-		    -r/--register:      Also register the efi-loader with UEFI.
+		    -r/--register:      Also register the bootmanager with UEFI.
 		  Extra arguments ignored so this can work as install/remove kernel hook.
 	EOH
 }
 
 Echo(){ # I:go,verbose,quiet 1:message 2:errorcode(exit if not 0 and go==1)
 	# No message if errorcode 0 and verbose 0)
-	local msg=$1 err=$2
+	local msg=$1 err=${2:-}
 	if [[ $err ]]
 	then
 		((err)) && echo -e "\nABORT: $msg" && ((go)) && exit $err
@@ -41,7 +44,7 @@ Echo(){ # I:go,verbose,quiet 1:message 2:errorcode(exit if not 0 and go==1)
 }
 
 # Default UEFI entry label
-label='Linux boot manager'
+label='Linux bootmanager'
 
 # Default timeout for bootmenu (seconds)
 timeout=6
@@ -52,9 +55,6 @@ boot=/boot
 # ESP directory: used when none specified and more than 1 is mounted
 defesp=/boot/efi
 
-# Boot manager file
-mgr=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
-
 # Install location bootctlu
 inst=/usr/local/bin
 
@@ -64,7 +64,7 @@ hookidir=/etc/kernel/postinst.d hooki=$hookidir/$hook
 hookrdir=/etc/kernel/postrm.d hookr=$hookrdir/$hook
 
 # Downloads
-gumurl='good4.eu/gummi' memurl='good4.eu/memtest.tgz' memver='8.1'
+memurl='good4.eu/memtest.tgz' memver='8.1'
 
 # SecureBoot binaries PreLoader.efi and HashTool.efi urls
 preloader='https://apt.blobfolio.com/other/PreLoader/PreLoader.efi'
@@ -74,12 +74,14 @@ hashtool='https://apt.blobfolio.com/other/PreLoader/HashTool.efi'
 	echo "Don't source, but install or run like: bash $BASH_SOURCE" &&
 	return 1
 
-self=${0##*/} imgdir=$boot specesp=$BOOTCTLU_ESP off=/dev/null rd=$off
+self=${0##*/} imgdir=$boot specesp=${BOOTCTLU_ESP:-} off=/dev/null rd=$off
 go=1 quiet=0 verbose=0 register=0 secureboot=0 memtest=0 maxkernels=99 esp=
+
 while (($#))
 do
 	case $1 in
 	-h|--help) Help && exit 0 ;;
+	-V|--version) echo "$self v$version" && exit 0 ;;
 	-I|--install)
 		[[ $inst/$self ]] && diff "$0" "$inst/$self" ||
 			cp -v "$0" "$inst"
@@ -112,7 +114,11 @@ do
 	shift
 done
 
-((EUID)) && Echo "Privileges required, run with sudo or as root" 4
+# Bootmanager file
+loader=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
+[[ ! -f $loader ]] && Echo "The bootmanager cannot be found: '$loader'" 1
+
+((EUID)) && echo "ABORT: Privileges required, run with sudo or as root" && exit
 if ((go))
 then
 	((register)) && ! ebm=$(type -P efibootmgr) &&
@@ -164,18 +170,18 @@ else  # No EFI-mount specified
 	fi
 fi
 part=$(grep " $esp " /proc/mounts) part=${part%% *}
-partnum=${part##*[^0-9]} disk=${part%$p}
+partnum=${part##*[^0-9]} disk=${part%$partnum}
 Echo "--- Using mountpoint $esp on $part\n"
 Echo "--- Copying images from $imgdir into EFI mountpoint $esp\n"
 
-# Initialize and prepare loader confguration
+# Initialize and prepare bootmanager confguration
 id=$(</etc/machine-id)
-entriesdir="$esp/loader/entries" iddir="$esp/$id"
+entriesdir="$esp/loader/entries" iddir="$esp/loader/$id"
 p=$(grep ' / ' /proc/mounts) root=${p%% *}
 [[ -f /etc/os-release ]] && p=$(grep PRETTY_NAME /etc/os-release) ||
 	p=$(grep DISTRIB_DESCRIPTION /etc/lsb-release)
 p=${p#*\"} release=${p:0: -1}
-cmdline=$(sed -e 's@ initrd=[^ ]*@@g' -e 's@ BOOT_IMAGE=[^ ]*@@' /proc/cmdline |xargs)
+cmdline=$(sed -e 's@initrd=[^ ]*@@g' -e 's@BOOT_IMAGE=[^ ]*@@' /proc/cmdline |xargs)
 out="$esp/loader/loader.conf"
 file="#auto-entries 0\n#auto-firmware 0\n#console-mode auto\n"
 file+="default $id-linux-*\ntimeout $timeout\neditor yes"
@@ -185,9 +191,7 @@ if ((go))
 then
 	# Remove all linux entries for the current machine
 	rm -rf -- "$iddir"/linux-* "$entriesdir/$id-linux-"*.conf
-	[[ ! -f $mgr ]] && mgr=$PWD/gummi && [[ ! -f gummi ]] &&
-		wget -q "$gumurl"
-	mkdir -p "$iddir" "$entriesdir" "$esp/EFI/bootctlu" "$esp/EFI/Boot" ||
+	mkdir -p "$iddir" "$entriesdir" "$esp/EFI/loader" "$esp/EFI/BOOT" ||
 		Echo "Problem making required directories" 11
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		mv "$out" "$out~" &&
@@ -196,21 +200,20 @@ then
 	Echo ":\n" 0
 	echo -e "$file" |tee "$out" >$rd
 	Echo "\nInstalling boot manager file\n" 0
-	cp "$mgr" "$esp/EFI/bootctlu/loader.efi"
-	cp "$mgr" "$esp/EFI/BOOT/BOOTX64.EFI"
-	rm "$mgr"
+	cp "$loader" "$esp/EFI/loader/systemd-bootx64.efi"
+	cp "$loader" "$esp/EFI/BOOT/BOOTX64.EFI"
 	if ((secureboot))
 	then
 		Echo "\n--- Ensuring the presence of SecureBoot files"
-		if [[ ! -f "$esp/EFI/bootctlu/PreLoader.efi" ]]
+		if [[ ! -f "$esp/EFI/loader/PreLoader.efi" ]]
 		then
 			Echo "\nDownloading SecureBoot:PreLoader.efi" 0
-			wget -qO "$esp/EFI/bootctlu/PreLoader.efi" "$preloader"
+			wget -qO "$esp/EFI/loader/PreLoader.efi" "$preloader"
 		fi
-		if [[ ! -f "$esp/EFI/bootctlu/HashTool.efi" ]]
+		if [[ ! -f "$esp/EFI/loader/HashTool.efi" ]]
 		then
 			Echo "\nDownloading SecureBoot:HashTool.efi" 0
-			wget -qO "$esp/EFI/bootctlu/HashTool.efi" "$hashtool"
+			wget -qO "$esp/EFI/loader/HashTool.efi" "$hashtool"
 		fi
 	fi
 else
@@ -234,14 +237,14 @@ do
 	((go)) && ! mkdir -p "$entry" &&
 		Echo "Problem making directory $entry" 12
 	Echo "\n--- Copying images to $entry"
-	((go)) && cp "$kernel" "$entry/linux"
+	((go)) && cp "$kernel" "$entry/kernel"
 	((go)) && cp "$initrd" "$entry/initrd"
 	out="$entriesdir/$id-linux-$version.conf"
 	Echo "\n--- Writing '$out'"
 	Echo ":" 0
 	file="title $release on $root (linux-$version)\nversion $version\n"
-	file+="machine-id $id\noptions $cmdline\nlinux /$id/linux-$version/linux\n"
-	file+="initrd /$id/linux-$version/initrd"
+	file+="machine-id $id\noptions $cmdline\nlinux /loader/$id/linux-$version/kernel\n"
+	file+="initrd /loader/$id/linux-$version/initrd"
 	((go)) && Echo "\n" && echo -e "$file" |tee "$out" >$rd ||
 		Echo "\n$file\n" 0
 done
@@ -250,7 +253,7 @@ done
 if ((memtest))
 then
 	Echo "\nDownloading and extracting MemTest86...\n"
-	memdir="$id/memtest86"
+	memdir="loader/$id/memtest86"
 	tmp=$(mktemp -d)
 	cd "$tmp"
 	wget -q "$memurl" || Echo "Can't download MemTest86" 13
@@ -263,7 +266,7 @@ then
 	out="$entriesdir/$id-memtest86.conf"
 	Echo "\n--- Writing '$out'"
 	Echo ":" 0
-	file="title MemTest86\nversion $memver\nefi $memdir/BOOTX64.efi"
+	file="title MemTest86\nversion $memver\nefi $memdir/BOOTX64.EFI"
 	((go)) && Echo "\n" 0 && echo -e "$file" |tee "$out" >$rd ||
 		Echo "\n$file\n" 0
 fi
@@ -287,10 +290,10 @@ then
 	echo
 	if ((secureboot))
 	then ((go)) &&
-			$ebm -c -t $timeout -D -l '\EFI\bootctlu\PreLoader.efi' -L "PreLoader" &&
+			$ebm -c -t $timeout -D -l '\EFI\loader\PreLoader.efi' -L "PreLoader" &&
 			Echo "\nSuccessfully registered PreLoader\n" 0
 	else ((go)) &&
-			$ebm -c -t $timeout -D -l '\EFI\bootctlu\loader.efi' -L "$label" &&
+			$ebm -c -t $timeout -D -l '\EFI\loader\systemd-bootx64.efi' -L "$label" &&
 			Echo "\nSuccessfully registered $label\n" 0
 	fi
 else
