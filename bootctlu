@@ -18,8 +18,9 @@ Help(){
 		    -q/--quiet:         Only fatal errors output to the terminal.
 		    -v/--verbose:       Show more detail of the actions.
 		    -n/--nogo:          No writing to the system at all.
-		    -I/--install:       Only install the script and kernel install hooks
-		    -U/--uninstall:     Only uninstall the script and kernel install hooks
+		    -I/--install:       Only install the script and kernel install hooks.
+		    -U/--uninstall:     Only uninstall the script and kernel install hooks.
+		    -M/--maxkernels:    Maximum number of kernels to install (1..9).
 		    -i/--imgdir <dir>:  Kernel & initrd images directory, default:
 		                        $boot, overrides BOOTCTLU_BOOT.
 		    -e/--esp <dir>:     EFI System Partition mountpoint, default:
@@ -55,7 +56,7 @@ boot=/boot
 defesp=/boot/efi
 
 # Boot manager file
-mgr=/usr/lib/systemd/boot/efi/systemd-boot*.efi
+mgr=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
 
 # Install location bootctlu
 inst=/usr/local/bin
@@ -76,8 +77,8 @@ hashtool='https://apt.blobfolio.com/other/PreLoader/HashTool.efi'
 	echo "Don't source, but install or run like: bash $BASH_SOURCE" &&
 	return 1
 
-self=${0##*/} imgdir=$boot specesp=$BOOTCTLU_ESP off=/dev/null
-go=1 quiet=0 rd=$off verbose=0 register=0 secureboot=0 memtest=0 esp=
+self=${0##*/} imgdir=$boot specesp=$BOOTCTLU_ESP off=/dev/null rd=$off
+go=1 quiet=0 verbose=0 register=0 secureboot=0 memtest=0 maxkernels=99 esp=
 while (($#))
 do
 	case $1 in
@@ -102,10 +103,13 @@ do
 		[[ $specesp ]] && Echo "WARNING: overriding BOOTCTLU_ESP with '$2'"
 		specesp=$2
 		shift ;;
+	-M|--maxkernels)
+		[[ $2 =~ ^[1-9]$ ]] || Echo "Max. kernel not 1..9: '$2'" 2
+		maxkernels=$2; shift ;;
 	-m|--memtest) memtest=1 ;;
 	-r|--register) register=1 ;;
 	-s|--secureboot) secureboot=1 ;;
-	-*) Help && Echo "Unrecognized flag: $1" 2 ;;
+	-*) Help && Echo "Unrecognized flag: $1" 3 ;;
 	*) Echo "Ignored argument '$1'" 0
 	esac
 	shift
@@ -113,15 +117,15 @@ done
 
 sudo=
 ((EUID)) && ! sudo=$(type -P sudo) &&
-	Echo "Need to escalate privilege, but sudo not present" 3
+	Echo "Need to escalate privilege, but sudo not present" 4
 if ((go))
 then
 	((register)) && ! ebm=$(type -P efibootmgr) &&
-		Echo "Can't register with UEFI, efibootmgr not available" 4
+		Echo "Can't register with UEFI, efibootmgr not available" 5
 	if [[ ! -f /etc/machine-id ]]
 	then
 		uuidgen=$(type -P uuidgen) ||
-			Echo "Can't generate a machine-id, package uuid-runtime not installed" 5
+			Echo "Can't generate a machine-id, package uuid-runtime not installed" 6
 		$uuidgen |tr -d '-' |$sudo tee /etc/machine-id
 	fi
 else
@@ -140,12 +144,12 @@ do
 			grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
 	[[ $esp ]] && esps+=" /dev/$part"
 done
-[[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 6
+[[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 7
 Echo "EFI System Partitions: $esps\n" 0
 
 # Usable EFI partition must be mounted, collect all mounted
 mp=$(egrep "${esps// /|}" /proc/mounts |cut -d' ' -f2)
-[[ $mp ]] || Echo "No EFI System Partitions mounted" 7
+[[ $mp ]] || Echo "No EFI System Partitions mounted" 8
 mp=${mp//$'\n'/ }
 Echo "Mount points of EFI partitions: $mp\n" 0
 
@@ -153,14 +157,14 @@ Echo "Mount points of EFI partitions: $mp\n" 0
 if [[ $specesp ]]
 then  # EFI-mount specified (commandline / env.variable): check if mounted
 	[[ " $mp " == *" $specesp "* ]] && esp=$specesp ||
-		Echo "Specified EFI mountpoint '$specesp' has no EFI partition mounted" 8
+		Echo "Specified EFI mountpoint '$specesp' has no EFI partition mounted" 9
 else  # No EFI-mount specified
 	if [[ " $mp " == *" $defesp "* ]]
 	then  # Use default if mounted
 		esp=$defesp
 	else  # Use the discovered one
 		[[ $mp == *$'\n'* ]] &&
-			Echo "More than 1 EFI System Partition mounted, must specify one" 9
+			Echo "More than 1 EFI System Partition mounted, must specify one" 10
 		esp=$mp
 	fi
 fi
@@ -187,7 +191,7 @@ then
 	[[ ! -f $mgr ]] && mgr=$PWD/gummi && [[ ! -f gummi ]] &&
 		wget -q "$gumurl"
 	$sudo mkdir -p "$iddir" "$entries" "$esp/EFI/bootctlu" "$esp/EFI/Boot" ||
-		Echo "Problem making required directories" 10
+		Echo "Problem making required directories" 11
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		$sudo mv "$out" "$out~" &&
 		Echo "\nRenaming previous loader.conf to '$out~'\n" 0
@@ -196,7 +200,7 @@ then
 	echo -e "$file" |$sudo tee "$out" >$rd
 	Echo "\nInstalling boot manager file\n" 0
 	$sudo cp "$mgr" "$esp/EFI/bootctlu/loader.efi"
-	$sudo cp "$mgr" "$esp/EFI/BOOT/BOOTX64.EFI"
+	$sudo mv "$mgr" "$esp/EFI/BOOT/BOOTX64.EFI"
 	if ((secureboot))
 	then
 		Echo "\n--- Ensuring the presence of SecureBoot files"
@@ -223,15 +227,17 @@ fi
 
 # Making new entries for each kernel binary
 shopt -s nullglob extglob
-for kernel in $imgdir/vmlinuz-*
+n=0 kernels=$(printf '%s\n' /boot/vmlinuz-* |sort -r)
+for kernel in $kernels
 do
+	((++n>maxkernels)) && break
 	version=${kernel#$imgdir/vmlinuz-}
 	[[ $release = @(void|Artix|Antergos Linux|Arch Linux) ]] &&
 		initrd=$imgdir/boot/initramfs-$version.img ||
 		initrd=$imgdir/initrd.img-$version
 	entry="$iddir/linux-$version"
 	((go)) && ! $sudo mkdir -p "$entry" &&
-		Echo "Problem making directory $entry" 11
+		Echo "Problem making directory $entry" 12
 	Echo "\n--- Copying images to $entry"
 	((go)) && $sudo cp "$kernel" "$entry/linux"
 	((go)) && $sudo cp "$initrd" "$entry/initrd"
@@ -252,11 +258,11 @@ then
 	memdir="$id/memtest86"
 	tmp=$(mktemp -d)
 	cd "$tmp"
-	wget -q "$memurl" || Echo "Can't download MemTest86" 12
+	wget -q "$memurl" || Echo "Can't download MemTest86" 13
 	((go)) && $sudo mkdir -p "$esp/$memdir" && $sudo rm -rf -- "$esp/$memdir/*"
 	((go)) &&
 		! $sudo tar xf memtest.tgz --no-same-owner -C "$esp/$memdir" &&
-		Echo "Can't setup the files for MemTest86" 13
+		Echo "Can't setup the files for MemTest86" 14
 	cd - >/dev/null
 	rm -r -- "$tmp"
 	out="$entries/$id-memtest86.conf"
@@ -271,7 +277,7 @@ fi
 if ((register))
 then
 	[[ ! -d /sys/firmware/efi/efivars ]] &&
-		Echo "Not in UEFI mode, no EFI variables, unable to register" 14
+		Echo "Not in UEFI mode, no EFI variables, unable to register" 15
 	Echo "\nRegistering the boot manager with UEFI\n"
 	ebm="$sudo $ebm -d $disk -p $partnum" &&
 	entries=$($sudo $ebm |grep " $label$" |grep -o 'Boot....')
