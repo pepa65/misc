@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -eu
 # mkuki - Create EFI Unified Kernel Image
-# Required: tr grep sed coreutils(mktemp uname cat)
+# Required: tr grep sed coreutils(mktemp uname cat readlink wc mkdir cp ls)
+#           [install]:sudo efibootmgr fdisk mount
 # Repp: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
@@ -16,6 +17,8 @@ Usage(){ # I:self,efistubdir
 			<option>:
 	    -h|--help                Only display this help text
 	    -V|--version             Only display the version
+		  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
+		  -d|--device <device>     '<esp>' to use for install (optional)
 		  -k|--kernel <file>       Linux kernel file (default: '/boot/vmlinuz')
 		  -i|--initrd <file>       Initramfs file (default: '/boot/initrd.img')
 		  -m|--microcode <file>    Microcode file (optional, multiple allowed)
@@ -23,7 +26,7 @@ Usage(){ # I:self,efistubdir
                                it, start with / or . (default: '/proc/cmdline')
 		  -o|--output <file>       Output file (default: 'vmlinuz.efi')
 		  -r|--release <file>      Release file (default: '/etc/os-release')
-		  -s|--splash <file>       Splash image (optional)
+		  -s|--splash <file>       Splash image: BMP max.800x600 <1.4M (optional)
 		  -e|--efistub <file>      EFI stub file (default: 'linux<march>.efi.stub')
 		                           in '$efistubdir', <march>: x64|ia32|aa64|arm
 	EOH
@@ -35,7 +38,8 @@ Die(){ # 1:msg
 }
 
 self=${0##*/} version=0.1.1 efistubdir=/usr/lib/systemd/boot/efi
-efistub= output= imgs= linux=/boot/vmlinuz init=/boot/initrd.img
+efistub= output= imgs= device= install=0
+linux=/boot/vmlinuz init=/boot/initrd.img
 commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null
 
 while (($#))
@@ -43,6 +47,10 @@ do # Process commandline
 	case $1 in
 	-h|--help) Usage; exit 0 ;;
 	-V|--version) echo "$self $version"; exit 0 ;;
+	-I|--install) install=1 ;;
+	-d|--device)
+		[[ ! -b $2 ]] || Die "No blockdevice found: '$2'"
+		device=$2; shift ;;
 	-k|--kernel)
 		[[ ! -f $2 ]] || Die "kernel file not found: '$2'"
 		linux=$2; shift ;;
@@ -55,7 +63,7 @@ do # Process commandline
 	-c|--cmdline) commandline=$2; shift ;;
 	-o|--output) output=$2; shift ;;
 	-r|--release) osrel=$2; shift ;;
-	-w|--splash) splash=$2; shift ;;
+	-s|--splash) splash=$2; shift ;;
 	-e|--efistub) efistub=$2; shift ;;
 	-*) Die "unknown commandline flag: '$1'" ;;
 	*) Die "unknown commandline argument: '$1'"
@@ -84,7 +92,7 @@ fi
 [[ -f $efistub ]] || Die "no EFI stub file: '$efistub'"
 
 tmpdir=$(mktemp -dt $self.XXXXXX) initrd=$tmpdir/initrd cmdline=$tmpdir/cmdline
-#trap "rm -rf $tmpdir" EXIT HUP INT TERM
+trap "rm -rf $tmpdir" EXIT HUP INT TERM
 imgs+=$init
 [[ $imgs ]] && cat $imgs >"$initrd" || initrd=/dev/null
 
@@ -104,6 +112,40 @@ sudo objcopy \
 	--add-section .linux="$linux" --change-section-vma .linux=0x2000000  \
 	--add-section .initrd="$initrd" --change-section-vma .initrd=0x3000000 \
 	"$efistub" "$output"
+
+if ((install))
+then # Determine <esp>, move the UKI and register
+	if [[ $device ]]
+	then # EFI System partition specified
+		esp=$(readlink "$device")
+	else
+		esp=$(sudo fdisk -l |grep ^/ |grep 'EFI System$')
+		[[ $esp ]] ||
+			Die "no proper EFI System partitions found, specify one with -d|--device"
+		(($(wc -l <<<"$esp")>1)) &&
+			Die "more than 1 EFI System partitions found, specify 1 with -d|--device"
+		esp=${esp%% *}
+	fi
+	_=$(grep -o "^$esp [^ ]*" /proc/mounts) mount=${_#* }
+	if [[ -z $mount ]]
+	then # Not mounted
+		mount=$tmpdir/mnt
+		mkdir "$mount"
+		sudo mount "$esp" "$mount"
+	fi
+	sudo mkdir -p "$mount/EFI/Linux"
+	sudo cp -- "$output" "$mount/EFI/Linux"
+	[[ $mount = $tmpdir/mnt ]] && sudo umount "$mount"
+	partition=$(grep -o '[0-9]*$' <<<"$esp") disk=${esp%$partition}
+	[[ ${disk: -1} = p && ${disk: -2:1} = [0-9] ]] && disk=${disk%p}
+	_=$(grep PRETTY_NAME "$osrel") _=${_//\"} entry=${_#*=}
+	if [[ -z $entry ]]
+	then # No PRETTY_NAME specified
+		_=$(grep ^NAME "$osrel") _="${_//\"} entry=${_#*=}
+		_=$(grep ^VERSION "$osrel") _=${_//\"} entry+=" ${_#*=}
+	fi
+	sudo efibootmgr -c -d $disk -p $partition -l "/EFI/Linux/$output" -L "$entry" |grep "$entry"
+fi
 
 # Show the result
 for v in osrel cmdline splash linux initrd efistub output
