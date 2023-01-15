@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set +vx
 # bootctlu - Setting up and registering systemd-boot on Ubuntu/Void/Arch
-# Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp s rm cd ls diff)
+# Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp mv rm cd ls diff)
 #           grep sed systemd(file:systemd-boot*.efi) uuid-runtime(uuidgen)
-#   [non-root or nogo]: sudo
 #   [memtest]: wget tar
 #   [register]: efibootmgr
 #   [install]: diffutils(diff)
@@ -85,11 +84,11 @@ do
 	-h|--help) Help && exit 0 ;;
 	-I|--install)
 		[[ $inst/$self ]] && diff "$0" "$inst/$self" ||
-			sudo cp -v "$0" "$inst"
-		sudo ln -sfv "$inst/$self" "$hooki"
-		sudo ln -sfv "$inst/$self" "$hookr"
+			cp -v "$0" "$inst"
+		ln -sfv "$inst/$self" "$hooki"
+		ln -sfv "$inst/$self" "$hookr"
 		exit 0 ;;
-	-U|--uninstall) sudo rm -v "$inst/$self" "$hooki" "$hookr"; exit 0 ;;
+	-U|--uninstall) rm -v "$inst/$self" "$hooki" "$hookr"; exit 0 ;;
 	-n|--nogo) go=0 ;;
 	-q|--quiet) quiet=1 ;;
 	-v|--verbose) verbose=1 rd=/dev/stdout ;;
@@ -115,9 +114,7 @@ do
 	shift
 done
 
-sudo=
-((EUID)) && ! sudo=$(type -P sudo) &&
-	Echo "Need to escalate privilege, but sudo not present" 4
+((EUID)) && Echo "Privileges required, run with sudo or as root" 4
 if ((go))
 then
 	((register)) && ! ebm=$(type -P efibootmgr) &&
@@ -126,7 +123,7 @@ then
 	then
 		uuidgen=$(type -P uuidgen) ||
 			Echo "Can't generate a machine-id, package uuid-runtime not installed" 6
-		$uuidgen |tr -d '-' |$sudo tee /etc/machine-id
+		$uuidgen |tr -d '-' |tee /etc/machine-id
 	fi
 else
 	Echo "\n### Simulation, no actual copying/writing/registering\n"
@@ -140,7 +137,7 @@ do
 	num=$(grep -o '[0-9]*$' <<<"$part")
 	disk=${part%$num}
 	[[ ${disk: -1} = p && ${disk: -2:1} = [0-9] ]] && disk=${disk%p}
-	esp=$($sudo sgdisk -i$num /dev/$disk |
+	esp=$(sgdisk -i$num /dev/$disk |
 			grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
 	[[ $esp ]] && esps+=" /dev/$part"
 done
@@ -189,20 +186,21 @@ file+="default $id-linux-*\ntimeout $timeout\neditor yes"
 if ((go))
 then
 	# Remove all linux entries for the current machine
-	$sudo rm -rf -- "$iddir"/linux-* "$entriesdir/$id-linux-"*.conf
+	rm -rf -- "$iddir"/linux-* "$entriesdir/$id-linux-"*.conf
 	[[ ! -f $mgr ]] && mgr=$PWD/gummi && [[ ! -f gummi ]] &&
 		wget -q "$gumurl"
-	$sudo mkdir -p "$iddir" "$entriesdir" "$esp/EFI/bootctlu" "$esp/EFI/Boot" ||
+	mkdir -p "$iddir" "$entriesdir" "$esp/EFI/bootctlu" "$esp/EFI/Boot" ||
 		Echo "Problem making required directories" 11
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
-		$sudo mv "$out" "$out~" &&
+		mv "$out" "$out~" &&
 		Echo "\nRenaming previous loader.conf to '$out~'\n" 0
 	Echo "\n--- Writing '$out'"
 	Echo ":\n" 0
-	echo -e "$file" |$sudo tee "$out" >$rd
+	echo -e "$file" |tee "$out" >$rd
 	Echo "\nInstalling boot manager file\n" 0
-	$sudo cp "$mgr" "$esp/EFI/bootctlu/loader.efi"
-	$sudo mv "$mgr" "$esp/EFI/BOOT/BOOTX64.EFI"
+	cp "$mgr" "$esp/EFI/bootctlu/loader.efi"
+	cp "$mgr" "$esp/EFI/BOOT/BOOTX64.EFI"
+	rm "$mgr"
 	if ((secureboot))
 	then
 		Echo "\n--- Ensuring the presence of SecureBoot files"
@@ -235,18 +233,18 @@ do
 		initrd=$imgdir/boot/initramfs-$version.img ||
 		initrd=$imgdir/initrd.img-$version
 	entry="$iddir/linux-$version"
-	((go)) && ! $sudo mkdir -p "$entry" &&
+	((go)) && ! mkdir -p "$entry" &&
 		Echo "Problem making directory $entry" 12
 	Echo "\n--- Copying images to $entry"
-	((go)) && $sudo cp "$kernel" "$entry/linux"
-	((go)) && $sudo cp "$initrd" "$entry/initrd"
+	((go)) && cp "$kernel" "$entry/linux"
+	((go)) && cp "$initrd" "$entry/initrd"
 	out="$entriesdir/$id-linux-$version.conf"
 	Echo "\n--- Writing '$out'"
 	Echo ":" 0
 	file="title $release on $root (linux-$version)\nversion $version\n"
 	file+="machine-id $id\noptions $cmdline\nlinux /$id/linux-$version/linux\n"
 	file+="initrd /$id/linux-$version/initrd"
-	((go)) && Echo "\n" && echo -e "$file" |$sudo tee "$out" >$rd ||
+	((go)) && Echo "\n" && echo -e "$file" |tee "$out" >$rd ||
 		Echo "\n$file\n" 0
 done
 
@@ -258,9 +256,9 @@ then
 	tmp=$(mktemp -d)
 	cd "$tmp"
 	wget -q "$memurl" || Echo "Can't download MemTest86" 13
-	((go)) && $sudo mkdir -p "$esp/$memdir" && $sudo rm -rf -- "$esp/$memdir/*"
+	((go)) && mkdir -p "$esp/$memdir" && rm -rf -- "$esp/$memdir/*"
 	((go)) &&
-		! $sudo tar xf memtest.tgz --no-same-owner -C "$esp/$memdir" &&
+		! tar xf memtest.tgz --no-same-owner -C "$esp/$memdir" &&
 		Echo "Can't setup the files for MemTest86" 14
 	cd - >/dev/null
 	rm -r -- "$tmp"
@@ -268,7 +266,7 @@ then
 	Echo "\n--- Writing '$out'"
 	Echo ":" 0
 	file="title MemTest86\nversion $memver\nefi $memdir/BOOTX64.efi"
-	((go)) && Echo "\n" 0 && echo -e "$file" |$sudo tee "$out" >$rd ||
+	((go)) && Echo "\n" 0 && echo -e "$file" |tee "$out" >$rd ||
 		Echo "\n$file\n" 0
 fi
 
@@ -278,23 +276,23 @@ then
 	[[ ! -d /sys/firmware/efi/efivars ]] &&
 		Echo "Not in UEFI mode, no EFI variables, unable to register" 15
 	Echo "\nRegistering the boot manager with UEFI\n"
-	ebm="$sudo $ebm -d $disk -p $partnum" &&
-	bootentries=$($sudo $ebm |grep " $label$" |grep -o 'Boot....')
+	ebm="$ebm -d $disk -p $partnum" &&
+	bootentries=$($ebm |grep " $label$" |grep -o 'Boot....')
 	((secureboot)) &&
-		bootentries+=$($sudo $ebm |grep " PreLoader$" |grep -o 'Boot....')
+		bootentries+=$($ebm |grep " PreLoader$" |grep -o 'Boot....')
 	Echo "\nLooking at entries: "$bootentries 0
 	for entry in $bootentries
 	do
-		((go)) && $sudo $ebm -b ${entry:4:4} -B >$off
+		((go)) && $ebm -b ${entry:4:4} -B >$off
 		Echo "\nUEFI entry '$entry $label' removed" 0
 	done
 	echo
 	if ((secureboot))
 	then ((go)) &&
-			$sudo $ebm -c -t $timeout -D -l '\EFI\bootctlu\PreLoader.efi' -L "PreLoader" &&
+			$ebm -c -t $timeout -D -l '\EFI\bootctlu\PreLoader.efi' -L "PreLoader" &&
 			Echo "\nSuccessfully registered PreLoader\n" 0
 	else ((go)) &&
-			$sudo $ebm -c -t $timeout -D -l '\EFI\bootctlu\loader.efi' -L "$label" &&
+			$ebm -c -t $timeout -D -l '\EFI\bootctlu\loader.efi' -L "$label" &&
 			Echo "\nSuccessfully registered $label\n" 0
 	fi
 else
