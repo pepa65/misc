@@ -108,32 +108,36 @@ bb [ init|check|help|unlock|prune | list [<prefix>] | info|delete <name> |
 * Usage: `bitwarden2xml bitwarden.csv >keepassx.xml`
 
 ## bootctlu
-**Setting up and registering gummiboot on Ubuntu/Void/Arch**
+**Setting up and registering systemd-boot on Ubuntu/Void/Arch**
 
 * Usage:
 ```
-bootctlu - Install & register gummiboot/systemd-boot on Ubuntu/Void/Arch
+bootctlu - Install & register systemd-boot on Ubuntu/Void/Arch
 
-bootctlu [-h|--help] [-I|--install] [-U|--uninstall]
-         [-n|--nogo] [-q|--quiet] [-v|--verbose]
-         [-i|--imgdir <dir>] [-e|--esp <dir>]
-         [-m|--memtest] [-s|--secureboot] [-r|--register]
+Usage:  bootctlu [<option>...]
+  <option>:
     -h/--help:          Only display this help text.
-    -I/--install:       Only install the script and kernel install hooks
-    -U/--uninstall:     Only uninstall the script and kernel install hooks
-    -n/--nogo:          No writing to the system at all.
     -q/--quiet:         Only fatal errors output to the terminal.
     -v/--verbose:       Show more detail of the actions.
+    -n/--nogo:          No writing to the system at all.
+    -I/--install:       Only install the script and kernel install hooks
+    -U/--uninstall:     Only uninstall the script and kernel install hooks
     -i/--imgdir <dir>:  Kernel & initrd images directory, default:
-                          /boot, overrides BOOTCTLU_IMGDIR.
+                        /boot, overrides BOOTCTLU_BOOT.
     -e/--esp <dir>:     EFI System Partition mountpoint, default:
-                          /boot/efi, overrides BOOTCTLU_ESP.
+                        /boot/efi, overrides BOOTCTLU_ESP.
     -m/--memtest:       Also download and set up a MemTest86 entry.
     -s/--secureboot:    Also install secureboot files.
     -r/--register:      Also register the efi-loader with UEFI.
-	Extraneous arguments ignored to work as install/remove kernel hook.
+  Extra arguments ignored so this can work as install/remove kernel hook.
 ```
-* Required: util-linux(lsblk) coreutils(tee sort cut mkdir cat cp ls rm cd) grep sed systemd(file:systemd-bootx64.efi)/wget[if not present] sudo[unless run as root, or only invoked with -n/--nogo]. For -m/--memtest: wget tar. For -r/--register: efibootmgr.
+
+* Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp s rm cd ls diff)
+  grep sed systemd(file:systemd-boot*.efi) uuid-runtime(uuidgen)
+  - non-root or nogo: sudo
+  - memtest: wget tar
+  - [register: efibootmgr
+  - [install: diffutils(diff)
 
 ## buildgocryptfs
 **Build gocryptfs**

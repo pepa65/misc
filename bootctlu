@@ -1,30 +1,63 @@
 #!/usr/bin/env bash
 set +vx
-# bootctlu - Setting up and registering gummiboot on Ubuntu/Void/Arch
-#
+# bootctlu - Setting up and registering systemd-boot on Ubuntu/Void/Arch
 # Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp s rm cd ls diff)
-#           grep sed systemd(file:systemd-bootx64.efi)/wget[if not present]
-#           sudo[unless run as root, or -n/--nogo] uuid-runtime(uuidgen)
-#   For -m/--memtest:  wget tar
-#   For -r/--register: efibootmgr
-#   For -I/--install:  diffutils(diff)
+#           grep sed systemd(file:systemd-boot*.efi) uuid-runtime(uuidgen)
+#   [non-root or nogo]: sudo
+#   [memtest]: wget tar
+#   [register]: efibootmgr
+#   [install]: diffutils(diff)
 
-# Used as the UEFI boot entry name
-menuname='Main boot menu'
+Help(){
+	cat <<-EOH
+		$self - Install & register systemd-boot on Ubuntu/Void/Arch
 
-# Timeout for bootmenu (seconds)
+		Usage:  $self [<option>...]
+		  <option>:
+		    -h/--help:          Only display this help text.
+		    -q/--quiet:         Only fatal errors output to the terminal.
+		    -v/--verbose:       Show more detail of the actions.
+		    -n/--nogo:          No writing to the system at all.
+		    -I/--install:       Only install the script and kernel install hooks
+		    -U/--uninstall:     Only uninstall the script and kernel install hooks
+		    -i/--imgdir <dir>:  Kernel & initrd images directory, default:
+		                        $boot, overrides BOOTCTLU_BOOT.
+		    -e/--esp <dir>:     EFI System Partition mountpoint, default:
+		                        $defesp, overrides BOOTCTLU_ESP.
+		    -m/--memtest:       Also download and set up a MemTest86 entry.
+		    -s/--secureboot:    Also install secureboot files.
+		    -r/--register:      Also register the efi-loader with UEFI.
+		  Extra arguments ignored so this can work as install/remove kernel hook.
+	EOH
+}
+
+Echo(){ # I:go,verbose,quiet 1:message 2:errorcode(exit if not 0 and go==1)
+	# No message if errorcode 0 and verbose 0)
+	local msg=$1 err=$2
+	if [[ $err ]]
+	then
+		((err)) && echo -e "\nABORT: $msg" && ((go)) && exit $err
+		((!verbose)) && msg=
+	fi
+	((!quiet)) && echo -ne "$msg"
+}
+
+# Default UEFI entry label
+label='Main boot manager'
+
+# Default timeout for bootmenu (seconds)
 timeout=6
 
 # Default directory for kernel initrd images
-defimgdir=/boot
+boot=/boot
 
 # ESP directory: used when none specified and more than 1 is mounted
 defesp=/boot/efi
 
-# Boot loader binary file
-bootloader='/usr/lib/systemd/boot/efi/systemd-bootx64.efi'
+# Boot manager file
+mgr=/usr/lib/systemd/boot/efi/systemd-boot*.efi
 
-# Install location
+# Install location bootctlu
 inst=/usr/local/bin
 
 # Install/remove kernel hooks
@@ -39,47 +72,11 @@ gumurl='good4.eu/gummi' memurl='good4.eu/memtest.tgz' memver='8.1'
 preloader='https://apt.blobfolio.com/other/PreLoader/PreLoader.efi'
 hashtool='https://apt.blobfolio.com/other/PreLoader/HashTool.efi'
 
-Help(){
-	cat <<-EOH
-		$self - Install & register gummiboot/systemd-boot on Ubuntu/Void/Arch
-
-		Usage:  $self [-h|--help] [-I|--install] [-U|--uninstall]
-		                 [-n|--nogo] [-q|--quiet] [-v|--verbose]
-		                 [-i|--imgdir <dir>] [-e|--esp <dir>]
-		                 [-m|--memtest] [-s|--secureboot] [-r|--register]
-		    -h/--help:          Only display this help text.
-		    -I/--install:       Only install the script and kernel install hooks
-		    -U/--uninstall:     Only uninstall the script and kernel install hooks
-		    -n/--nogo:          No writing to the system at all.
-		    -q/--quiet:         Only fatal errors output to the terminal.
-		    -v/--verbose:       Show more detail of the actions.
-		    -i/--imgdir <dir>:  Kernel & initrd images directory, default:
-		                          $defimgdir, overrides BOOTCTLU_IMGDIR.
-		    -e/--esp <dir>:     EFI System Partition mountpoint, default:
-		                          $defesp, overrides BOOTCTLU_ESP.
-		    -m/--memtest:       Also download and set up a MemTest86 entry.
-		    -s/--secureboot:    Also install secureboot files.
-		    -r/--register:      Also register the efi-loader with UEFI.
-		  Extraneous arguments ignored to work as install/remove kernel hook.
-	EOH
-}
-
-Echo(){ # $1: message, $2: errorcode (exit if go and non-zero!)
-	# If errorcode is zero, only display the message when verbose is set
-	local m=$1
-	if [[ $2 ]]
-	then
-		(($2)) && echo -e "\nABORT: $m" && exit $2
-		((verbose)) || m=
-	fi
-	((quiet)) || echo -ne "$m"
-}
-
 [[ $- = *i* ]] &&
 	echo "Don't source, but install or run like: bash $BASH_SOURCE" &&
 	return 1
 
-self=${0##*/} imgdir=$defimgdir specesp=$BOOTCTLU_ESP off=/dev/null
+self=${0##*/} imgdir=$boot specesp=$BOOTCTLU_ESP off=/dev/null
 go=1 quiet=0 rd=$off verbose=0 register=0 secureboot=0 memtest=0 esp=
 while (($#))
 do
@@ -96,8 +93,8 @@ do
 	-q|--quiet) quiet=1 ;;
 	-v|--verbose) verbose=1 rd=/dev/stdout ;;
 	-i|--imgdir)
-		[[ $BOOTCTLU_IMGDIR ]] &&
-			Echo "WARNING: overriding BOOTCTLU_IMGDIR with '$2'"
+		[[ $BOOTCTLU_BOOT ]] &&
+			Echo "WARNING: overriding BOOTCTLU_BOOT with '$2'"
 		imgdir=$2
 		shift ;;
 	-e|--esp)
@@ -136,8 +133,9 @@ esps=
 parts=$(ls -Al /dev/disk/by-partuuid |grep -o '[a-z][a-z0-9]*$')
 for part in $parts
 do
-	num=${part##*[a-z]}
+	num=$(grep -o '[0-9]*$' <<<"$part")
 	disk=${part%$num}
+	[[ ${disk: -1} = p && ${disk: -2:1} = [0-9] ]] && disk=${disk%p}
 	esp=$($sudo sgdisk -i$num /dev/$disk |
 			grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
 	[[ $esp ]] && esps+=" /dev/$part"
@@ -183,10 +181,10 @@ out="$esp/loader/loader.conf"
 file="#auto-entries 0\n#auto-firmware 0\n#console-mode auto\n"
 file+="default $id-linux-*\ntimeout $timeout\neditor yes"
 
-# Install bootloader binary and loader configuration
+# Install boot manager file and loader configuration
 if ((go))
 then
-	[[ ! -f $bootloader ]] && bootloader=$PWD/gummi && [[ ! -f gummi ]] &&
+	[[ ! -f $mgr ]] && mgr=$PWD/gummi && [[ ! -f gummi ]] &&
 		wget -q "$gumurl"
 	$sudo mkdir -p "$iddir" "$entries" "$esp/EFI/bootctlu" "$esp/EFI/Boot" ||
 		Echo "Problem making required directories" 10
@@ -196,9 +194,9 @@ then
 	Echo "\n--- Writing '$out'"
 	Echo ":\n" 0
 	echo -e "$file" |$sudo tee "$out" >$rd
-	Echo "\nInstalling bootloader binaries\n" 0
-	$sudo cp "$bootloader" "$esp/EFI/bootctlu/loader.efi"
-	$sudo cp "$bootloader" "$esp/EFI/BOOT/BOOTX64.EFI"
+	Echo "\nInstalling boot manager file\n" 0
+	$sudo cp "$mgr" "$esp/EFI/bootctlu/loader.efi"
+	$sudo cp "$mgr" "$esp/EFI/BOOT/BOOTX64.EFI"
 	if ((secureboot))
 	then
 		Echo "\n--- Ensuring the presence of SecureBoot files"
@@ -216,7 +214,7 @@ then
 else
 	Echo "\n--- Writing '$out'"
 	Echo ":\n$file" 0
-	Echo "\nInstalling bootloader binaries\n" 0
+	Echo "\nInstalling boot manager file(s)\n" 0
 	((secureboot)) && Echo "\n--- Ensuring the presence of SecureBoot files"
 fi
 
@@ -269,26 +267,26 @@ then
 		Echo "\n$file\n" 0
 fi
 
-# Register the bootloader binary with UEFI
+# Register the boot manager with UEFI
 if ((register))
 then
 	[[ ! -d /sys/firmware/efi/efivars ]] &&
 		Echo "Not in UEFI mode, no EFI variables, unable to register" 14
-	Echo "\nRegistering the bootloader with UEFI\n"
+	Echo "\nRegistering the boot manager with UEFI\n"
 	ebm="$sudo $ebm -d $disk -p $partnum" &&
-	entries=$($sudo $ebm |grep " $menuname$" |grep -o 'Boot....')
+	entries=$($sudo $ebm |grep " $label$" |grep -o 'Boot....')
 	((secureboot)) &&
 		entries+=$($sudo $ebm |grep " PreLoader$" |grep -o 'Boot....')
 	Echo "\nLooking at entries: "$entries 0
 	for entry in $entries
 	do
 		((go)) && $sudo $ebm -b ${entry:4:4} -B >$off
-		Echo "\nUEFI entry '$entry $menuname' removed" 0
+		Echo "\nUEFI entry '$entry $label' removed" 0
 	done
 	echo
 	((go)) &&
-		$sudo $ebm -c -t $timeout -D -l '\EFI\bootctlu\loader.efi' -L "$menuname" &&
-		Echo "\nSuccessfully registered $menuname\n" 0
+		$sudo $ebm -c -t $timeout -D -l '\EFI\bootctlu\loader.efi' -L "$label" &&
+		Echo "\nSuccessfully registered $label\n" 0
 	((go && secureboot)) &&
 		$sudo $ebm -c -t $timeout -D -l '\EFI\bootctlu\PreLoader.efi' -L "PreLoader" &&
 		Echo "\nSuccessfully registered PreLoader\n" 0
