@@ -2,10 +2,8 @@
 set +vx
 # bootctlu - Setting up and registering systemd-boot on Ubuntu/Void/Arch
 # Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp mv rm cd ls diff)
-#           grep sed systemd(file:systemd-boot*.efi) uuid-runtime(uuidgen)
-#   [memtest]: wget tar
-#   [register]: efibootmgr
-#   [install]: diffutils(diff)
+#           grep sed systemd(systemd-boot*.efi) uuid-runtime(uuidgen) xargs
+#   [memtest]: wget tar  [register]: efibootmgr  [install]: diffutils(diff)
 
 Help(){
 	cat <<-EOH
@@ -43,7 +41,7 @@ Echo(){ # I:go,verbose,quiet 1:message 2:errorcode(exit if not 0 and go==1)
 }
 
 # Default UEFI entry label
-label='Main boot manager'
+label='Linux boot manager'
 
 # Default timeout for bootmenu (seconds)
 timeout=6
@@ -123,7 +121,7 @@ then
 	then
 		uuidgen=$(type -P uuidgen) ||
 			Echo "Can't generate a machine-id, package uuid-runtime not installed" 6
-		$uuidgen |tr -d '-' |tee /etc/machine-id
+		$uuidgen |tr -d '-' >/etc/machine-id
 	fi
 else
 	Echo "\n### Simulation, no actual copying/writing/registering\n"
@@ -177,7 +175,7 @@ p=$(grep ' / ' /proc/mounts) root=${p%% *}
 [[ -f /etc/os-release ]] && p=$(grep PRETTY_NAME /etc/os-release) ||
 	p=$(grep DISTRIB_DESCRIPTION /etc/lsb-release)
 p=${p#*\"} release=${p:0: -1}
-cmdline=$(sed 's@initrd=[^ ]*@@g' /proc/cmdline)
+cmdline=$(sed -e 's@ initrd=[^ ]*@@g' -e 's@ BOOT_IMAGE=[^ ]*@@' /proc/cmdline |xargs)
 out="$esp/loader/loader.conf"
 file="#auto-entries 0\n#auto-firmware 0\n#console-mode auto\n"
 file+="default $id-linux-*\ntimeout $timeout\neditor yes"

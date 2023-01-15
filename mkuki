@@ -1,35 +1,34 @@
 #!/usr/bin/env bash
 set -eu
 # mkuki - Create EFI Unified Kernel Image
-# Required: tr grep sed coreutils(mktemp uname cat readlink wc mkdir cp ls)
-#           [install]:sudo efibootmgr fdisk mount
+# Required: coreutils(tr mktemp uname cat readlink wc mkdir cp ls head)
+#           grep sed  [install]:sudo efibootmgr fdisk mount
 # Repp: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
 Usage(){ # I:self,efistubdir
 	cat<<-EOH
 		$self - Create EFI Unified Kernel Image
-		An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
-		combine an EFI stub loader, a kernel image, an initramfs image, a splash
-		image, the kernel commandline, and CPU microcode images.
-
+		  An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
+		  combine an EFI stub loader, a kernel image, an initramfs image, a splash
+		  image, the kernel commandline, and CPU microcode images.
 		Usage: $self [<option>...]
 			<option>:
-	    -h|--help                Only display this help text
-	    -V|--version             Only display the version
+		  -h|--help                Only display this help text
+		  -V|--version             Only display the version
 		  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
 		  -l|--label <txt>         UEFI label in quotes for install (optional)
 		  -d|--device <device>     '<esp>' to use for install (optional)
-		  -k|--kernel <file>       Linux kernel file (default: '/boot/vmlinuz')
-		  -i|--initrd <file>       Initramfs file (default: '/boot/initrd.img')
+		  -k|--kernel <file>       Linux kernel file (default: '$linux')
+		  -i|--initrd <file>       Initramfs file (default: '$init')
 		  -m|--microcode <file>    Microcode file (optional, multiple allowed)
 		  -c|--cmdline <txt/file>  Kernel cmdline in quotes, or a file containing
-                               it, start with / or . (default: '/proc/cmdline')
-		  -o|--output <file>       Output file (default: 'vmlinuz.efi')
-		  -r|--release <file>      Release file (default: '/etc/os-release')
+                               it, start with / or . (default: '$commandline')
+		  -o|--output <file>       Output file (default: '$output')
+		  -r|--release <file>      Release file (default: '$osrel')
 		  -s|--splash <file>       Splash image: BMP 800x600 24bit (optional)
-		  -e|--efistub <file>      EFI stub file (default: 'linux<march>.efi.stub')
-		                           in '$efistubdir', <march>: x64|ia32|aa64|arm
+		  -e|--efistub <file>      EFI stub file (default: 'linux*.efi.stub') in
+		                           '$efistubdir', *: x64 | ia32 | aa64 | arm
 	EOH
 }
 
@@ -38,7 +37,7 @@ Die(){ # 1:msg
 	exit 1
 }
 
-self=${0##*/} version=0.1.1 efistubdir=/usr/lib/systemd/boot/efi
+version=0.1.4 self=${0##*/} efistubdir=/usr/lib/systemd/boot/efi
 efistub= output= imgs= device= label=
 linux=/boot/vmlinuz init=/boot/initrd.img install=0
 commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null
@@ -128,7 +127,7 @@ then # Determine <esp>, move the UKI and register
 			Die "more than 1 EFI System partitions found, specify 1 with -d|--device"
 		esp=${esp%% *}
 	fi
-	_=$(grep -o "^$esp [^ ]*" /proc/mounts) mount=${_#* }
+	_=$(grep -o "^$esp [^ ]*" /proc/mounts |head -1) mount=${_#* }
 	if [[ -z $mount ]]
 	then # Not mounted
 		mount=$tmpdir/mnt
@@ -137,6 +136,7 @@ then # Determine <esp>, move the UKI and register
 	fi
 	sudo mkdir -p "$mount/EFI/Linux"
 	sudo cp -- "$output" "$mount/EFI/Linux"
+	mv -- "$output" "$tmpdir/$output"
 	[[ $mount = $tmpdir/mnt ]] && sudo umount "$mount"
 	partition=$(grep -o '[0-9]*$' <<<"$esp") disk=${esp%$partition}
 	[[ ${disk: -1} = p && ${disk: -2:1} = [0-9] ]] && disk=${disk%p}
@@ -150,6 +150,7 @@ then # Determine <esp>, move the UKI and register
 		fi
 	fi
 	sudo efibootmgr -c -d $disk -p $partition -l "/EFI/Linux/$output" -L "$label" |grep "$label"
+	output=$tmpdir/$output
 fi
 
 # Show the result
