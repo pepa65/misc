@@ -104,7 +104,7 @@ do
 		specesp=$2
 		shift ;;
 	-M|--maxkernels)
-		[[ $2 =~ ^[1-9]$ ]] || Echo "Max. kernel not 1..9: '$2'" 2
+		[[ $2 =~ ^[1-9]$ ]] || Echo "Max.kernels not 1..9: '$2'" 2
 		maxkernels=$2; shift ;;
 	-m|--memtest) memtest=1 ;;
 	-r|--register) register=1 ;;
@@ -188,6 +188,8 @@ file+="default $id-linux-*\ntimeout $timeout\neditor yes"
 # Install boot manager file and loader configuration
 if ((go))
 then
+	# Remove all linux entries for the current machine
+	$sudo rm -rf -- "$iddir"/linux-* "$entries/$id-linux-"*.conf
 	[[ ! -f $mgr ]] && mgr=$PWD/gummi && [[ ! -f gummi ]] &&
 		wget -q "$gumurl"
 	$sudo mkdir -p "$iddir" "$entries" "$esp/EFI/bootctlu" "$esp/EFI/Boot" ||
@@ -221,9 +223,6 @@ else
 	Echo "\nInstalling boot manager file(s)\n" 0
 	((secureboot)) && Echo "\n--- Ensuring the presence of SecureBoot files"
 fi
-
-# Remove all linux entries for the current machine
-((go)) && $sudo rm -rf -- "$iddir"/linux-* "$entries/$id-linux-"*.conf
 
 # Making new entries for each kernel binary
 shopt -s nullglob extglob
