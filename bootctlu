@@ -5,7 +5,7 @@ set -u +vx
 #           grep sed systemd(systemd-boot*.efi) uuid-runtime(uuidgen) xargs
 #   [memtest]: wget tar  [register]: efibootmgr  [install]: diffutils(diff)
 
-version=0.2.1
+version=0.2.2
 
 Help(){
 	cat <<-EOH
@@ -26,7 +26,6 @@ Help(){
 		    -e/--esp <dir>:     EFI System Partition mountpoint, default:
 		                        $defesp, overrides BOOTCTLU_ESP.
 		    -m/--memtest:       Also download and set up a MemTest86 entry.
-		    -s/--secureboot:    Also install secureboot files.
 		    -r/--register:      Also register the bootmanager with UEFI.
 		  Extra arguments ignored so this can work as install/remove kernel hook.
 	EOH
@@ -75,7 +74,7 @@ hashtool='https://apt.blobfolio.com/other/PreLoader/HashTool.efi'
 	return 1
 
 self=${0##*/} imgdir=$boot specesp=${BOOTCTLU_ESP:-} off=/dev/null rd=$off
-go=1 quiet=0 verbose=0 register=0 secureboot=0 memtest=0 maxkernels=99 esp=
+go=1 quiet=0 verbose=0 register=0 memtest=0 maxkernels=99 esp=
 
 while (($#))
 do
@@ -107,7 +106,6 @@ do
 		maxkernels=$2; shift ;;
 	-m|--memtest) memtest=1 ;;
 	-r|--register) register=1 ;;
-	-s|--secureboot) secureboot=1 ;;
 	-*) Help && Echo "Unrecognized flag: $1" 3 ;;
 	*) Echo "Ignored argument '$1'" 0
 	esac
@@ -116,17 +114,17 @@ done
 
 # Bootmanager file
 loader=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
-[[ ! -f $loader ]] && Echo "The bootmanager cannot be found: '$loader'" 1
+[[ ! -f $loader ]] && Echo "The bootmanager cannot be found: '$loader'" 3
 
 ((EUID)) && echo "ABORT: Privileges required, run with sudo or as root" && exit
 if ((go))
 then
 	((register)) && ! ebm=$(type -P efibootmgr) &&
-		Echo "Can't register with UEFI, efibootmgr not available" 5
+		Echo "Can't register with UEFI, efibootmgr not available" 4
 	if [[ ! -f /etc/machine-id ]]
 	then
 		uuidgen=$(type -P uuidgen) ||
-			Echo "Can't generate a machine-id, package uuid-runtime not installed" 6
+			Echo "Can't generate a machine-id, package uuid-runtime not installed" 5
 		$uuidgen |tr -d '-' >/etc/machine-id
 	fi
 else
@@ -145,12 +143,12 @@ do
 			grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
 	[[ $esp ]] && esps+=" /dev/$part"
 done
-[[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 7
+[[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 6
 Echo "EFI System Partitions: $esps\n" 0
 
 # Usable EFI partition must be mounted, collect all mounted
 mp=$(egrep "${esps// /|}" /proc/mounts |cut -d' ' -f2)
-[[ $mp ]] || Echo "No EFI System Partitions mounted" 8
+[[ $mp ]] || Echo "No EFI System Partitions mounted" 7
 mp=${mp//$'\n'/ }
 Echo "Mount points of EFI partitions: $mp\n" 0
 
@@ -158,14 +156,14 @@ Echo "Mount points of EFI partitions: $mp\n" 0
 if [[ $specesp ]]
 then  # EFI-mount specified (commandline / env.variable): check if mounted
 	[[ " $mp " == *" $specesp "* ]] && esp=$specesp ||
-		Echo "Specified EFI mountpoint '$specesp' has no EFI partition mounted" 9
+		Echo "Specified EFI mountpoint '$specesp' has no EFI partition mounted" 8
 else  # No EFI-mount specified
 	if [[ " $mp " == *" $defesp "* ]]
 	then  # Use default if mounted
 		esp=$defesp
 	else  # Use the discovered one
 		[[ $mp == *$'\n'* ]] &&
-			Echo "More than 1 EFI System Partition mounted, must specify one" 10
+			Echo "More than 1 EFI System Partition mounted, must specify one" 9
 		esp=$mp
 	fi
 fi
@@ -192,7 +190,7 @@ then
 	# Remove all linux entries for the current machine
 	rm -rf -- "$iddir"/linux-* "$entriesdir/$id-linux-"*.conf
 	mkdir -p "$iddir" "$entriesdir" "$esp/EFI/loader" "$esp/EFI/BOOT" ||
-		Echo "Problem making required directories" 11
+		Echo "Problem making required directories" 10
 	[[ -f "$out" && ! $(echo -e "$file") = $(<"$out") ]] &&
 		mv "$out" "$out~" &&
 		Echo "\nRenaming previous loader.conf to '$out~'\n" 0
@@ -200,27 +198,25 @@ then
 	Echo ":\n" 0
 	echo -e "$file" |tee "$out" >$rd
 	Echo "\nInstalling boot manager file\n" 0
-	cp "$loader" "$esp/EFI/loader/systemd-bootx64.efi"
+	cp "$loader" "$esp/EFI/loader/loader.efi"
 	cp "$loader" "$esp/EFI/BOOT/BOOTX64.EFI"
-	if ((secureboot))
+	# Install the SecureBoot files
+	Echo "\n--- Ensuring the presence of SecureBoot files"
+	if [[ ! -f "$esp/EFI/loader/PreLoader.efi" ]]
 	then
-		Echo "\n--- Ensuring the presence of SecureBoot files"
-		if [[ ! -f "$esp/EFI/loader/PreLoader.efi" ]]
-		then
-			Echo "\nDownloading SecureBoot:PreLoader.efi" 0
-			wget -qO "$esp/EFI/loader/PreLoader.efi" "$preloader"
-		fi
-		if [[ ! -f "$esp/EFI/loader/HashTool.efi" ]]
-		then
-			Echo "\nDownloading SecureBoot:HashTool.efi" 0
-			wget -qO "$esp/EFI/loader/HashTool.efi" "$hashtool"
-		fi
+		Echo "\nDownloading SecureBoot:PreLoader.efi" 0
+		wget -qO "$esp/EFI/loader/PreLoader.efi" "$preloader"
+	fi
+	if [[ ! -f "$esp/EFI/loader/HashTool.efi" ]]
+	then
+		Echo "\nDownloading SecureBoot:HashTool.efi" 0
+		wget -qO "$esp/EFI/loader/HashTool.efi" "$hashtool"
 	fi
 else
 	Echo "\n--- Writing '$out'"
 	Echo ":\n$file" 0
 	Echo "\nInstalling boot manager file(s)\n" 0
-	((secureboot)) && Echo "\n--- Ensuring the presence of SecureBoot files"
+	Echo "\n--- Ensuring the presence of SecureBoot files"
 fi
 
 # Making new entries for each kernel binary
@@ -235,7 +231,7 @@ do
 		initrd=$imgdir/initrd.img-$version
 	entry="$iddir/linux-$version"
 	((go)) && ! mkdir -p "$entry" &&
-		Echo "Problem making directory $entry" 12
+		Echo "Problem making directory $entry" 11
 	Echo "\n--- Copying images to $entry"
 	((go)) && cp "$kernel" "$entry/kernel"
 	((go)) && cp "$initrd" "$entry/initrd"
@@ -256,11 +252,11 @@ then
 	memdir="loader/$id/memtest86"
 	tmp=$(mktemp -d)
 	cd "$tmp"
-	wget -q "$memurl" || Echo "Can't download MemTest86" 13
+	wget -q "$memurl" || Echo "Can't download MemTest86" 12
 	((go)) && mkdir -p "$esp/$memdir" && rm -rf -- "$esp/$memdir/*"
 	((go)) &&
 		! tar xf memtest.tgz --no-same-owner -C "$esp/$memdir" &&
-		Echo "Can't setup the files for MemTest86" 14
+		Echo "Can't setup the files for MemTest86" 13
 	cd - >/dev/null
 	rm -r -- "$tmp"
 	out="$entriesdir/$id-memtest86.conf"
@@ -275,12 +271,11 @@ fi
 if ((register))
 then
 	[[ ! -d /sys/firmware/efi/efivars ]] &&
-		Echo "Not in UEFI mode, no EFI variables, unable to register" 15
+		Echo "Not in UEFI mode, no EFI variables, unable to register" 14
 	Echo "\nRegistering the boot manager with UEFI\n"
-	ebm="$ebm -d $disk -p $partnum" &&
+	ebm="$ebm -d $disk -p $partnum"
 	bootentries=$($ebm |grep " $label$" |grep -o 'Boot....')
-	((secureboot)) &&
-		bootentries+=$($ebm |grep " PreLoader$" |grep -o 'Boot....')
+	bootentries+=$($ebm |grep " PreLoader$" |grep -o 'Boot....')
 	Echo "\nLooking at entries: "$bootentries 0
 	for entry in $bootentries
 	do
@@ -288,12 +283,12 @@ then
 		Echo "\nUEFI entry '$entry $label' removed" 0
 	done
 	echo
-	if ((secureboot))
+	if [[ $(od -Anone -b -j4 -N1 /sys/firmware/efi/efivars/SecureBoot-*) = ' 001' ]]
 	then ((go)) &&
 			$ebm -c -t $timeout -D -l '\EFI\loader\PreLoader.efi' -L "PreLoader" &&
 			Echo "\nSuccessfully registered PreLoader\n" 0
 	else ((go)) &&
-			$ebm -c -t $timeout -D -l '\EFI\loader\systemd-bootx64.efi' -L "$label" &&
+			$ebm -c -t $timeout -D -l '\EFI\loader\loader.efi' -L "$label" &&
 			Echo "\nSuccessfully registered $label\n" 0
 	fi
 else

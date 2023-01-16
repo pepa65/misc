@@ -75,14 +75,6 @@ s5(){ # $1:country(us|nl|th|ca|cr|sg) # entries s5nl/s5th/s5us/s5ca/s5cr/s5sg mu
     wait $falkon
     kill $ssh
 }
-sc4(){
-	echo -e "Copying to brain4:\n$@"
-	scp -p -r "$@" b4:.
-}
-sc3(){
-	echo -e "Copying to brain3:\n$@"
-	scp -p -r "$@" b3:.
-}
 dif(){ [[ $3 ]] && arg=$1 && shift; local c=$(colordiff $arg -u "$1" "$2"); [[ "$c" ]] && less -r <<<"$c" || echo "Same: $1 $2";}
 dy(){ colordiff -y "$1" "$2" |less -r;}
 gr(){
@@ -257,10 +249,6 @@ alias filedefrag='shake --bigsize=0 --old=0 -C 0 '
 alias tt='echo "$(TZ=Asia/Bangkok LC_TIME="th_TH.UTF-8" date +"%T วัน%A วันที่ %d %B พ.ศ.") $(($(date +%Y)+543))"'
 alias vlcs='vlc -R -f --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
 alias vlcp='vlc -R -f --video-on-top --no-video-title-show --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
-alias renamecanon="(cd /media/pp/CANON_DC/DCIM && rename 's#^[0-9][0-9][0-9]___#2020#' *)"
-alias renamepentax="(cd /media/pp/disk/DCIM && rename 's#^[0-9][0-9][0-9]_#2016#' *)"
-alias renamenikon="(cd /media/pp/disk/DCIM/100NIKON/ && rename 's#DSCN#DSCNc#' DSCN[0-9]*)"
-alias solus='qemu -enable-kvm -m 1024m -redir tcp:2222::22 -vga std -no-frame -hda /data/iso/qemu/s2q2.vdi &'
 alias lb='lsblk -o NAME,FSTYPE,LABEL,MOUNTPOINT,SIZE,OWNER,GROUP,MODE,PHY-SEC,SCHED'
 alias is='bc -l <<<'
 alias m="mount |sed 's/ on / /g' |sed 's/ type / /g' |column -t"
