@@ -1,14 +1,27 @@
 // scrypt - Mount LUKS encrypted vault as non-root
-// Install:
+//
+// Adjust the #define variables below before compiling
+//
+// Install for all users:
 //  sudo gcc scrypt.c -o /usr/local/bin/scrypt
 //  sudo chmod u+s /usr/local/bin/scrypt
 //  sudo ln -s /usr/local/bin/scrypt /usr/local/bin/uscrypt
-// Adjust the variables below before compiling
-// Example vault:
+//
+// Install instead for local user only:
+//  sudo gcc scrypt.c -o ~/bin/scrypt
+//  sudo chmod 4501 ~/bin/scrypt
+//  sudo ln -s ~/bin/scrypt ~/bin/uscrypt
+//
+// Example vault creation (matching the variables):
 //  truncate -s 400M /data/MyDocuments/SECURE/vault
 //  sudo cryptsetup -I hmac-sha256 luksFormat /data/MyDocuments/SECURE/vault
 //  sudo cryptsetup luksOpen /data/MyDocuments/SECURE/vault vault
 //  sudo mkfs.ext4 /dev/mapper/vault
+
+// Configuration parameters, change to fit
+#define LUKSNAME "vault"
+#define MOUNTPOINT "/home/pp/Private"
+#define VAULTFILE "/data/MyDocuments/SECURE/vault"
 
 #include <unistd.h>
 #include <stdarg.h>
@@ -17,11 +30,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
-// Configuration parameters, change to fit
-#define NAME "vault"
-#define MOUNTPOINT "/home/pp/Private"
-#define DEVICE "/data/MyDocuments/SECURE/vault"
 
 char * replacement_environment[] = {
 	"PATH=/bin:/usr/bin:/sbin:/usr/sbin",
@@ -80,17 +88,17 @@ void run(char *exec, ...) {
 }
 
 void do_mount(void) {
-	fprintf(stdout, "Mounting %s on %s\n", DEVICE, MOUNTPOINT);
+	fprintf(stdout, "Mounting %s on %s\n", VAULTFILE, MOUNTPOINT);
 	setreuid(0,0);
-	run("/sbin/cryptsetup", "luksOpen", DEVICE, NAME, NULL);
-	run("/bin/mount", "/dev/mapper/"NAME, MOUNTPOINT, NULL);
+	run("/sbin/cryptsetup", "luksOpen", VAULTFILE, LUKSNAME, NULL);
+	run("/bin/mount", "/dev/mapper/"LUKSNAME, MOUNTPOINT, NULL);
 }
 
 void do_umount(void) {
-	fprintf(stdout, "Un-mounting %s from %s\n", NAME, MOUNTPOINT);
+	fprintf(stdout, "Un-mounting %s from %s\n", LUKSNAME, MOUNTPOINT);
 	setreuid(0,0);
 	run("/bin/umount", MOUNTPOINT, 0);
-	run("/sbin/cryptsetup", "luksClose", NAME, 0);
+	run("/sbin/cryptsetup", "luksClose", LUKSNAME, 0);
 }
 
 int main(int argc, char **argv) {

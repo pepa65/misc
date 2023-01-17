@@ -526,12 +526,17 @@ Default values when options are not supplied:
 ## scrypt.c
 **Mount LUKS encrypted vault as non-root**
 
-* Adjust the variables at the top of `scrypt.c` before compiling
-* Install as root:
-  - `gcc scrypt.c -o /usr/local/bin/scrypt`
-  - `chmod u+s /usr/local/bin/scrypt`
-* Example vault:
-  - `truncate -s 400M /data/MyDocuments/SECURE/vault`
+* Adjust the #define variables at the top of `scrypt.c` before compiling
+* Install for all users:
+  - `sudo gcc scrypt.c -o /usr/local/bin/scrypt`
+  - `sudo chmod u+s /usr/local/bin/scrypt`
+  - `sudo ln -s /usr/local/bin/scrypt /usr/local/bin/uscrypt`
+* Install instead for local user only:
+  - `sudo gcc scrypt.c -o ~/bin/scrypt`
+  - `sudo chmod 4501 ~/bin/scrypt`
+  - `sudo ln -s ~/bin/scrypt ~/bin/uscrypt`
+* Example vault creation (matching the variables):
+   - `truncate -s 400M /data/MyDocuments/SECURE/vault`
   - `sudo cryptsetup -I hmac-sha256 luksFormat /data/MyDocuments/SECURE/vault`
   - `sudo cryptsetup luksOpen /data/MyDocuments/SECURE/vault vault`
   - `sudo mkfs.ext4 /dev/mapper/vault`
