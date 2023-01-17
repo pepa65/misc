@@ -23,6 +23,7 @@ Help(){
 		    -M/--maxkernels:    Maximum number of kernels to install (1..9).
 		    -i/--imgdir <dir>:  Kernel & initrd images directory, default:
 		                        $boot, overrides BOOTCTLU_BOOT.
+		    -p/--part <dev>:    EFI System Partition device
 		    -e/--esp <dir>:     EFI System Partition mountpoint, default:
 		                        $defesp, overrides BOOTCTLU_ESP.
 		    -m/--memtest:       Also download and set up a MemTest86 entry.
@@ -74,7 +75,7 @@ hashtool='https://apt.blobfolio.com/other/PreLoader/HashTool.efi'
 	return 1
 
 self=${0##*/} imgdir=$boot specesp=${BOOTCTLU_ESP:-} off=/dev/null rd=$off
-go=1 quiet=0 verbose=0 register=0 memtest=0 maxkernels=99 esp=
+go=1 quiet=0 verbose=0 register=0 memtest=0 maxkernels=99 esp= partition=
 
 while (($#))
 do
@@ -95,6 +96,10 @@ do
 		[[ $BOOTCTLU_BOOT ]] &&
 			Echo "WARNING: overriding BOOTCTLU_BOOT with '$2'"
 		imgdir=$2
+		shift ;;
+	-p|--part)
+		[[ -b $2 ]] || Echo "Partition '$2' is not a block device" 1
+		partition=$2
 		shift ;;
 	-e|--esp)
 		[[ ${2%%/*} ]] && Echo "Mountpoint '$2' must start with /" 1
@@ -134,13 +139,13 @@ fi
 # Get EFI System Partitions
 esps=
 parts=$(ls -Al /dev/disk/by-partuuid |grep -o '[a-z][a-z0-9]*$')
+[[ $partition ]] && parts=${partition##*/}
 for part in $parts
 do
 	num=$(grep -o '[0-9]*$' <<<"$part")
 	disk=${part%$num}
 	[[ ${disk: -1} = p && ${disk: -2:1} = [0-9] ]] && disk=${disk%p}
-	esp=$(sgdisk -i$num /dev/$disk |
-			grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
+	esp=$(sgdisk -i$num /dev/$disk |grep C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
 	[[ $esp ]] && esps+=" /dev/$part"
 done
 [[ $esps ]] && esps=${esps:1} || Echo "No EFI System Partitions present" 6
@@ -169,6 +174,7 @@ else  # No EFI-mount specified
 fi
 part=$(grep " $esp " /proc/mounts) part=${part%% *}
 partnum=${part##*[^0-9]} disk=${part%$partnum}
+[[ ${disk: -1} = p && ${disk: -2:1} = [0-9] ]] && disk=${disk%p}
 Echo "--- Using mountpoint $esp on $part\n"
 Echo "--- Copying images from $imgdir into EFI mountpoint $esp\n"
 

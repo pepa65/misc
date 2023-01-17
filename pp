@@ -327,3 +327,12 @@ alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
 alias flush='sudo systemd-resolve --flush-caches'
 alias itt='img2txt -f utf8'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
+pg23(){ if [[ $1 ]]
+	then
+		xmodmap -e "keycode 68 = F2 F2 F2 NoSymbol F2 F2 XF86Switch_VT_2 F2 F2"
+		xmodmap -e "keycode 69 = F3 F3 F3 NoSymbol F3 F3 XF86Switch_VT_3 F3 F3"
+	else
+		xmodmap -e "keycode 68 = Prior F2 F2 NoSymbol F2 F2 XF86Switch_VT_2 F2 F2"
+		xmodmap -e "keycode 69 = Next F3 F3 NoSymbol F3 F3 XF86Switch_VT_3 F3 F3"
+	fi
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eu
+set -eu #vx
 # mkuki - Create EFI Unified Kernel Image
 # Required: coreutils(tr mktemp uname cat readlink wc mkdir cp ls head)
 #           grep sed  [install]:sudo efibootmgr fdisk mount
@@ -52,7 +52,7 @@ do # Process commandline
 	-I|--install) install=1 ;;
 	-l|--label) label=$2; shift ;;
 	-d|--device)
-		[[ ! -b $2 ]] || Die "No blockdevice found: '$2'"
+		[[ -b $2 ]] || Die "No blockdevice found: '$2'"
 		device=$2; shift ;;
 	-k|--kernel)
 		[[ ! -f $2 ]] || Die "kernel file not found: '$2'"
@@ -120,7 +120,7 @@ if ((install))
 then # Determine <esp>, move the UKI and register
 	if [[ $device ]]
 	then # EFI System partition specified
-		esp=$(readlink "$device")
+		esp=$(readlink -e "$device")
 	else
 		esp=$(sudo fdisk -l |grep ^/ |grep 'EFI System$')
 		[[ $esp ]] ||
