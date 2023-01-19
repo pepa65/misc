@@ -287,7 +287,8 @@ then
 		Echo "\nUEFI entry '$entry $label' removed" 0
 	done
 	echo
-	if test -f /sys/firmware/efi/efivars/SecureBoot-* &&
+	shopt -u nullglob
+	if test -e /sys/firmware/efi/efivars/SecureBoot-* &&
 		[[ $(od -Anone -b -j4 -N1 /sys/firmware/efi/efivars/SecureBoot-*) = ' 001' ]]
 	then ((go)) &&
 			$ebm -c -t $timeout -D -l '\EFI\loader\PreLoader.efi' -L "PreLoader" &&
