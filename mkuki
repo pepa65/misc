@@ -2,7 +2,7 @@
 set -eu #vx
 # mkuki - Create EFI Unified Kernel Image
 # Required: coreutils(tr mktemp uname cat readlink wc mkdir cp ls head)
-#           grep sed  [install]:sudo efibootmgr fdisk mount
+#   grep sed  [install]:sudo efibootmgr fdisk mount binutils(objcopy)
 # Repp: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
