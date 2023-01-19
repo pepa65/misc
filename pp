@@ -51,6 +51,8 @@ addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin $HOME/.cargo/bin ~/.luav/bin ~/.
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
+fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return;
+	ssh server "find /data/downloads |grep $1; find  /data/video |grep $1";}
 qr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
 c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
