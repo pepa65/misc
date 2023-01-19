@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -u +vx
-# bootctlu - Install/register systemd-bootmanager on Ubuntu/Void/Arch
+# bootctlu - Install/register systemd-bootmanager on Ubuntu
 # Required: gdisk(sgdisk) coreutils(tee sort cut mkdir cat cp mv rm cd ls diff)
 #           grep sed systemd(systemd-boot*.efi) uuid-runtime(uuidgen) xargs
 #   [memtest]: wget tar  [register]: efibootmgr  [install]: diffutils(diff)
 
-version=0.2.2
+version=0.2.3
 
 Help(){
 	cat <<-EOH
-		$self v$version - Install/register systemd-bootmanager on Ubuntu/Void/Arch
+		$self v$version - Install/register systemd-bootmanager on Ubuntu
 
 		Usage:  $self [<option>...]
 		  <option>:
@@ -232,9 +232,7 @@ for kernel in $kernels
 do
 	((++n>maxkernels)) && break
 	version=${kernel#$imgdir/vmlinuz-}
-	[[ $release = @(void|Artix|Antergos Linux|Arch Linux) ]] &&
-		initrd=$imgdir/boot/initramfs-$version.img ||
-		initrd=$imgdir/initrd.img-$version
+	initrd=$imgdir/initrd.img-$version
 	entry="$iddir/linux-$version"
 	((go)) && ! mkdir -p "$entry" &&
 		Echo "Problem making directory $entry" 11

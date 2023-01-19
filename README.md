@@ -112,7 +112,7 @@ bb [ init|check|help|unlock|prune | list [<prefix>] | info|delete <name> |
 
 * Usage:
 ```
-bootctlu v0.2.1 - Install/register systemd-bootmanager on Ubuntu/Void/Arch
+bootctlu v0.2.3 - Install/register systemd-bootmanager on Ubuntu
 
 Usage:  bootctlu [<option>...]
   <option>:
