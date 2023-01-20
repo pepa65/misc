@@ -7,6 +7,8 @@ set -u +vx
 
 version=0.2.3
 
+maxkernels=2
+
 Help(){
 	cat <<-EOH
 		$self v$version - Install/register systemd-bootmanager on Ubuntu
@@ -75,7 +77,7 @@ hashtool='https://apt.blobfolio.com/other/PreLoader/HashTool.efi'
 	return 1
 
 self=${0##*/} imgdir=$boot specesp=${BOOTCTLU_ESP:-} off=/dev/null rd=$off
-go=1 quiet=0 verbose=0 register=0 memtest=0 maxkernels=99 esp= partition=
+go=1 quiet=0 verbose=0 register=0 memtest=0 esp= partition=
 
 while (($#))
 do
