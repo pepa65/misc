@@ -5,7 +5,7 @@ set -u +vx
 #           grep sed systemd(systemd-boot*.efi) uuid-runtime(uuidgen) xargs
 #   [memtest]: wget tar  [register]: efibootmgr  [install]: diffutils(diff)
 
-version=0.2.3
+version=0.2.4
 
 maxkernels=2
 
@@ -22,11 +22,11 @@ Help(){
 		    -n/--nogo:          No writing to the system at all.
 		    -I/--install:       Only install the script and kernel install hooks.
 		    -U/--uninstall:     Only uninstall the script and kernel install hooks.
-		    -M/--maxkernels:    Maximum number of kernels to install (1..9).
-		    -i/--imgdir <dir>:  Kernel & initrd images directory, default:
+		    -M/--maxkernels:    Maximum number of kernels to install, default: $maxkernels.
+		    -i/--imgdir <dir>:  Kernel & initrd images directory, default: '$boot'.
 		                        $boot, overrides BOOTCTLU_BOOT.
 		    -p/--part <dev>:    EFI System Partition device
-		    -e/--esp <dir>:     EFI System Partition mountpoint, default:
+		    -e/--esp <dir>:     EFI System Partition mountpoint, default: '$defesp'.
 		                        $defesp, overrides BOOTCTLU_ESP.
 		    -m/--memtest:       Also download and set up a MemTest86 entry.
 		    -r/--register:      Also register the bootmanager with UEFI.

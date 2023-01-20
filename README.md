@@ -112,7 +112,7 @@ bb [ init|check|help|unlock|prune | list [<prefix>] | info|delete <name> |
 
 * Usage:
 ```
-bootctlu v0.2.3 - Install/register systemd-bootmanager on Ubuntu
+bootctlu v0.2.4 - Install/register systemd-bootmanager on Ubuntu
 
 Usage:  bootctlu [<option>...]
   <option>:
@@ -123,10 +123,10 @@ Usage:  bootctlu [<option>...]
     -n/--nogo:          No writing to the system at all.
     -I/--install:       Only install the script and kernel install hooks.
     -U/--uninstall:     Only uninstall the script and kernel install hooks.
-    -M/--maxkernels:    Maximum number of kernels to install (1..9).
-    -i/--imgdir <dir>:  Kernel & initrd images directory, default:
+    -M/--maxkernels:    Maximum number of kernels to install, default 2.
+    -i/--imgdir <dir>:  Kernel & initrd images directory, default: '/boot'.
                         /boot, overrides BOOTCTLU_BOOT.
-    -e/--esp <dir>:     EFI System Partition mountpoint, default:
+    -e/--esp <dir>:     EFI System Partition mountpoint, default: '/boot/efi'.
                         /boot/efi, overrides BOOTCTLU_ESP.
     -m/--memtest:       Also download and set up a MemTest86 entry.
     -s/--secureboot:    Also install secureboot files.
