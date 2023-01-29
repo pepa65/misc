@@ -50,7 +50,7 @@ do
 done
 [[ -z $in ]] && echo "No filename for ${half^} sized pdf given" && Usage 3
 [[ -z $out ]] &&
-	out=$(basename "$in") out=${out%.pdf} out=${out%.PDF} out.=_${full^}.pdf
+	out=$(basename "$in") out=${out%.pdf} out=${out%.PDF} out+=_${full^}.pdf
 
 missingcmd=
 for cmd in psselect pdf2ps ps2pdf psnup

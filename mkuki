@@ -55,7 +55,7 @@ do # Process commandline
 		[[ -b $2 ]] || Die "No blockdevice found: '$2'"
 		device=$2; shift ;;
 	-k|--kernel)
-		[[ ! -f $2 ]] || Die "kernel file not found: '$2'"
+		[[ -f $2 ]] || Die "kernel file not found: '$2'"
 		linux=$2; shift ;;
 	-i|--initrd) # An empty initrd could be specified like: --initrd ''
 		[[ $2 && ! -f $2 ]] && Die "initramfs file not found: '$2'"

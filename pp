@@ -7,7 +7,8 @@
 #  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii
-#  php-fpm php-xml php-gd shellcheck
+#  php-fpm php-xml php-gd shellcheck imgcat(https://github.com/trashhalo/imgcat)
+#  viu[docker run --rm --name rust -v /tmp:/tmp -ti rust bash -c "apt update && apt -y install musl-tools && git clone https://github.com/atanunq/viu && cd viu && rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release && cp target/x86_64-unknown-linux-musl/release/viu /tmp/viu]
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx

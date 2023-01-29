@@ -31,10 +31,12 @@ urls=(
 	"caddyserver/caddy"
 	"rclone/rclone"
 	"schollz/croc"
+	"nabijaczleweli/termimage"
 )
 
 # Local deb packages directory
 cd "%%"
+echo "Processing localdebs in $PWD..."
 for url in "${urls[@]}"
 do case $url in
 	caddyserver/caddy)
@@ -49,6 +51,8 @@ do case $url in
 		latest=$(wget -qO- api.github.com/repos/$url/releases/latest)
 		u=$(jq "{assets}" <<<"$latest" |grep browser_download_url |grep -o https.*Linux-64bit.deb)
 		wget -qO croc_Linux-64bit.deb "$u" ;;
+	nabijaczleweli/termimage)
+		wget -q https://github.com/nabijaczleweli/termimage.deb ;;
 	http*) wget -qN "$url" ;;
 	*) echo "ERROR: unhandled URL: $url"
 	esac
