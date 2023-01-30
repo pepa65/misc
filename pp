@@ -327,6 +327,9 @@ alias i=feh
 alias sun='sunclock -map -dottedlines -twilight -meridianmode 3 -tropics -decimal'
 alias clk='tty-clock -sSbcC6'
 alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
+fpw(){ (($#)) && a=$@ c=always || a=. c=never
+	read -sp "Firefox master password: " && echo -n $'\r' &&
+	echo -n "$REPLY" |~/git/misc/ffpw.py |grep --color=$c "$a" |less -R; reset;}
 alias flush='sudo systemd-resolve --flush-caches'
 alias itt='img2txt -f utf8'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
