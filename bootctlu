@@ -5,7 +5,7 @@ set -u +vx
 #           grep sed systemd(systemd-boot*.efi) uuid-runtime(uuidgen) xargs
 #   [memtest]: wget tar  [register]: efibootmgr  [install]: diffutils(diff)
 
-version=0.2.4
+version=0.2.5
 
 maxkernels=2
 
@@ -28,6 +28,7 @@ Help(){
 		    -p/--part <dev>:    EFI System Partition device
 		    -e/--esp <dir>:     EFI System Partition mountpoint, default: '$defesp'.
 		                        $defesp, overrides BOOTCTLU_ESP.
+		    -L/--label:         Label for the UEFI entry.
 		    -m/--memtest:       Also download and set up a MemTest86 entry.
 		    -r/--register:      Also register the bootmanager with UEFI.
 		  Extra arguments ignored so this can work as install/remove kernel hook.
@@ -98,6 +99,9 @@ do
 		[[ $BOOTCTLU_BOOT ]] &&
 			Echo "WARNING: overriding BOOTCTLU_BOOT with '$2'"
 		imgdir=$2
+		shift ;;
+	-L|--label)
+		label=$2
 		shift ;;
 	-p|--part)
 		[[ -b $2 ]] || Echo "Partition '$2' is not a block device" 1

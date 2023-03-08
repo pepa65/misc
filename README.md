@@ -112,7 +112,7 @@ bb [ init|check|help|unlock|prune | list [<prefix>] | info|delete <name> |
 
 * Usage:
 ```
-bootctlu v0.2.4 - Install/register systemd-bootmanager on Ubuntu
+bootctlu v0.2.5 - Install/register systemd-bootmanager on Ubuntu
 
 Usage:  bootctlu [<option>...]
   <option>:
@@ -128,6 +128,7 @@ Usage:  bootctlu [<option>...]
                         /boot, overrides BOOTCTLU_BOOT.
     -e/--esp <dir>:     EFI System Partition mountpoint, default: '/boot/efi'.
                         /boot/efi, overrides BOOTCTLU_ESP.
+    -L/--label:         Label for the UEFI entry.
     -m/--memtest:       Also download and set up a MemTest86 entry.
     -s/--secureboot:    Also install secureboot files.
     -r/--register:      Also register the bootmanager with UEFI.
