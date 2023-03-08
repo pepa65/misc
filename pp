@@ -6,7 +6,7 @@
 #  tty-clock rdiff caca-utils git tmux aptitude gpgsm rsync ghostscript csvtool
 #  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
-#  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii
+#  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
 #  php-fpm php-xml php-gd shellcheck imgcat(https://github.com/trashhalo/imgcat)
 #  viu[docker run --rm --name rust -v /tmp:/tmp -ti rust bash -c "apt update && apt -y install musl-tools && git clone https://github.com/atanunq/viu && cd viu && rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release && cp target/x86_64-unknown-linux-musl/release/viu /tmp/viu]
 
@@ -251,7 +251,7 @@ alias filedefrag='shake --bigsize=0 --old=0 -C 0 '
 alias tt='echo "$(TZ=Asia/Bangkok LC_TIME="th_TH.UTF-8" date +"%T วัน%A วันที่ %d %B พ.ศ.") $(($(date +%Y)+543))"'
 alias vlcs='vlc -R -f --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
 alias vlcp='vlc -R -f --video-on-top --no-video-title-show --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
-alias lb='lsblk -o NAME,FSTYPE,LABEL,MOUNTPOINT,SIZE,OWNER,GROUP,MODE,PHY-SEC,SCHED'
+alias lb='lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,FSUSE%,MOUNTPOINT -x START --tree' # lsblk recent enough for START
 alias is='bc -l <<<'
 alias m="mount |sed 's/ on / /g' |sed 's/ type / /g' |column -t"
 alias be='(head -5; echo; tail -5) <'  ## requires a file to 'analyze'
@@ -330,7 +330,6 @@ fpw(){ (($#)) && a=$@ c=always || a=. c=never
 	read -sp "Firefox master password: " && echo -n $'\r' &&
 	echo -n "$REPLY" |~/git/misc/ffpw.py |grep --color=$c "$a" |less -R; reset;}
 alias flush='sudo systemd-resolve --flush-caches'
-alias itt='img2txt -f utf8'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
 pg23(){ if [[ $1 ]]
 	then

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -eu #vx
 # mkuki - Create EFI Unified Kernel Image
-# Required: coreutils(tr mktemp uname cat readlink wc mkdir cp ls head)
+# Required: coreutils(tr mktemp uname cat readlink wc mkdir cp ls head cut)
 #   grep sed  [install]:sudo efibootmgr fdisk mount binutils(objcopy)
 # Repp: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
-version=0.1.5
+version=0.1.6
 
 Usage(){ # I:self,efistubdir
 	cat<<-EOH
@@ -125,8 +125,17 @@ then # Determine <esp>, move the UKI and register
 		esp=$(sudo fdisk -l |grep ^/ |grep 'EFI System$')
 		[[ $esp ]] ||
 			Die "no proper EFI System partitions found, specify one with -d|--device"
-		(($(wc -l <<<"$esp")>1)) &&
-			Die "more than 1 EFI System partitions found, specify 1 with -d|--device"
+		if (($(wc -l <<<"$esp")>1))
+		then # More than 1 EFI System partition, use the one mounted on /boot/efi
+			for p in $(cut -f1 -d' ' <<<$esp)
+			do # Check mount
+				grep "$p" /proc/mounts |grep -q ' /boot/efi ' &&
+					mountedesp=$p
+			done
+			[[ -z $mountedesp ]] &&
+				Die "multiple EFI System partitions, none on '/boot/efi', specify 1 with -d|--device"
+			esp=$mountedesp
+		fi
 		esp=${esp%% *}
 	fi
 	_=$(grep -o "^$esp [^ ]*" /proc/mounts |head -1) mount=${_#* }

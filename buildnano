@@ -80,6 +80,7 @@ nanorc=$(cat <<\EORC
 # ~/.nanorc
 # Syntaxfiles:
 include /usr/local/share/nano/*.nanorc
+#include /home/pp/git/misc/*.nanorc
 
 # Colors: [bold|italic,][light]white|black|blue|green|red|cyan|yellow|magenta |
 #  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal

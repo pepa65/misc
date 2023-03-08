@@ -320,6 +320,9 @@ healbitrot [-h|--help] [<dir>...]
 * Usage: `keepassxml2json [-d|--debug] <in.xml> <out.json>`
 * Required: grep sed coreutils(tail tr cd mv rm ls)
 
+## KeeWeb.html
+**Browser-based KeePass application**
+
 # kenburns
 * Required: ruby ffmpeg
 * Usage:
@@ -422,12 +425,12 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 ## mkuki
 **Create EFI Unified Kernel Image**
 
-* Required: `coreutils`(`tr mktemp uname cat readlink wc mkdir cp ls head`) `grep sed`
+* Required: `coreutils`(`tr mktemp uname cat readlink wc mkdir cp ls head cut`) `grep sed`
   - install: `sudo efibootmgr fdisk mount`
 * From: https://github.com/jirutka/efi-mkuki
 * Usage:
 ```
-mkuki v0.1.5 - Create EFI Unified Kernel Image
+mkuki v0.1.6 - Create EFI Unified Kernel Image
   An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
   combine an EFI stub loader, a kernel image, an initramfs image, a splash
   image, the kernel commandline, and CPU microcode images.

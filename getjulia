@@ -36,7 +36,8 @@ then
 else
 	xml=$(wget -O- "$url") versions=()
 	for v in $(grep -o [^/]*sha256 <<<"$xml")
-	do versions+=(${v:6: -7})
+	#do versions+=(${v:6: -7})
+	do [[ ${v:6: -7} = *beta* || ${v:6: -7} = *alpha* || ${v:6: -7} = *rc* ]] || versions+=(${v:6: -7})
 	done
 	echo "Available Julia versions: ${versions[@]}" |fold -s
 	version=${versions[-1]}
