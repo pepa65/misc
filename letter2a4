@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -e
+# letter2a4 - Convert Letter-sized pdf to A4 with room for binding
+# Usage: letter2a4 <letter.pdf>
+# Required: poppler-utils(pdftocairo pdfunite) grep imagemagick(convert)
+#  coreutils(file mktemp cd ls wc)
+
+inp=$1
+[[ -z $inp ]] && echo "Need Letter-sized pdf to convert to A4 for binding" && exit 1
+[[ $inp = *^* ]] && echo "Need a filename that does not contain '^'" && exit 2
+inp=$(readlink -e "$inp")
+[[ -z $inp ]] && echo "File not found: $inp" && exit 3
+[[ ${inp: -4} = .pdf ]] && in=${inp%.pdf} || in=$inp inp+=.pdf
+i=${in##*/}
+
+dir=$(mktemp -d)
+cd "$dir"
+pdftocairo "$inp" -png
+p=$(ls "$dir/$i"-*.png |head -1)
+m=$(ls "$dir/$i"-*.png |wc -l)
+read w _ h <<<"$(file "$p" |grep -o '[0-9]* x [0-9]*')"
+
+for p in "$i"-*[13579].png; do convert "$p" -resize 96%x100% -gravity east -extent ${w}x$h "$p.pdf"; done
+((m>1)) && for p in "$i"-*[02468].png; do convert "$p" -resize 96%x100% -gravity west -extent ${w}x$h "$p.pdf"; done
+pdfunite "$i"-*.png.pdf "$in".png.pdf
+rm -r -- "$dir"
