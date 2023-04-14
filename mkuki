@@ -21,15 +21,15 @@ Usage(){ # I:self,efistubdir
 		  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
 		  -l|--label <txt>         UEFI label in quotes for install (optional)
 		  -d|--device <device>     '<esp>' to use for install (optional)
-		  -k|--kernel <file>       Linux kernel file (default: '$linux')
-		  -i|--initrd <file>       Initramfs file (default: '$init')
+		  -k|--kernel <file>       Linux kernel file, default: '$linux'
+		  -i|--initrd <file>       Initramfs file, default: '$init'
 		  -m|--microcode <file>    Microcode file (optional, multiple allowed)
-		  -c|--cmdline <txt/file>  Kernel cmdline in quotes, or a file containing
-                               it, start with / or . (default: '$commandline')
-		  -o|--output <file>       Output file (default: '$output')
-		  -r|--release <file>      Release file (default: '$osrel')
+		  -c|--cmdline <txt/file>  Kernel cmdline in quotes or in a file (starting
+		                           with '/' or '.'), default: '$commandline'
+		  -o|--output <file>       Output file, default: '$output'
+		  -r|--release <file>      Release file, default: '$osrel'
 		  -s|--splash <file>       Splash image: BMP 800x600 24bit (optional)
-		  -e|--efistub <file>      EFI stub file (default: 'linux*.efi.stub') in
+		  -e|--efistub <file>      EFI stub file, default: 'linux*.efi.stub' in
 		                           '$efistubdir', *: x64 | ia32 | aa64 | arm
 	EOH
 }
