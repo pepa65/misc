@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+set +vx
+# fonts - Preview fonts interactively from the commandline
+# Copyright: Siddharth Dushantha 2020, pepa65 2023
+# Requires: feh imagemagick xdotool fzf
+
+self=${0##*/} version=1.1.0
+
+# Default values
+prompt='[Pres Esc to exit] '
+previewsize=532x365
+position=+0+0
+fontsize=38
+background=#ffffff
+fontcolor=#000000
+text="ABCDEFGHIJKLM\nNOPQRSTUVWXYZ\nabcdefghijklm\nnopqrstuvwxyz\n1234567890\n!@#$\%^\&\*-=-+<>(){}[]"
+
+Help() {
+	cat <<-EOH
+		┌─┐┌─┐┌┐┌┌┬┐┌─┐
+		├─ │ ││││ │ └─┐
+		┘  └─┘┘└┘ ┴ └─┘
+		$self - Preview fonts interactively from the commandline
+
+		Usage:  $self [FONT | <option> ...]
+		  Options:
+		  FONT                   Filename (.otf .ttf .woff) of the font
+		                         (If not given, fonts can be explored interactively)
+		  -h/--help              Show this help message and exit
+		  -V/--version           Show the version of '$self' and exit
+		  -S/--previewsize WxH   Width and height of the font preview window in pixels
+		  -P/--position +X+Y     Position of the font preview window
+		  -p/--prompt PROMPT     Prompt for the fuzzy searcher
+		  -s/--fontsize SIZE     Font size
+		  -b/--background COLOR  Background color of the font preview window
+		  -f/--fontcolor COLOR   Font color of the font preview window
+		  -t/--text "TEXT"       Text in the font preview window
+		Options can be set by environment variables: FONTS_PREVIEWSIZE FONTS_POSITION
+		  FONTS_PROMPT FONTS_FONTSIZE FONTS_BACKGROUND FONTS_FONTCOLOR FONTS_TEXT
+	EOH
+	exit 0
+}
+
+Preview(){ # 1:font 2:image
+	# After: https://twitter.com/climagic/status/1218295616289243142
+	convert -size "$previewsize" xc:"$background" -gravity center -pointsize $fontsize \
+		-font "$1" -fill "$fontcolor" -annotate +0+0 "$text" -flatten "$2"
+}
+
+# Disable Ctrl-Z otherwise the script could exit with feh still running
+trap "" SIGTSTP
+
+Cleanup() {
+	rm "$preview"
+	kill -9 $fehpid &>/dev/null
+}
+preview=$(mktemp "$self-XXXXXXXX.png")
+touch "$preview"
+trap Cleanup EXIT
+
+# Parse the commandline, arguments take precedent over environment variables
+options=$(getopt -o hVS:P:p:s:b:f:t: --long help,version,size:,position:,prompt:,fontsize:,background:,fontcolor:,text: -- "$@")
+eval set -- "$options"
+while true
+do case "$1" in
+	-h|--help) Help ;;
+	-V|--version) echo "$self v$version" && exit 0 ;;
+	-S|--size) FONTS_PREVIEWSIZE=$2 && shift ;;
+	-P|--position) FONTS_POSITION=$2 && shift ;;
+	-p|--prompt) FONTS_PROMPT=$2 && shift ;;
+	-s|--fontsize) FONTS_FONTSIZE=$2 && shift ;;
+	-b|--background) FONTS_BACKGROUND=$2 && shift ;;
+	-f|--fontcolor) FONTS_FONTCOLOR=$2 && shift ;;
+	-t|--text) FONTS_TEXT=$2 && shift ;;
+	--) shift
+		font=$1
+		shift
+		(($#>0)) && echo "Unrecognized arguments: $@" && Help
+		break ;;
+	*) echo "Unrecognized option '$1'" && Help
+	esac
+	shift
+done
+
+# Enviornment variables take precedent over default values
+[[ $FONTS_PROMPT ]] && prompt=$FONTS_PROMPT
+[[ $FONTS_PREVIEWSIZE ]] && previewsize=$FONTS_PREVIEWSIZE
+[[ $FONTS_POSITION ]] && position=$FONTS_POSITION
+[[ $FONTS_FONTSIZE ]] && fontsize=$FONTS_FONTSIZE
+[[ $FONTS_BACKGROUND ]] && background=$FONTS_BACKGROUND
+[[ $FONTS_FONTCOLOR ]] && fontcolor=$FONTS_FONTCOLOR
+[[ $FONTS_TEXT ]] && text=$FONTS_TEXT
+
+if [[ -f $font ]]
+then # If FONT given: just show it
+	Preview "$font" "$preview"
+	XDG_CONFIG_HOME=/ feh --draw-tinted --info "echo $font" -N --title 'Press Q to exit' -g "$previewsize$position" "$preview"
+	exit
+fi
+
+dependencies=(awk xdotool feh convert fzf)
+for dependency in "${dependencies[@]}"
+do ! type -p "$dependency" &>/dev/null &&
+		echo "Error: '${dependency}' not found, is it installed?" >&2 && exit 1
+done
+
+# Save terminal window ID to switch back to after displaying the font preview
+termpid=$(xdotool getactivewindow)
+
+fehpid=65535
+while true
+do # List out all the fonts which imagemagick is able to find, extract the font names and then pass them to fzf
+	font=$(convert -list font |grep Font: |grep -o '[^ ]*$' |fzf --prompt="$prompt")
+	# No output from fzf means nothing or Esc pressed
+	[[ $font ]] || exit
+	Preview "$font" "$preview"
+	XDG_CONFIG_HOME=/ feh --draw-tinted --info "echo $font" -N --title 'Press Q to exit' -g "$previewsize$position" "$preview" &
+	fehpid=$!
+	xdotool windowfocus $termpid
+done
+

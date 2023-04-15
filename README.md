@@ -57,7 +57,7 @@ Lines in backup-list are file/dirnames, except when the first character is:
 Links are followed to backup the actual file contents if possible.
 ```
 
-# bacme
+## bacme
 **Simply request certificates from Let's Encrypt using ACME**
 
 * Usage:
@@ -168,12 +168,12 @@ buildnano [<version> | -g|--git | -c|--current]
     -c/--current:  Build from local git repo (as is)
 ```
 
-# buildsignal
+## buildsignal
 **Build Signal desktop AppImage**
 
 * Required: sudo
 
-# chmc
+## chmc
 **Change Mojang Minecraft name for local LAN play with TLauncher**
 * Usage: `chmc [OLD NEW]` (Without arguments, display current name(s))
 
@@ -261,7 +261,33 @@ fillform [-s|--separate] [<dir>]
   as well as the concatenated file. Directory <dir> has the input files.
 ```
 
-# forks
+# fonts
+**Preview fonts interactively from the commandline**
+* Usage:
+```
+┌─┐┌─┐┌┐┌┌┬┐┌─┐
+├─ │ ││││ │ └─┐
+┘  └─┘┘└┘ ┴ └─┘
+fonts - Preview fonts interactively from the commandline
+
+Usage:  fonts [FONT | <option> ...]
+  Options:
+  FONT                   Filename (.otf .ttf .woff) of the font
+                         (If not given, fonts can be explored interactively)
+  -h/--help              Show this help message and exit
+  -V/--version           Show the version of 'fonts' and exit
+  -S/--previewsize WxH   Width and height of the font preview window in pixels
+  -P/--position +X+Y     Position of the font preview window
+  -p/--prompt PROMPT     Prompt for the fuzzy searcher
+  -s/--fontsize SIZE     Font size
+  -b/--background COLOR  Background color of the font preview window
+  -f/--fontcolor COLOR   Font color of the font preview window
+  -t/--text "TEXT"       Text in the font preview window
+Options can be set by environment variables: FONTS_PREVIEWSIZE FONTS_POSITION
+  FONTS_PROMPT FONTS_FONTSIZE FONTS_BACKGROUND FONTS_FONTCOLOR FONTS_TEXT
+```
+
+## forks
 **Check forks of significance on github**
 
 ## getborg
@@ -324,7 +350,7 @@ healbitrot [-h|--help] [<dir>...]
 ## KeeWeb.html
 **Browser-based KeePass application**
 
-# kenburns
+## kenburns
 * Required: ruby ffmpeg
 * Usage:
 ```
@@ -348,10 +374,10 @@ kenburns [options] input1 [input2...] output
 
 * Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
 
-# localdebs
+## localdebs
 **Create a local repo for deb packages**
 
-# mailout
+## mailout
 **Send mail according to template and CSV**
 * Usage: `mailout [-s|--send]`
 If the -s/--send flag is not given, no mails will be actually be sent.
@@ -365,10 +391,10 @@ the emails to. If variables 'firstnameheader' and 'lastnameheader' are set
 * Required: mailer[github.com/pepa65/mailer] sed csvtool coreutils(wc)
 * Set appropriate values to all required variables in the script.
 
-# makeself
+## makeself
 **Create self-extracting tar.gz archive**
 
-# megadl
+## megadl
 **Download mega.nz and MegaCrypter files**
 
 * Usage:
@@ -633,7 +659,10 @@ subshift <infile.sub/srt> <outfile.sub/srt> [action...]
           @<framerate>               [like: 23.976 / 25 / 29.97]'
 ```
 
-# tn
+## ti
+**Show images with filename in terminal using Sixel**
+
+## tn
 **Try TCP on host & port**
 
 * Required: perl
@@ -647,7 +676,7 @@ subshift <infile.sub/srt> <outfile.sub/srt> [action...]
   - command: help / show / insert / delete
 * Environment variables: `TPM_DIR` `TPM_KEY`
 
-# transfer
+## transfer
 **Transfer files via transfer.sh**
 
 * Features:
