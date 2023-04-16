@@ -13,7 +13,7 @@
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
 #  galculator virtualbox keepassxc googleearth gnumeric #libgtk3-nocsd0
-#  photofilmstrip vcdimager skype zoom feh flameshot
+#  photofilmstrip vcdimager skype zoom feh flameshot mlterm-tiny
 # numlockx:
 #  (if /etc/lightdm/lightdm.conf empty, start with: '[SeatDefaults]')
 #  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf
@@ -234,6 +234,18 @@ transfer(){ # Required: tty curl zip cd cat
 di(){ [[ ! -n $1 ]] && echo "Need docker container_id to inspect" && return || docker inspect -f 'docker run --name {{printf "%q" .Name}} {{- with .HostConfig}} {{- if .Privileged}} --privileged {{- end}} {{- if .AutoRemove}} --rm {{- end}} {{- if .Runtime}} --runtime {{printf "%q" .Runtime}} {{- end}} {{- range $b := .Binds}} --volume {{printf "%q" $b}} {{- end}} {{- range $v := .VolumesFrom}} --volumes-from {{printf "%q" $v}} {{- end}} {{- range $l := .Links}} --link {{printf "%q" $l}} {{- end}} {{- if .PublishAllPorts}} --publish-all {{- end}} {{- if .UTSMode}} --uts {{printf "%q" .UTSMode}} {{- end}} {{- with .LogConfig}} --log-driver {{printf "%q" .Type}} {{- range $o, $v := .Config}} --log-opt {{$o}}={{printf "%q" $v}} {{- end}} {{- end}} {{- with .RestartPolicy}} --restart "{{.Name -}} {{- if eq .Name "on-failure"}}:{{.MaximumRetryCount}} {{- end}}" {{- end}} {{- range $e := .ExtraHosts}} --add-host {{printf "%q" $e}} {{- end}} {{- range $v := .CapAdd}} --cap-add {{printf "%q" $v}} {{- end}} {{- range $v := .CapDrop}} --cap-drop {{printf "%q" $v}} {{- end}} {{- range $d := .Devices}} --device {{printf "%q" (index $d).PathOnHost}}:{{printf "%q" (index $d).PathInContainer}}:{{(index $d).CgroupPermissions}} {{- end}} {{- end}} {{- with .NetworkSettings -}} {{- range $p, $conf := .Ports}} {{- with $conf}} --publish " {{- if $h := (index $conf 0).HostIp}}{{$h}}: {{- end}} {{- (index $conf 0).HostPort}}:{{$p}}" {{- end}} {{- end}} {{- range $n, $conf := .Networks}} {{- with $conf}} --network {{printf "%q" $n}} {{- range $a := $conf.Aliases}} --network-alias {{printf "%q" $a}} {{- end}} {{- end}} {{- end}} {{- end}} {{- with .Config}} {{- if .Hostname}} --hostname {{printf "%q" .Hostname}} {{- end}} {{- if .Domainname}} --domainname {{printf "%q" .Domainname}} {{- end}} {{- range $p, $conf := .ExposedPorts}} --expose {{printf "%q" $p}} {{- end}} {{- range $e := .Env}} --env {{printf "%q" $e}} {{- end}} {{- range $l, $v := .Labels}} --label {{printf "%q" $l}}={{printf "%q" $v}} {{- end}} {{- if not (or .AttachStdin (or .AttachStdout .AttachStderr))}} --detach {{- end}} {{- if .AttachStdin}} --attach stdin {{- end}} {{- if .AttachStdout}} --attach stdout {{- end}} {{- if .AttachStderr}} --attach stderr {{- end}} {{- if .Tty}} --tty {{- end}} {{- if .OpenStdin}} --interactive {{- end}} {{- if .Entrypoint}} {{- if eq (len .Entrypoint) 1 }} --entrypoint " {{- range $i, $v := .Entrypoint}} {{- if $i}} {{end}} {{- $v}} {{- end}}" {{- end}} {{- end}} {{printf "%q" .Image}} {{range .Cmd}}{{printf "%q " .}}{{- end}} {{- end}}' "$1" |sed 's/ --/ \\\n  --/g' |less;}
 vp(){ ffprobe "$1" 2>&1 |grep -e Duration: -e Video:;}
 i(){ convert -colors 16 "$1" sixel:-;}
+fpw(){ (($#)) && a=$@ c=always || a=. c=never
+	read -sp "Firefox master password: " && echo -n $'\r' &&
+	echo -n "$REPLY" |~/git/misc/ffpw.py |grep --color=$c "$a" |less -R; reset;}
+pg23(){ if [[ $1 ]]
+	then
+		xmodmap -e "keycode 68 = F2 F2 F2 NoSymbol F2 F2 XF86Switch_VT_2 F2 F2"
+		xmodmap -e "keycode 69 = F3 F3 F3 NoSymbol F3 F3 XF86Switch_VT_3 F3 F3"
+	else
+		xmodmap -e "keycode 68 = Prior F2 F2 NoSymbol F2 F2 XF86Switch_VT_2 F2 F2"
+		xmodmap -e "keycode 69 = Next F3 F3 NoSymbol F3 F3 XF86Switch_VT_3 F3 F3"
+	fi
+}
 
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
 alias python3='PYTHONPATH=/usr/lib/python3/dist-packages; python3'
@@ -324,21 +336,10 @@ alias lsdm='ls -AFl /dev/disk/by-id |gr dm-name |sed "s@.*dm-name-\([^ ]*\) -> \
 alias reset='\reset;  tmux clear'
 alias memes='wget -O - -q reddit.com/r/memes.json | jq ".data.children[] |.data.url" | grep -v "/\"$" |xargs feh -xZ.'
 alias tf=twofat
-#alias i=feh
 alias sun='sunclock -map -dottedlines -twilight -meridianmode 3 -tropics -decimal'
 alias clk='tty-clock -sSbcC6'
 alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
-fpw(){ (($#)) && a=$@ c=always || a=. c=never
-	read -sp "Firefox master password: " && echo -n $'\r' &&
-	echo -n "$REPLY" |~/git/misc/ffpw.py |grep --color=$c "$a" |less -R; reset;}
 alias flush='sudo systemd-resolve --flush-caches'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
-pg23(){ if [[ $1 ]]
-	then
-		xmodmap -e "keycode 68 = F2 F2 F2 NoSymbol F2 F2 XF86Switch_VT_2 F2 F2"
-		xmodmap -e "keycode 69 = F3 F3 F3 NoSymbol F3 F3 XF86Switch_VT_3 F3 F3"
-	else
-		xmodmap -e "keycode 68 = Prior F2 F2 NoSymbol F2 F2 XF86Switch_VT_2 F2 F2"
-		xmodmap -e "keycode 69 = Next F3 F3 NoSymbol F3 F3 XF86Switch_VT_3 F3 F3"
-	fi
-}
+alias mlt='mlterm -w 24 -b black -f white -O none &'
+alias xt='xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 18 -si -rightbar -sl 51200 -wf -ti vt340 &'

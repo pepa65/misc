@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set +vx
+# Copyright: B9 June 2017 (MIT), pepa65 2023
+# rmbg - Make background of image transparent
+
+# Default 'fuzz': percentage of strictness in background color detection
+fuzzpercentage=20
+
+Usage(){
+	cat <<-EOH
+		rmbg - Make background of image transparent
+		  Convert images into shaped transparent png files by floodfilling
+		  the background with transparency (antialiased alpha channel).
+		  Unless a different starting pixel is specified, the top left
+		  pixel is used as the 'background' color to remove and
+		  floodfill starts from all four image edges.
+		Usage:  rmbg [-f PCT] [-s|-S] [-p X,Y] [-v] <image>...
+		  -f <fuzz>     How strict to match the background, default $defaultfuzz%
+		  -s            Speedy antialiasing (much faster, slightly less acurate)
+			-S            No antialiasing (faster still)
+		  -p <x>,<y>    Start from pixel at x,y instead of 0,0
+		  -v            Verbose operation
+	EOH
+	exit 0
+}
+# * This application creates an antialiased (blurred) alpha channel
+#   that is also eroded by half a pixel to avoid halos. ImageMagick's
+#   morphological operations don't (yet?) work at the subpixel level,
+#   so the alpha channel gets blown up to 200% before eroding. Since
+#   this can be slow on large images, consider using the '-s' option
+#   which uses a faster, lower quality antialiasing.
+# * Running this script on an image that already has transparency will
+#   erode the image due to the antialiasing. Using '-S' is a workaround,
+#   but is not very satisfactory. Perhaps this script should remove any
+#   existing transparency before manipulating the image and then add it
+#   back in at the end. But then again, how often are people going to
+#   want to do that? The only use I can think of is when using '-p'.
+# * Because of the previous issue, if you do use '-p' to fill lots of
+#   lagoons, you will probably want to use '-S' at the same time.
+# * Finding the coordinates for '-p' is a pain. It would be nice if there was
+#   a '-P' option which let the user click on a point (or multiple points)
+#   in the image to start the floodfill..!
+
+fuzz=$fuzzpercentage pixelcomma=0,0 pixelplus=+0+0
+speedyantialias=0 noantialias=0 verbose=0 pixelpicked=0
+while getopts f:sShp:v name
+do
+	case $name in
+	f) fuzz=$OPTARG ;;
+	s) speedyantialias=1 ;;
+	S) noantialias=1 ;;
+	v) verbose=1 ;;
+	h) Usage ;;
+	p) pixelcomma=$OPTARG
+		pixelplus=+${OPTARG%,*}+${OPTARG#*,}
+		pixelpicked=1 ;;
+	*) Usage
+	esac
+done
+
+shift $((OPTIND-1))
+(($#)) || Usage  # No image(s) given!
+
+for image
+do # Get color of top left pixel (0,0)
+	color=$(convert "$image" -format "%[pixel:p{$pixelcomma}]" info:-)
+	[[ $color = *rgba*",0)" ]] && color="${color%,0)},1)"  # Floodfill only works with opaque colors.
+	[[ $color = none ]] &&
+		echo "Error: $image: pixel at $pixelcomma is completely transparent, cannot floodfill." >&2 &&
+		continue
+
+	options=
+	# Add a 1 pixel border so we'll fill from the bottom and sides as well.
+	((!pixelpicked)) && options+=" -bordercolor $color -border 1 "
+	# In a new stack, make a copy of the image
+	options+=" ( +clone "
+	# [copy] floodfill with transparency ("none") starting at top-left
+	options+=" -fuzz $fuzz% -fill none -floodfill $pixelplus $color"
+	# [copy] extract just the transparency (alpha channel)
+	options+=" -alpha extract"
+
+	((!noantialias)) && # Antialiassing
+		if ((speedyantialias))
+		then # Speedy antialiassing
+			# [copy] blur the alpha channel to make it antialiased
+			options+=" -blur 0x1"
+			# [copy] only antialias inside the figure (<50% opacity becomes 0%)
+			options+=" -level 50%,100%"
+		else # No speedy antialiassing
+			# [copy] blow up the alpha channel so we can do sub-pixel morphology
+			options+=" -geometry 200%"
+			# [copy] blur the alpha channel to make it antialiased
+			options+=" -blur 0x0.5"
+			# [copy] shrink the region that is opaque by half a pixel.
+			options+=" -morphology erode square:1"
+			# [copy] scale the alpha channel back to normal size.
+			options+=" -geometry 50%"
+		fi
+	# [copy] end the stack.
+	options+=" ) "
+	# Compose the original image and the copy's alpha channel.
+	options+=" -compose CopyOpacity -composite"
+	((!pixelpicked)) && options+=" -shave 1"  # Remove the 1 pixel border we added
+	_=${image##*/} newimage=${_%.*}_rmbg$fuzz.png
+	((verbose)) && echo convert "$image" $options "$newimage"
+	convert "$image" $options "$newimage"
+done
