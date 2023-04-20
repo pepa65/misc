@@ -13,7 +13,7 @@
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
 #  galculator virtualbox keepassxc googleearth gnumeric #libgtk3-nocsd0
-#  photofilmstrip vcdimager skype zoom feh flameshot mlterm-tiny
+#  photofilmstrip vcdimager skype zoom feh flameshot
 # numlockx:
 #  (if /etc/lightdm/lightdm.conf empty, start with: '[SeatDefaults]')
 #  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf
@@ -341,5 +341,4 @@ alias clk='tty-clock -sSbcC6'
 alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
 alias flush='sudo systemd-resolve --flush-caches'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
-alias mlt='mlterm -w 24 -b black -f white -O none &'
 alias xt='xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 18 -si -rightbar -sl 51200 -wf -ti vt340 &'

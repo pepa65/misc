@@ -177,6 +177,9 @@ buildnano [<version> | -g|--git | -c|--current]
 **Change Mojang Minecraft name for local LAN play with TLauncher**
 * Usage: `chmc [OLD NEW]` (Without arguments, display current name(s))
 
+## colorc
+**Count color capacity of terminal**
+
 ## count
 **Count character occurrences in file**
 
@@ -287,6 +290,19 @@ Options can be set by environment variables: FONTS_PREVIEWSIZE FONTS_POSITION
   FONTS_PROMPT FONTS_FONTSIZE FONTS_BACKGROUND FONTS_FONTCOLOR FONTS_TEXT
 ```
 
+## fonttable
+**Display every unicode character**
+```
+Usage:  fonttable [-c] [-s] [-u] [START..END] [-f FONT]
+  -c/--cache           UnicodeData.txt data embedded in this script.
+  -s/--show-unihan     Also show CJK data from the Unihan database.
+  -u/--unihan-cache    Use a cached copy of the list of valid CJK characters
+                       instead of looking for Unihan_DictionaryIndices.txt.
+  START..END           Only show range from START to END(inclusive)
+                       Multiple ranges allowed: fonttable 2590..f 1fb00..ff
+  -f/--font FONT       Show every Unicode glyph which is defined in FONT.
+```
+
 ## forks
 **Check forks of significance on github**
 
@@ -393,6 +409,33 @@ the emails to. If variables 'firstnameheader' and 'lastnameheader' are set
 
 ## makeself
 **Create self-extracting tar.gz archive**
+
+## mathsym
+**Convert ASCII a-z/A-Z/0-9 into 'Math' symbols from Unicode block 1D400-7FF**
+
+```
+mathsym - Convert ASCII a-z/A-Z/0-9 into 'Math' symbols from Unicode block 1D400-7FF
+Usage:  mathsym ([<format>] <string>)...
+    <format>:
+SHORT   IN FULL                  A-Z,a-z UNICODE    0-9 UNICODE    MISSING
+^       Bold Serif               U+1D400-433        U+1D7CE-7D7
+/       Italic Serif             U+1D434-467                       h
+^/      Bold Italic Serif        U+1D468-48B                       EFHILMR
+@       Script                   U+1D49C-4CF                       ego
+^@      Bold Script              U+1D4D0-503
+%       Fractur                  U+1D504-537                       CHIRZ
+^%      Bold Fraktur             U+1D538-56B
+=       Doublestruck             U+1D56C-59F        U+1D7D8-7E1    CHNPQRZ
+-       Sansserif                U+1D5A0-5D3        U+1D7E2-7EB
+^-      Bold Sansserif           U+1D5D4-607        U+1D7EC-7F5
+/-      Italic Sansserif         U+1D608-63B
+^/-     Bold Italic Sansserif    U+1D63C-66F
+.       Monospaced               U+1D670-6A4        U+1D7F6-7FF
+    Format can be specified SHORT or IN FULL (case insensitive).
+    If no applicable <format> is given, <string> is rendered in Monospaced.
+Beware of missing symbols in some ranges! Complete are:
+ Bold Serif, Sansserif, Bold Sansserif and Monospaced.
+```
 
 ## megadl
 **Download mega.nz and MegaCrypter files**
