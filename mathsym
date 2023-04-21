@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+# mathsym - Convert ASCII 0-9/a-z/A-Z into Math symbols from Unicode block 1D400-7FF
+# Usage:  mathsym ([<format>] <string>)...
+
+Usage(){
+	cat <<-EOH
+		$self - Convert ASCII a-z/A-Z/0-9 into 'Math' symbols from Unicode block 1D400-7FF
+		Usage:  $self ([<format>] <string>)...
+		    <format>:
+		SHORT   IN FULL                  A-Z,a-z UNICODE    0-9 UNICODE    MISSING
+		^       Bold Serif               U+1D400-433        U+1D7CE-7D7
+		/       Italic Serif             U+1D434-467                       h
+		^/      Bold Italic Serif        U+1D468-48B                       EFHILMR
+		@       Script                   U+1D49C-4CF                       ego
+		^@      Bold Script              U+1D4D0-503
+		%       Fractur                  U+1D504-537                       CHIRZ
+		^%      Bold Fraktur             U+1D538-56B
+		=       Doublestruck             U+1D56C-59F        U+1D7D8-7E1    CHNPQRZ
+		-       Sansserif                U+1D5A0-5D3        U+1D7E2-7EB
+		^-      Bold Sansserif           U+1D5D4-607        U+1D7EC-7F5
+		/-      Italic Sansserif         U+1D608-63B
+		^/-     Bold Italic Sansserif    U+1D63C-66F
+		.       Monospaced               U+1D670-6A4        U+1D7F6-7FF
+		    Format can be specified SHORT or IN FULL (case insensitive).
+		    If no applicable <format> is given, <string> is rendered in Monospaced.
+		Beware of missing symbols in some ranges! Complete are:
+		 Bold Serif, Sansserif, Bold Sansserif and Monospaced.
+	EOH
+	exit
+}
+
+self=${0##*/}
+(($#==0)) && Usage
+
+while (($#))
+do # Check for format
+	format=${1// } d=0x7f6 a=0x670
+	case ${format,,} in
+	^|boldserif) a=0x400 d=0x7ce; shift ;;
+	/|italicserif) a=0x434; shift ;;
+	^/|bolditalicserif) a=0x468; shift ;;
+	@|script) a=0x49c; shift ;;
+	^@|boldscript) a=0x4d0; shift ;;
+	%|fractur) a=0x504; shift ;;
+	^%|boldfraktur) a=0x538; shift ;;
+	=|doublestruck) a=0x56c d=0x7d8; shift ;;
+	-|sansserif) a=0x5a0 d=0x7e2; shift ;;
+	^-|boldsansserif) a=0x5d4 d=0x7ec; shift ;;
+	/-|italicsansserif) a=0x608; shift ;;
+	^/-|bolditalicsansserif) a=0x63c; shift ;;
+	.|monospaced) shift ;;
+	esac
+
+	i=0
+	while ((i<${#1}))
+	do s=${1:$i:1}
+		printf -v c %d "'$s"
+		if (((c>47 && c<58) || (c>64 && c<91) || (c>96 && c<123)))
+		then # 0-9/a-z/A-Z
+			if ((c<58))
+			then # Numeric
+				o=$d
+				((c-=48))
+			else # Alpha
+				o=$a
+				((c>96)) && ((c-=71)) || ((c-=65))
+			fi
+			printf "\U$(printf %08x $((0x1d000+o+c)))"
+		else echo -n $s
+		fi
+		((++i))
+	done
+	shift
+done
+echo
+

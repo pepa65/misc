@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# colorc - Count color capacity of terminal
+trap 'tput sgr0' exit  # Clean up even if user hits ^C
+
+setfg(){ printf '\e[38;5;%dm' $1;}
+setbg(){ printf '\e[48;5;%dm' $1;}
+showcolors(){
+	# Given an integer, display that many colors
+	for ((i=0; i<$1; i++))
+	do
+		printf '%4d ' $i
+		setbg $i
+		tput el
+		tput sgr0
+		echo
+	done
+	tput sgr0 el
+}
+
+# First, test if terminal supports OSC 4 at all.
+printf '\e]4;%d;?\a' 0
+read -d $'\a' -s -t 0.1 </dev/tty
+if [[ -z $REPLY ]]
+then # OSC 4 not supported, so we'll fall back to terminfo
+	max=$(tput colors)
+else # OSC 4 is supported, so use it for a binary search
+	min=0 max=256
+	while ((min+1 < max))
+	do
+		((i=(min+max)/2))
+		printf '\e]4;%d;?\a' $i
+		read -d $'\a' -s -t 0.1 </dev/tty
+		[[ $REPLY ]] && min=$i || max=$i
+	done
+fi
+
+# If -v is given, show all the colors
+case ${1-none} in
+none) echo $max ;;
+-v) showcolors $max ;;
+*) (($1>0)) && showcolors $1 || echo $max
+esac #|less --raw-control-chars --QUIT-AT-EOF --no-init
