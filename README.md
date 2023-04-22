@@ -177,7 +177,7 @@ buildnano [<version> | -g|--git | -c|--current]
 **Change Mojang Minecraft name for local LAN play with TLauncher**
 * Usage: `chmc [OLD NEW]` (Without arguments, display current name(s))
 
-## colorc
+## colorcount
 **Count color capacity of terminal**
 
 ## count
@@ -575,6 +575,22 @@ Default values when options are not supplied:
   <img_file>:      <hostname>-<os>-<release>.qcow2
   <disk_size>:     $disk_size
   <boot_size>:     $boot_size
+```
+
+## rmbg
+```
+rmbg - Make background of image transparent
+  Convert images into shaped transparent png files by floodfilling
+  the background with transparency (antialiased alpha channel).
+  Unless a different starting pixel is specified, the top left
+  pixel is used as the 'background' color to remove and
+  floodfill starts from all four image edges.
+Usage:  rmbg [-f PCT] [-s|-S] [-p X,Y] [-v] <image>...
+  -f <fuzz>     How strict to match the background, default 20%
+  -s            Speedy antialiasing (much faster, slightly less acurate)
+  -S            No antialiasing (faster still)
+  -p <x>,<y>    Start from pixel at x,y instead of 0,0
+  -v            Verbose operation
 ```
 
 ## rmkernels

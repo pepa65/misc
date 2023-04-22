@@ -2,7 +2,8 @@
 set +vx
 # fonttable - Display every¹ unicode character in UnicodeData.txt
 # Copyright: 2018 hackerb9 (Copyleft: All wrongs reversed)
-# Required: awk sed grep bzip2(bzcat)
+# Required: awk sed grep bzip2(bzcat) fontconfig(fc-match fc-list fc-query)
+#   coreutils(basename cat sort column)
 
 # ¹ Well... not *every* character. This script shows every printable
 # *graphic* character. General classes C, M, and Z are omitted.
@@ -34,13 +35,13 @@ set +vx
 Usage(){
 	cat <<-EOF
 		fonttable - Display every unicode character
-		Usage:  fonttable [-c] [-s] [-u] [START..END] [-f FONT]
+		Usage:  fonttable [-c] [-s] [-u] [START-END] [-f FONT]
 		  -c/--cache           UnicodeData.txt data embedded in this script.
 		  -s/--show-unihan     Also show CJK data from the Unihan database.
 		  -u/--unihan-cache    Use a cached copy of the list of valid CJK characters
 		                       instead of looking for Unihan_DictionaryIndices.txt.
-		  START..END           Only show range from START to END(inclusive)
-		                       Multiple ranges allowed: fonttable 2590..f 1fb00..ff
+		  START-END            Only show range from START to END(inclusive)
+		                       Multiple ranges allowed: fonttable 2590-f 1fb00-ff
 		  -f/--font FONT       Show every Unicode glyph which is defined in FONT.
 	EOF
 	exit
@@ -56,7 +57,7 @@ Main(){
 		-u|--unihan-cache*) unihancacheflag=1 showhanflag=1	;;
 		# mkhancache is for internal use when updating this script.
 		--mkhancache) Mkhancache; exit 0 ;;
-		*..*) # Range START..END given
+		*-*) # Range START-END given
 			ranges+=("$1") ;;
 		-f|--font) # User wants to see the range for a fontfile
 			[[ -z $2 ]] && echo "Usage: $(basename $0) $1 <font>" >&2 && exit 1
@@ -68,13 +69,13 @@ Main(){
 	done
 
 	# If user didn't specify a range, then show all visible Unicode codepoints
-	((${#ranges} < 1)) && ranges=(..)
+	((${#ranges} < 1)) && ranges=(-)
 
 	for r in "${ranges[@]}"
 	do # Allow: U+2022 U2022 0x2022 2022
-		_=${r%..*} _=${_#u} _=${_#U} _=${_#+} start=${_#0x}
-		_=${r#*..} _=${_#u} _=${_#U} _=${_#+} end=${_#0x}
-		# Allow users to specify things like "fonttable 23b0..f"
+		_=${r%-*} _=${_#u} _=${_#U} _=${_#+} start=${_#0x}
+		_=${r#*-} _=${_#u} _=${_#U} _=${_#+} end=${_#0x}
+		# Allow users to specify things like "fonttable 23b0-f"
 		[[ $start && $end ]] && ((${#start} > ${#end})) &&
 			end=${start:0:$((${#start}-${#end}))}$end
 		Catucd |Restrict "$start" "$end" |Printvisible
@@ -90,10 +91,10 @@ Restrict(){ # 1:start 2:end
 	[[ -z $start ]] && start=0
 	[[ -z $end ]] && end=10FFFF
 	awk -F';' -v start=$((16#$start)) -v end=$((16#$end)) '
-		{
-			n=strtonum("0x" $1);
-			if (n >= start && n <= end) {print;}
-		}'
+{
+	n=strtonum("0x" $1);
+	if (n >= start && n <= end) {print;}
+}'
 }
 
 Printvisible(){ # @:fields in input
@@ -103,19 +104,20 @@ Printvisible(){ # @:fields in input
 	# means the third field is NOT C, M, or Z. (For UniHan, there is
 	# no third field, so we print all characters.)
 	# If anything gets printed, then a newline is added to the end.
-	awk -F';' '$3 !~ /C|M|Z/ {
-			printf ("%c", strtonum("0x" $1));
-			gotone=1;
-		};
-		END {if (gotone) print "";}'
+	awk -F';' '
+$3 !~ /C|M|Z/ {
+	printf ("%c", strtonum("0x" $1));
+	gotone=1;
+};
+END {if (gotone) print "";}'
 }
 
 Fontrange(){ # 1:font
 	# Given a fontfile or name as $1, output a list of unicode ranges
-	# that are covered by that font in the form: "20..7e a0 16a0
-	# 16a2..16a3 16a6 16a9..16ab 16b1 16b3 16b7..16b9 16bb 16be 16c1
-	# 16c4 16c7..16c9 16cb 16cf 16d2 16d6..16d7 16da 16dd..16e5
-	# 16eb..16ed 16f1..16f8 2008 200b..200f 202a..202e"
+	# that are covered by that font in the form: "20-7e a0 16a0
+	# 16a2-16a3 16a6 16a9-16ab 16b1 16b3 16b7-16b9 16bb 16be 16c1
+	# 16c4 16c7-16c9 16cb 16cf 16d2 16d6-16d7 16da 16dd-16e5
+	# 16eb-16ed 16f1-16f8 2008 200b-200f 202a-202e"
 	local font=$1 fontfile fallback
 	if [[ -r $font ]]
 	then # Yay! it is a file already. Nothing to do
@@ -141,7 +143,7 @@ Fontrange(){ # 1:font
 		fi
 		shopt -u nocasematch
 	fi
-	fc-query --format='%{charset}\n' "${fontfile%$'\t'*}" |sed 's/-/../g'
+	fc-query --format='%{charset}\n' "${fontfile%$'\t'*}" #|sed 's/-/../g'
 }
 
 Catucd(){
@@ -34785,20 +34787,22 @@ Catunihan(){
 		for f in {,/usr{/local,}/share/unicode/}Unihan_DictionaryIndices.txt{,.bz2}
 		do if [[ -r $f ]]
 			then # First field looks like "U+4E00": skip the U+ and comments (#)
-				bzcat -f "$f" |awk  '!/^\s*#/ {
-						if (prev != $1) {
-							prev=$1;
-							print substr($1, 3);
-						}
-					}'
+				bzcat -f "$f" |awk '
+!/^\s*#/ {
+	if (prev != $1) {
+		prev=$1;
+		print substr($1, 3);
+	}
+}'
 				return
 			fi
 		done
 
-	Catunihancache |awk '{
-			for (i=strtonum("0x" $1); i<=strtonum("0x" $2); i++)
-				printf ("%08X\n", i);
-		}'
+	Catunihancache |awk '
+{
+	for (i=strtonum("0x" $1); i<=strtonum("0x" $2); i++)
+		printf ("%08X\n", i);
+}'
 }
 
 Mkhancache(){
@@ -34808,25 +34812,26 @@ Mkhancache(){
 	done
 	[[ -z $unihan ]] && echo "Could not find your system Unihan_DictionaryIndices.txt.bz2" >&2 && return
 	echo "Finding all characters in $unihan..." >&2
-	bzcat -f "$unihan" |awk 'BEGIN { prev=-1; start=-1; sum=0; };
-			!/^\s*#/ {
-				cur=strtonum("0x" substr($1, 3));
-				if (cur != prev && cur != prev+1) {
-					if (start>=0) {
-						printf("%08X\t%08X\t(%d)\n", start, prev, prev-start+1);
-						sum=sum+prev-start+1;
-					}
-					start=cur;
-				}
-				prev=cur;
-			}
-			END {
-				if (start != cur) {
-					printf("%08X\t%08X\t(%d)\n", start, prev, prev-start+1);
-					sum=sum+prev-start+1;
-				}
-				printf("Number of unique glyphs: %d\n", sum) >"/dev/stderr";
-			}'
+	bzcat -f "$unihan" |awk '
+BEGIN { prev=-1; start=-1; sum=0; };
+!/^\s*#/ {
+	cur=strtonum("0x" substr($1, 3));
+	if (cur != prev && cur != prev+1) {
+		if (start>=0) {
+			printf("%08X\t%08X\t(%d)\n", start, prev, prev-start+1);
+			sum=sum+prev-start+1;
+		}
+		start=cur;
+	}
+	prev=cur;
+}
+END {
+	if (start != cur) {
+		printf("%08X\t%08X\t(%d)\n", start, prev, prev-start+1);
+		sum=sum+prev-start+1;
+	}
+	printf("Number of unique glyphs: %d\n", sum) >"/dev/stderr";
+}'
 }
 
 

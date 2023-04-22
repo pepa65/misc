@@ -15,9 +15,9 @@ Usage(){
 		  pixel is used as the 'background' color to remove and
 		  floodfill starts from all four image edges.
 		Usage:  rmbg [-f PCT] [-s|-S] [-p X,Y] [-v] <image>...
-		  -f <fuzz>     How strict to match the background, default $defaultfuzz%
+		  -f <fuzz>     How strict to match the background, default $fuzzpercentage%
 		  -s            Speedy antialiasing (much faster, slightly less acurate)
-			-S            No antialiasing (faster still)
+		  -S            No antialiasing (faster still)
 		  -p <x>,<y>    Start from pixel at x,y instead of 0,0
 		  -v            Verbose operation
 	EOH

@@ -67,7 +67,7 @@ do # Check for format
 				((c>96)) && ((c-=71)) || ((c-=65))
 			fi
 			printf "\U$(printf %08x $((0x1d000+o+c)))"
-		else echo -n $s
+		else echo -n "$s"
 		fi
 		((++i))
 	done

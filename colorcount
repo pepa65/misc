@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# colorc - Count color capacity of terminal
+# colorcount - Count color capacity of terminal
 trap 'tput sgr0' exit  # Clean up even if user hits ^C
 
 setfg(){ printf '\e[38;5;%dm' $1;}
