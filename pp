@@ -27,7 +27,7 @@ shopt -s interactive_comments
 shopt -s dotglob extglob
 set +H  # no more history expansion, use ! safely in strings
 
-export PROMPT_COMMAND='hasjobs=$(jobs -p); printf "⏎%$((COLUMNS-1))s\\r \\r"'
+export PROMPT_COMMAND='hasjobs=$(jobs -p)'
 export PS1='\[\033[01;36m\]${hasjobs:+\j }\[\033[01;32m\]\w \[\033[01;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\033[01;36m\]\$ \[\033[00m\]'
 export WINEPREFIX=~/.wine
 export EDITOR=nano
@@ -47,8 +47,8 @@ export SCT
 sct(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
 }
 
-addpath(){ for p; do [[ ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
-addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin $HOME/.cargo/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin
+addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
+addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
