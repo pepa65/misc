@@ -343,4 +343,4 @@ alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
 alias flush='sudo systemd-resolve --flush-caches'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
 xt(){ [[ $1 ]] && ssh="-e ssh $1"
-	xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 18 -si -rightbar -sl 51200 -wf -ti vt340 $ssh &}
+	xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 18 -si -rightbar -sl 51200 +vb -wf -ti vt340 $ssh &}

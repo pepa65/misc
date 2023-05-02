@@ -746,6 +746,9 @@ subshift <infile.sub/srt> <outfile.sub/srt> [action...]
 * Required: `curl`
 * Optional: `gpg tar qrencode`
 
+## unsubscribe.php
+**Facilitate list-unsubscribe links**
+
 ## w2usb
 **Write image/hybridiso to (USB) disk device**
 
