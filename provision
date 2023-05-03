@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -e  # Exit on any error
+# provision - Provision virtual machine
+# Usage:  provision <host> [=]
+#   <host>:    Host from ~/.ssh/config
+#   =:         If '=' is given, setting up the authorized_key is skipped
+
+prov=$0 host=$1 myid=$(</etc/machine-id)
+
+Inf(){	# 1:msg
+	echo "-- $1"
+}
+Err(){ # 1:msg 2:ret
+	echo "## $1"
+	exit $2
+}
+
+# Priming host
+if [[ $host && ! ${host:0:1} = . ]]
+then # Host specified and not an ID
+	[[ $2 != = ]] &&
+		Inf "Setting up authorized_keys on $host" &&
+		ssh-copy-id -i ~/.ssh/id_ed25519.pub "$host"
+	Inf "From $myid copying '$prov' to $host..."
+	scp -q "$prov" "$1":
+	Inf "Executing '$prov' on $host..."
+	ssh "$1" "$0" ".$myid"
+	exit
+fi
+
+# On the host?
+[[ -z $1 ]] && Err "Need HOST (from ~/.ssh/config)" 1
+
+# On the host??
+me=$(whoami) id=$(</etc/machine-id) fromid=${1:1}
+[[ $fromid = $id ]] && Err "Same machine, exiting" 2
+Inf "User $me on $id (from $fromid): $(hostname -A)"
+
+# On the host!
+set -v
+sudo apt update
+sudo apt-get install -y ne dfc iftop iotop source-highlight colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
+[[ -d git ]] || mkdir git
+cd git
+[[ ! -d misc ]] && git clone https://gitlab.com/pepa65/misc && misc/buildnano && sudo ln -sf ~/.nanorc /root/
+if [[ ! -f ~/.tmux.conf ]]
+then
+	cp misc/.tmux.conf ~/
+	echo -e "\n#PP\nsource ~/git/misc/pp\n" >>~/.bashrc
+	echo -e "\n#PP\nsource $HOME/git/misc/pp\n" |sudo tee -a /root/.bashrc
+fi

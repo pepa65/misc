@@ -555,6 +555,12 @@ Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 ## pp
 **Settings to be included in .bashrc**
 
+## provision
+**Provision virtual machine**
+* Usage: `provision <host> [=]`
+  - `<host>`: Host from ~/.ssh/config
+  - `=`: If `=` is given, setting up the authorized_key is skipped
+
 ## qemu-create-os-img
 **Create a fresh Debian/Ubuntu qemu image**
 
