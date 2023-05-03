@@ -39,7 +39,9 @@ Inf "User $me on $id (from $fromid): $(hostname -A)"
 # On the host!
 set -v
 sudo apt update
+sudo dpkg-reconfigure tzdata
 sudo apt-get install -y ne dfc iftop iotop source-highlight colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
+sudo apt purge snapd
 [[ -d git ]] || mkdir git
 cd git
 [[ ! -d misc ]] && git clone https://gitlab.com/pepa65/misc && misc/buildnano && sudo ln -sf ~/.nanorc /root/
