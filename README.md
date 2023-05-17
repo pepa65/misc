@@ -584,6 +584,9 @@ Default values when options are not supplied:
 ```
 
 ## rmbg
+**Make background of image transparent**
+* Required: imagemagick(convert)
+
 ```
 rmbg - Make background of image transparent
   Convert images into shaped transparent png files by floodfilling
