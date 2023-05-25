@@ -264,7 +264,7 @@ alias filedefrag='shake --bigsize=0 --old=0 -C 0 '
 alias tt='echo "$(TZ=Asia/Bangkok LC_TIME="th_TH.UTF-8" date +"%T วัน%A วันที่ %d %B พ.ศ.") $(($(date +%Y)+543))"'
 alias vlcs='vlc -R -f --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
 alias vlcp='vlc -R -f --video-on-top --no-video-title-show --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
-alias lb='lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,FSUSE%,MOUNTPOINT -x START --tree' # lsblk recent enough for START
+alias lb='lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,SCHED,FSUSE%,MOUNTPOINT -x START --tree' # lsblk recent enough for START
 alias is='bc -l <<<'
 alias m="mount |sed 's/ on / /g' |sed 's/ type / /g' |column -t"
 alias be='(head -5; echo; tail -5) <'  ## requires a file to 'analyze'

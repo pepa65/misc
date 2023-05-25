@@ -1,0 +1,43 @@
+Setup reverse-tunnel to access Server behind NAT
+================================================
+
+Required
+--------
+* Setup sshd on Server port Server-SSH-port user Server-user
+* Setup sshd on Remote port Remote-SSH-port user Remote-user
+* Permanent connection from Server to Remote (best install: autossh)
+
+
+Permanent connection from Server to Remote
+------------------------------------------
+# Execute on Server:
+autossh -fN -R Tunneled-SSH-port:localhost:Server-SSH-port -p Remote-SSH-port -l Remote-user Remote
+# ssh -fN:"go to background and don't execute anything" -R:"forward" -p:"SSH Port on Remote" -l:"User on Remote"
+
+# Or after setting up the SSH-config for Remote on Server:
+ssh -fN -R Tunneled-SSH-port:localhost:Server-SSH-port Remote
+
+
+Connect from Client to Server through Remote
+--------------------------------------------
+# After setting up the SSH-config for Server & Remote on Client (see below):
+ssh Server
+
+# Or without config, execute on Client:
+ssh -p Remote-SSH-port -l Remote-user Remote
+# And then execute on Remote:
+ssh -p Tunneled-SSH-port -l Server-user localhost
+
+
+Setup ssh-config on Client
+--------------------------
+Host Server
+	ProxyJump Remote
+	Hostname localhost
+	Port Tunneled-SSH-port
+	User Server-user
+Host Remote
+	Hostname IP/Domain
+	Port Remote-SSH-port
+	User Remote-user
+
