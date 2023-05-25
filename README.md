@@ -555,9 +555,9 @@ Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 ## pp
 **Settings to be included in .bashrc**
 
-## provision
+## deploy
 **Provision virtual machine**
-* Usage: `provision <host> [=]`
+* Usage: `deploy <host> [=]`
   - `<host>`: Host from ~/.ssh/config
   - `=`: If `=` is given, setting up the authorized_key is skipped
 
@@ -584,6 +584,9 @@ Default values when options are not supplied:
 ```
 
 ## rmbg
+**Make background of image transparent**
+* Required: imagemagick(convert)
+
 ```
 rmbg - Make background of image transparent
   Convert images into shaped transparent png files by floodfilling

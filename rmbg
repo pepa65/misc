@@ -2,6 +2,7 @@
 set +vx
 # Copyright: B9 June 2017 (MIT), pepa65 2023
 # rmbg - Make background of image transparent
+# Required: imagemagick(convert)
 
 # Default 'fuzz': percentage of strictness in background color detection
 fuzzpercentage=20
