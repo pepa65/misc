@@ -1,22 +1,22 @@
-// sct.c
-// Set Colour Temperature of screen
+// sct.c - Set Colour Temperature of screen
 // Required: libxrandr-dev (will pull in libx11-dev)
 // Compile:
 //     cc -o sct sct.c -lX11 -lXrandr
 //   Or:
 //     cc -std=c99 -O2 -I /usr/X11R6/include -o sct sct.c -L /usr/X11R6/lib -lm -lX11 -lXrandr
 // Install: chmod +x sct && sudo mv sct /usr/local/bin/sct
+// Usage:  sct [temperature]  # temperature: 1000..10000 (default: 6500)
 //
-// Bash usage (add these lines to .bashrc), requires yad:
-//     export SCT
-//     sct(){
+// GUI usage (add these lines to .bashrc), requires yad:
+//   export SCT
+//   st(){
+//     [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 ||
 //       SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000)
-//       [[ $SCT ]] && $(type -P sct) $SCT  ## sct executable in PATH
-//     }
+//     [[ $SCT ]] && $(type -p sct) && $(type -P sct) $SCT  ## sct executable in PATH and $SCT set
+//   }
 //
 // Original license: Public domain, do as you wish.
-// Adapted to work on all screens by pepa65 <pepa65@passchier.net>
-// Modifications relicenced under GPLv3+
+// Adapted to work on all screens by pepa65 <pepa65@passchier.net> GPLv3+
 
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+
+#define AVG(rgb) (1 - tr) * whitepoints[ti].rgb + tr * whitepoints[ti + 1].rgb
 
 // From redshift, in 500K steps
 static const struct {float red; float green; float blue;} whitepoints[] = {
@@ -59,13 +61,16 @@ int main(int argc, char **argv) {
 		arg, ti, c, i, crtcxid, size;
 	if (argc > 1) {
 		arg = atoi(argv[1]);
-		if (arg >= 1000 && arg <= 10000) temp = arg;
+		if (argc == 2 && arg >= 1000 && arg <= 10000) temp = arg;
+		else {
+			puts("Error: single argument needs to be 1000..10000");
+			return 1;
+		}
 	}
 
 	// Interpolate from the table
 	ti = temp / 500 - 2;
 	tr = temp % 500 / 500;
-#define AVG(rgb) (1 - tr) * whitepoints[ti].rgb + tr * whitepoints[ti + 1].rgb
 	gamma_red = AVG(red);
 	gamma_green = AVG(green);
 	gamma_blue = AVG(blue);

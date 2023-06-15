@@ -44,7 +44,7 @@ export TERM=xterm-256color
 export LANG="en_US.UTF-8"
 export LC_COLLATE="en_US.UTF-8"
 export SCT
-sct(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
+st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
 }
 
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
@@ -246,6 +246,8 @@ pg23(){ if [[ $1 ]]
 		xmodmap -e "keycode 69 = Next F3 F3 NoSymbol F3 F3 XF86Switch_VT_3 F3 F3"
 	fi
 }
+xt(){ [[ $1 ]] && ssh="-e ssh $1"
+	xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 18 -si -rightbar -sl 51200 +vb -wf -ti vt340 $ssh &}
 
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
 alias python3='PYTHONPATH=/usr/lib/python3/dist-packages; python3'
@@ -342,5 +344,4 @@ alias clk='tty-clock -sSbcC6'
 alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
 alias flush='sudo systemd-resolve --flush-caches'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
-xt(){ [[ $1 ]] && ssh="-e ssh $1"
-	xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 18 -si -rightbar -sl 51200 +vb -wf -ti vt340 $ssh &}
+alias clip="xclip -selection clipboard"
