@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# runvms - Display VirtualBox instances' state, and start if not yet running
+
+# Virtual Machines to run (available: `VBoxManage list vms`)
+vms=''
+
+# Initial sleep if run from cron (@reboot)
+[[ -t 1 ]] || sleep 60
+
+# Wait until /sbin/vboxconfig is no longer running
+while [[ -d /home/ultron/vboxconfig ]]
+do sleep 1; echo -n '.'
+done
+
+started=0 output=
+for vm in $vms
+do
+	echo
+	info=$(VBoxManage showvminfo --machinereadable "$vm")
+	grep -e '^name=' -e '^memory=' -e '^cpus=' -e '^macaddress' -e '^VMState='  <<<"$info"
+	grep -q 'VMState="poweroff"' <<<"$info" && started=1 &&
+		output+="$(echo; VBoxManage startvm "$vm" --type headless)"
+done
+
+((started)) && echo "$output"
+

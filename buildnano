@@ -63,7 +63,7 @@ Abort(){ # $1:message
 
 Sudo(){ # $@:command+arguments
 	echo "Elevated privileges required"
-	sudo "$@"
+	sudo -S "$@"
 }
 
 [[ $- = *i* ]] && echo "Don't source, but run like: bash $BASH_SOURCE" &&
@@ -257,7 +257,7 @@ pkgs=$(dpkg -l) inst=
 for p in $req
 do grep -q "^ii  $p[ :]" <<<$pkgs || inst+=" $p"; done
 [[ $inst ]] && echo "Need to install$inst" &&
-	! Sudo apt-get install -y $inst && Abort "could not install packages:$inst"
+	! Sudo -S apt-get install -y $inst && Abort "could not install packages:$inst"
 
 if ((cur))
 then
@@ -314,7 +314,7 @@ fi
 make || Abort "error in Make"
 
 # Needs: make sudo
-Sudo make install || Abort "error in Install"
+Sudo -S make install || Abort "error in Install"
 rc=$HOME/.nanorc
 
 echo -e "$nanorc" >"$rc.tmp"
