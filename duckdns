@@ -8,8 +8,32 @@
 #   */15 * * * * /PATH/TO/duckdns
 # Required: wget grep
 
-# Get WAN_IP by using dig on a TXT record:
-# dig -4 +short TXT o-o.myaddr.l.google.com @ns1.google.com
+# Get WAN_IP by using dig on a TXT/A/AAAA record:
+# dig -4 +short TXT o-o.myaddr.l.google.com @ns1.google.com  # Or -6, With ""
+# dig -4 +short myip.opendns.com @resolver1.opendns.com  # Or AAAA instead of -4, Blocks recursive resolvers
+# dig +short TXT whoami.cloudflare CH @1.1.1.1  # No IPv6, With "", Through CHaosnet
+# dig +short whoami.akamai.net @ns1-1.akamaitech.net  # No IPv6
+# dig -4 ip @dns.toys  # Or -6
+
+# Show your (local) recursive resolver through dig:
+# dig -4 +short TXT o-o.myaddr.l.google.com  # With ""
+# dig -4 +short whoami.akamai.net
+
+# Using dig on dns.toys to get all kinds of services
+# Get: help, time, weather, unit, base & currency conversions, number to words, definitions, CIDR range, dice roll, coin toss, random numbers:
+# dig help @dns.toys
+# dig bangkok.time @dns.toys
+# dig bangkok.weather @dns.toys
+# dig 24oz-ml.unit @dns.toys  # See dig unit @dns.toys
+# dig 755oct-bin.base @dns.toys  # dec/hex/bin/oct
+# dig 100THB-EUR.fx @dns.toys
+# dig 987654321.words @dns.toys
+# dig dandruff.dict @dns.toys
+# dig 2001:db8::/108.cidr @dns.toys
+# dig 3d20/2.dice @dns.toys
+# dig 3.coin @dns.toys
+# dig 30-200.rand @dns.toys
+
 
 # duckdns.org subdomain & token, can be set in DUCKDNS_DOMAIN & DUCKDNS_TOKEN
 domain=''

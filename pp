@@ -346,3 +346,4 @@ alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
 alias flush='sudo systemd-resolve --flush-caches'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
 alias clip="xclip -selection clipboard"
+alias dt="dig +short @dns.toys"
