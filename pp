@@ -13,7 +13,7 @@
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
 #  galculator virtualbox keepassxc googleearth gnumeric #libgtk3-nocsd0
-#  photofilmstrip vcdimager skype zoom feh flameshot
+#  photofilmstrip vcdimager skype zoom feh flameshot flpsed
 # numlockx:
 #  (if /etc/lightdm/lightdm.conf empty, start with: '[SeatDefaults]')
 #  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf
@@ -48,7 +48,7 @@ st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Disp
 }
 
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
-addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin
+addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
@@ -146,7 +146,6 @@ addpk(){ # add PUBKEY
  gpg --keyserver subkeys.pgp.net --recv-keys $1;  gpg --armor --export $1 | sudo apt-key add -;}
 ah(){ # hold package (no upgrades)
 	while [[ "$1" ]]; do sudo apt-mark hold "$1"; shift; done;}
-alias ach='dpkg --get-selections | egrep hold$' # check holds
 arh(){ # unhold package
 	while (($#)); do sudo apt-mark unhold "$1"; shift; done;}
 thcc(){ # Thai character count
@@ -247,8 +246,10 @@ pg23(){ if [[ $1 ]]
 	fi
 }
 xt(){ [[ $1 ]] && ssh="-e ssh $1"
-	xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 18 -si -rightbar -sl 51200 +vb -wf -ti vt340 $ssh &}
-
+	xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 19 -si -rightbar -sl 51200 +vb -wf -ti vt340 -xrm '*metaSendsEscape:true' $ssh &}
+gcd(){ (($#!=2)) && echo 'Need to numbers to get the Greatest Common Divider' && return
+	(($1%$2)) && gcd $2 $(($1%$2)) || echo $2;}
+alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
 alias python3='PYTHONPATH=/usr/lib/python3/dist-packages; python3'
 alias lesspipe='file “$1” | grep -q text && /usr/share/source-highlight/src-hilite-lesspipe.sh “$1”'

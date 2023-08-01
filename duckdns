@@ -8,6 +8,9 @@
 #   */15 * * * * /PATH/TO/duckdns
 # Required: wget grep
 
+# Get WAN_IP by using dig on a TXT record:
+# dig -4 +short TXT o-o.myaddr.l.google.com @ns1.google.com
+
 # duckdns.org subdomain & token, can be set in DUCKDNS_DOMAIN & DUCKDNS_TOKEN
 domain=''
 token=''
