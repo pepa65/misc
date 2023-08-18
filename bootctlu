@@ -125,7 +125,11 @@ done
 
 # Bootmanager file
 loader=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
-[[ ! -f $loader ]] && Echo "The bootmanager cannot be found: '$loader'" 3
+if [[ ! -f $loader ]]
+then # Try getting it elsewhere
+	wget -q good4.eu/gummi && loader=gummi ||
+		Echo "The bootmanager cannot be found: '$loader'" 3
+fi
 
 ((EUID)) && echo "ABORT: Privileges required, run with sudo or as root" && exit
 if ((go))

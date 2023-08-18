@@ -7,8 +7,9 @@
 #  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
-#  php-fpm php-xml php-gd shellcheck imgcat(https://github.com/trashhalo/imgcat)
-#  viu[docker run --rm --name rust -v /tmp:/tmp -ti rust bash -c "apt update && apt -y install musl-tools && git clone https://github.com/atanunq/viu && cd viu && rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release && cp target/x86_64-unknown-linux-musl/release/viu /tmp/viu]
+#  php-fpm php-xml php-gd shellcheck zint
+# imgcat: https://github.com/trashhalo/imgcat/releases/download/v1.2.0/imgcat_1.2.0_Linux_x86_64.tar.gz
+# viu (as root): docker run --rm --name rust -v /tmp:/tmp -ti rust bash -c "apt update && apt -y install musl-tools && git clone https://github.com/atanunq/viu && cd viu && rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release && cp target/x86_64-unknown-linux-musl/release/viu /usr/local/bin/viu"
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
@@ -48,7 +49,7 @@ st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Disp
 }
 
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
-addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin
+addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
