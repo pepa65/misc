@@ -128,7 +128,7 @@ ldr=/usr/lib/systemd/boot/efi/systemd-boot*.efi
 loader=$(echo $ldr)
 if [[ ! -f $loader ]]
 then # Try getting it elsewhere
-	wget -qO loader.efi good4.eu/gummi && loader=loader.efi ||
+	wget -qO good4.eu/gummi.efi && loader=gummi.efi ||
 		Echo "The bootmanager cannot be found: '$ldr'" 3
 fi
 
