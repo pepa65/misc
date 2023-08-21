@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# installExtensionPack - Get & install the VirtualBox Extension Pack
+
+# See latest 7.0: https://www.virtualbox.org/wiki/Downloads
+# See older 7.0: https://www.virtualbox.org/wiki/Download_Old_Builds_7_0
+# See 6.1: https://www.virtualbox.org/wiki/Download_Old_Builds_6_1
+
+# If no version given, it is being polled from Oracle
+version=7.0.8
+version=6.1.44
+
+# Get latest version online if none specified
+getversion=download.virtualbox.org/virtualbox/LATEST-STABLE.TXT
+[[ ! $version ]] && ! version=$(wget -qO - "https://$getversion") && echo "No internet..." && exit 1
+
+# Examine available VirtualBox packages
+vboxversions=$(apt-cache search virtualbox-[5-9] |grep -o '^[^ ]*' |grep -o '...$')
+echo "Available VirtualBox packages:" $vboxversions
+
+# Find installed Virtualbox version
+_=$(dpkg -l |grep -o '^ii[ ]*virtualbox-[5-9].[0-9]') installed=${_: -3}
+for vboxversion in $vboxversions
+do
+	[[ $version = $vboxversion* ]] && echo "- Available: $version"
+	[[ $installed = $vboxversion* ]] && echo "= INSTALLED: $vboxversion"
+done
+
+# Examine installed Extension Packs
+extpacks=$(VBoxManage list extpacks)
+_=$(grep 'Version:' <<<"$extpacks") extver=${_##* }  # Problem if more than 1 installed!
+[[ $extver = $version ]] && echo "Up to date Extension Pack:" &&
+	grep -e '^Version:' -e '^Revision:' -e '^Usable:' <<<"$extpacks" && exit 0
+
+wget "https://download.virtualbox.org/virtualbox/$version/Oracle_VM_VirtualBox_Extension_Pack-$version.vbox-extpack"
+echo "y" |sudo VBoxManage extpack install --replace "Oracle_VM_VirtualBox_Extension_Pack-$version.vbox-extpack"
+

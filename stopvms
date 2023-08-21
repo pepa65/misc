@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# stopvms - Stop running Virtual Machines
+
+for vm in $(vboxmanage list runningvms |grep -o '^"[^"]*' |grep -o '[^"]*')
+do grep 'VMState="poweroff"' <<<"$(VBoxManage showvminfo --machinereadable "$vm")" && continue
+	echo "Powering off $vm"
+	VBoxManage controlvm "$vm" poweroff
+done

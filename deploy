@@ -38,16 +38,16 @@ Inf "User $me on $id (from $fromid): $(hostname -A)"
 
 # On the host!
 set -v
-sudo apt update
-sudo dpkg-reconfigure tzdata
-sudo apt-get install -y ne dfc iftop iotop source-highlight colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
-sudo apt purge snapd
+sudo -S apt update
+sudo -S dpkg-reconfigure tzdata
+sudo -S apt-get install -y ne dfc iftop iotop source-highlight colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
+sudo -S apt purge snapd
 [[ -d git ]] || mkdir git
 cd git
-[[ ! -d misc ]] && git clone https://gitlab.com/pepa65/misc && misc/buildnano && sudo ln -sf ~/.nanorc /root/
+[[ ! -d misc ]] && git clone https://gitlab.com/pepa65/misc && misc/buildnano && sudo -S ln -sf ~/.nanorc /root/
 if [[ ! -f ~/.tmux.conf ]]
 then
 	cp misc/.tmux.conf ~/
 	echo -e "\n#PP\nsource ~/git/misc/pp\n" >>~/.bashrc
-	echo -e "\n#PP\nsource $HOME/git/misc/pp\n" |sudo tee -a /root/.bashrc
+	echo -e "\n#PP\nsource $HOME/git/misc/pp\n" |sudo -S tee -a /root/.bashrc
 fi

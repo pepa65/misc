@@ -7,13 +7,14 @@
 #  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
-#  php-fpm php-xml php-gd shellcheck imgcat(https://github.com/trashhalo/imgcat)
-#  viu[docker run --rm --name rust -v /tmp:/tmp -ti rust bash -c "apt update && apt -y install musl-tools && git clone https://github.com/atanunq/viu && cd viu && rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release && cp target/x86_64-unknown-linux-musl/release/viu /tmp/viu]
+#  php-fpm php-xml php-gd shellcheck zint
+# imgcat: https://github.com/trashhalo/imgcat/releases/download/v1.2.0/imgcat_1.2.0_Linux_x86_64.tar.gz
+# viu (as root): docker run --rm --name rust -v /tmp:/tmp -ti rust bash -c "apt update && apt -y install musl-tools && git clone https://github.com/atanunq/viu && cd viu && rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release && cp target/x86_64-unknown-linux-musl/release/viu /usr/local/bin/viu"
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
 #  galculator virtualbox keepassxc googleearth gnumeric #libgtk3-nocsd0
-#  photofilmstrip vcdimager skype zoom feh flameshot
+#  photofilmstrip vcdimager skype zoom feh flameshot flpsed
 # numlockx:
 #  (if /etc/lightdm/lightdm.conf empty, start with: '[SeatDefaults]')
 #  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf
@@ -48,14 +49,15 @@ st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Disp
 }
 
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
-addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin
+addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
 function fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server 'find /data/downloads; find /data/video' |grep "$1";}
 qr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
-function c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
+c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
+cx(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 +G || less -RMgx2 +G "$@";}
 ff(){ [[ $2 ]] && d="$2" || d='.'; find "$d" |grep -s --color=auto --devices=skip -I "$1";}
 pdfc(){ (($#<2 || $#>3)) && echo "PDF Resize needs: <input.pdf> <output.pdf> [1] (third argument optional, gives better quality)" && return 1; [[ $3 = 1 ]] && q=ebook || q=screen; gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/"$q" -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" "$1";}
 pdfcl(){ (($#!=2)) && echo "PDF Clean needs 2 arguments: <input.pdf> and <output.pdf>" && return 1; t=$(mktemp); pdf2ps "$1" "$t"; ps2pdf "$t" "$2"; rm -- "$t";}
@@ -146,7 +148,6 @@ addpk(){ # add PUBKEY
  gpg --keyserver subkeys.pgp.net --recv-keys $1;  gpg --armor --export $1 | sudo apt-key add -;}
 ah(){ # hold package (no upgrades)
 	while [[ "$1" ]]; do sudo apt-mark hold "$1"; shift; done;}
-alias ach='dpkg --get-selections | egrep hold$' # check holds
 arh(){ # unhold package
 	while (($#)); do sudo apt-mark unhold "$1"; shift; done;}
 thcc(){ # Thai character count
@@ -247,8 +248,10 @@ pg23(){ if [[ $1 ]]
 	fi
 }
 xt(){ [[ $1 ]] && ssh="-e ssh $1"
-	xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 18 -si -rightbar -sl 51200 +vb -wf -ti vt340 $ssh &}
-
+	xterm +ah -aw -rw -bc -cr cyan -j -fg white -bg black -maximized -fa Julia -fs 19 -si -rightbar -sl 51200 +vb -wf -ti vt340 -xrm '*metaSendsEscape:true' $ssh &}
+gcd(){ (($#!=2)) && echo 'Need to numbers to get the Greatest Common Divider' && return
+	(($1%$2)) && gcd $2 $(($1%$2)) || echo $2;}
+alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
 alias python3='PYTHONPATH=/usr/lib/python3/dist-packages; python3'
 alias lesspipe='file “$1” | grep -q text && /usr/share/source-highlight/src-hilite-lesspipe.sh “$1”'
@@ -345,3 +348,4 @@ alias ffpw='PYTHONPATH=/usr/lib/python3/dist-packages ffpw'
 alias flush='sudo systemd-resolve --flush-caches'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
 alias clip="xclip -selection clipboard"
+alias dt="dig +short @dns.toys"
