@@ -7,7 +7,7 @@
 #  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
-#  php-fpm php-xml php-gd shellcheck zint
+#  php-fpm php-xml php-gd shellcheck zint libnss-resolve[github.com/censurfridns/client-configs]
 # imgcat: https://github.com/trashhalo/imgcat/releases/download/v1.2.0/imgcat_1.2.0_Linux_x86_64.tar.gz
 # viu (as root): docker run --rm --name rust -v /tmp:/tmp -ti rust bash -c "apt update && apt -y install musl-tools && git clone https://github.com/atanunq/viu && cd viu && rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release && cp target/x86_64-unknown-linux-musl/release/viu /usr/local/bin/viu"
 
@@ -56,7 +56,7 @@ ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RAN
 function fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server 'find /data/downloads; find /data/video' |grep "$1";}
 qr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
-c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
+function c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
 cx(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 +G || less -RMgx2 +G "$@";}
 ff(){ [[ $2 ]] && d="$2" || d='.'; find "$d" |grep -s --color=auto --devices=skip -I "$1";}
 pdfc(){ (($#<2 || $#>3)) && echo "PDF Resize needs: <input.pdf> <output.pdf> [1] (third argument optional, gives better quality)" && return 1; [[ $3 = 1 ]] && q=ebook || q=screen; gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/"$q" -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" "$1";}
