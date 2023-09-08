@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e  # Exit on any error
-# deploy - Provision virtual machine
+# deploy - Provision VPS
 # Usage:  deploy <host> [=]
 #   <host>:    Host from ~/.ssh/config
 #   =:         If '=' is given, setting up the authorized_key is skipped
@@ -23,8 +23,9 @@ then # Host specified and not an ID
 		ssh-copy-id -i ~/.ssh/id_ed25519.pub "$host"
 	Inf "From $myid copying '$prov' to $host..."
 	scp -q "$prov" "$1":
+	prov=${prov##*/}
 	Inf "Executing '$prov' on $host..."
-	ssh "$1" "$0" ".$myid"
+	ssh "$1" "bash $prov" ".$myid"
 	exit
 fi
 
@@ -37,7 +38,7 @@ me=$(whoami) id=$(</etc/machine-id) fromid=${1:1}
 Inf "User $me on $id (from $fromid): $(hostname -A)"
 
 # On the host!
-set -v
+set -xv
 sudo -S apt update
 sudo -S dpkg-reconfigure tzdata
 sudo -S apt-get install -y ne dfc iftop iotop source-highlight colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
