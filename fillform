@@ -74,11 +74,12 @@ do
 	unite+="$pdf "
 done
 
-exit # If no collating is desired
+#exit # If no collating is desired
 
 if [[ -z $file ]]
 then # Not a single file specified
-	! pdfunite $unite ${form%.flpsed}$(date +%Y%m%d).pdf &&
+	#! pdfunite $unite ${form%.flpsed}$(date +%Y%m%d).pdf &&
+	! pdfunite $unite ${form%flpsed}pdf &&
 		echo "Something went wrong collating the pdf files" &&
 		exit 7
 fi

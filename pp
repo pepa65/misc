@@ -8,8 +8,7 @@
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
 #  php-fpm php-xml php-gd shellcheck zint libnss-resolve[github.com/censurfridns/client-configs]
-# imgcat: https://github.com/trashhalo/imgcat/releases/download/v1.2.0/imgcat_1.2.0_Linux_x86_64.tar.gz
-# viu (as root): docker run --rm --name rust -v /tmp:/tmp -ti rust bash -c "apt update && apt -y install musl-tools && git clone https://github.com/atanunq/viu && cd viu && rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release && cp target/x86_64-unknown-linux-musl/release/viu /usr/local/bin/viu"
+# tiv: https://github.com/stefanhaustein/TerminalImageViewer (good4.eu/tiv)
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
@@ -29,7 +28,7 @@ shopt -s dotglob extglob
 set +H  # no more history expansion, use ! safely in strings
 
 export PROMPT_COMMAND='hasjobs=$(jobs -p)'
-export PS1='\[\033[01;36m\]${hasjobs:+\j }\[\033[01;32m\]\w \[\033[01;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\033[01;36m\]\$ \[\033[00m\]'
+PS1='\[\033[01;36m\]${hasjobs:+\j }\[\033[01;32m\]\w \[\033[01;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\033[01;36m\]\$ \[\033[00m\]'
 export WINEPREFIX=~/.wine
 export EDITOR=nano
 export LESSOPEN="| /usr/share/source-highlight/src-hilite-lesspipe.sh %s"
@@ -352,3 +351,4 @@ alias flush='sudo systemd-resolve --flush-caches'
 alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
 alias clip="xclip -selection clipboard"
 alias dt="dig +short @dns.toys"
+alias vid='mpv --vo=tct' # Showing video on terminal
