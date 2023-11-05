@@ -9,6 +9,7 @@
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
 #  php-fpm php-xml php-gd shellcheck zint libnss-resolve[github.com/censurfridns/client-configs]
 # tiv: https://github.com/stefanhaustein/TerminalImageViewer (good4.eu/tiv)
+# pi: https://justine.lol/printimage.com
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
@@ -17,6 +18,8 @@
 # numlockx:
 #  (if /etc/lightdm/lightdm.conf empty, start with: '[SeatDefaults]')
 #  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf
+# vscodium: https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo
+
 #alias getyoutube-dl='sudo curl -qL https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl; sudo chmod +x /usr/local/bin/youtube-dl'
 alias getytdl='sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/ytdl && sudo chmod a+rx /usr/local/bin/ytdl'
 
@@ -36,23 +39,24 @@ export QUOTING_STYLE=literal
 export DISPLAY=:0.0
 #export CHROME_DEVEL_SANDBOX=/usr/local/sbin/chrome-devel-sandbox
 export PAGER='less -Gg -~RXQFP"%pB\% %f - press Q to exit"'
-export GOPATH=~/go GOROOT=/usr/local/go GOBIN=~/go/bin
-export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /:}")
 export LESS_TERMCAP_mb=$'\E[01;31m' LESS_TERMCAP_md=$'\E[01;31m' LESS_TERMCAP_me=$'\E[0m'
 export LESS_TERMCAP_se=$'\E[0m' LESS_TERMCAP_so=$'\E[01;44;33m' LESS_TERMCAP_ue=$'\E[0m' LESS_TERMCAP_us=$'\E[01;32m'
 export TERM=xterm-256color
 export LANG="en_US.UTF-8"
 export LC_COLLATE="en_US.UTF-8"
-export SCT
-st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
-}
+export SCT=6500
+export GOPATH=~/go GOROOT=/usr/local/go GOBIN=~/go/bin
+export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /:}")
+export MODULAR_HOME="/home/pp/.modular"
 
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
-addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin
+addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin ~/.modular/pkg/packages.modular.com_mojo/bin ~/.cargo/bin /opt/cosmo/bin /opt/cosmos/bin
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
-function fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server 'find /data/downloads; find /data/video' |grep "$1";}
+fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server 'find /data/downloads; find /data/video' |grep "$1";}
+st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
+}
 qr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
 c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
@@ -294,7 +298,8 @@ alias telco='whois -h whois.telcodata.us'
 alias sc='scp -P 5691 -p -r -o User=PeterPasschier1965'
 alias scb='scp -P 21865 -p -r -o User=PeterPasschier1965'
 #alias s='screen -D -R'
-alias s='tmux a || tmux'
+#alias s='tmux a || tmux'
+alias s='su pp -c "cd; tmux attach -t pp || tmux new -n pp"'
 alias tmuxclean='for u in $(echo $(tmux ls |grep -v ^pp: |grep -v "(group 0) (attached)$" |sed "s/:.*//g")); do tmux kill-ses -t $u; done'
 alias e='nano'
 alias ee='dte'
