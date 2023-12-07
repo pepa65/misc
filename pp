@@ -343,6 +343,8 @@ alias d='dfc -d -T -b -t-tmpfs,devtmpfs -f; swapon --show=NAME,TYPE,SIZE,USED,PR
 alias da='df -ahT'
 alias rs='rsync -vrptzlOuP --partial-dir=.rsync-partial --exclude="*/.~*" -e "ssh"'
 alias rb='rsync -vrptzlPO --delete -e "ssh"'
+alias cpf="rsync -ahW --inplace --no-compress --info=progress2"
+alias cpr="rsync -ah --inplace --no-whole-file --no-compress --info=progress2"
 alias qip='wget -q -O - "http://ip-api.com/csv/"'
 alias ffx='/usr/lib/firefox/firefox'
 alias lsdm='ls -AFl /dev/disk/by-id |gr dm-name |sed "s@.*dm-name-\([^ ]*\) -> \.\./\.\./\(.*\)@\2 \1@" |sort'
