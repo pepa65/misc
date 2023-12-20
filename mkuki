@@ -6,7 +6,7 @@ set -eu #vx
 # Repp: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
-version=0.1.6
+version=0.1.7
 
 Usage(){ # I:self,efistubdir
 	cat<<-EOH
@@ -26,7 +26,7 @@ Usage(){ # I:self,efistubdir
 		  -m|--microcode <file>    Microcode file (optional, multiple allowed)
 		  -c|--cmdline <txt/file>  Kernel cmdline in quotes or in a file (starting
 		                           with '/' or '.'), default: '$commandline'
-		  -o|--output <file>       Output file, default: '$output'
+		  -o|--output <file>       Output file, default: 'vmlinuz.efi'
 		  -r|--release <file>      Release file, default: '$osrel'
 		  -s|--splash <file>       Splash image: BMP 800x600 24bit (optional)
 		  -e|--efistub <file>      EFI stub file, default: 'linux*.efi.stub' in
