@@ -54,7 +54,7 @@ addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/l
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
-fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server 'find /data/downloads; find /data/video' |grep "$1";}
+fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server '{ find /data/video/Downloads; find /data/video;} | grep --color=auto';}
 st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
 }
 qr(){ zbarimg --raw -q $1;}
@@ -107,32 +107,35 @@ adb(){ # adb - analyse max-decibel; USAGE: adb <inputmp3> # if neg, increase pos
 	ffmpeg -i "$1" -af "volumedetect" -vn -sn -dn -f null /dev/null 2>&1 |grep -o 'max_volume.*';}
 bv(){ ffmpeg -i "$1" -af "volume=$2dB" "$1.mp3";}
 clipvid(){
-	# $1:src $2:start(time) $3:fadein(s) $4:end(time) $5:fadeout(s) [$6:dst]
+	# $1:src $2:start(time) $3:fadein(s) $4:fadeout(s) $5:end(time) [$6:dst]
 	local tmp out=$1.mp4 i b e bd ed
-	local usage="Usage: clipvid <videofile> <start(0 | h:mm:ss[.mmm])>"
-	usage+=" <fadein(s[.mmm])> <fadeout(s[.mmm])> <end(h:mm:ss[.mmm])> <outfile>"
+	local usage="Usage: clipvid <videofile> <start(0 | hmmss[.mmm])>"
+	usage+=" <fadein(s[.mmm])> <fadeout(s[.mmm])> <end(hmmss[.mmm])> <outfile>"
 	[[ -z $1 || $1 = -h || $1 = --help ]] &&
 		echo $usage && return 0
 	[[ ! -f $1 ]] &&
 		echo -e "$usage\nSource video not a file: '$1'" && return 1
 	b=$2 e=$5 bd=$(cut -s -d. -f2 <<<"$b") ed=$(cut -s -d. -f2 <<<"$e")
-	[[ $b = 0 ]] && b=0:00:00
-	[[ ! $b = [0-9]:[0-5][0-9]:[0-5][0-9]* ]] &&
-		echo -e "$usage\nStarttime '$2' not in time format h:mm:ss[.mmm]" && return 2
+	[[ $b = 0 ]] && b=00000
+	[[ ! $b = [0-9][0-5][0-9][0-5][0-9]* ]] &&
+		echo -e "$usage\nStarttime '$2' not in time format hmmss[.mmm]" && return 2
 	[[ -z $3 || ${3//[0-9.]} ]] &&
 		echo -e "$usage\nFade-in seconds '$3' not numerical" && return 3
 	[[ -z $4 || ${4//[0-9.]} ]] &&
 		echo -e "$usage\nFade-out seconds '$4' not numerical" && return 4
-	[[ ! $e = [0-9]:[0-5][0-9]:[0-5][0-9]* ]] &&
-		echo -e "$usage\nEndtime '$e' not in time format h:mm:ss[.mmm]" && return 5
+	[[ ! $e = [0-9][0-5][0-9][0-5][0-9]* ]] &&
+		echo -e "$usage\nEndtime '$e' not in time format hmmss[.mmm]" && return 5
 	[[ $6 ]] && out=$6
+	b=${b:0:1}:${b:1:2}:${b:3:2}${b:5} e=${e:0:1}:${e:1:2}:${e:3:2}${e:5}
 	i=$(bc -l <<<"$(date -d $e +%s).$ed-$(date -d $b +%s).$bd-$4")
 	tmp=$(mktemp).mp4
 	ffmpeg -i "$1" -ss "$b" -to "$e" -async 1 $tmp
 	echo "ffmpeg -i '$1' -ss '$b' -to '$e' -async 1 $tmp"
-	ffmpeg -i $tmp -vf "fade=t=in:st=0:d=$3,fade=t=out:st=$i:d=$4" \
-		-af "afade=t=in:st=0:d=$3,afade=t=out:st=$i:d=$4" "$out"
-	rm $tmp
+	(($3+$4)) &&
+		ffmpeg -i $tmp -vf "fade=t=in:st=0:d=$3,fade=t=out:st=$i:d=$4" \
+			-af "afade=t=in:st=0:d=$3,afade=t=out:st=$i:d=$4" "$out" &&
+		rm $tmp ||
+		mv "$tmp" "$out"
 }
 speedvid(){
 	(($#!=2)) && echo "Usage: speedvid <video> <speed>" && return 1
@@ -359,3 +362,4 @@ alias lf="find . -type f -printf '%T+ %p\n' |sort -r |less -RMgx2"
 alias clip="xclip -selection clipboard"
 alias dt="dig +short @dns.toys"
 alias vid='mpv --vo=tct' # Showing video on terminal
+alias ffp='ffprobe -hide_banner'
