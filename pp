@@ -363,3 +363,4 @@ alias clip="xclip -selection clipboard"
 alias dt="dig +short @dns.toys"
 alias vid='mpv --vo=tct' # Showing video on terminal
 alias ffp='ffprobe -hide_banner'
+alias ffm='ffmpeg -hide_banner'
