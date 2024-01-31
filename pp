@@ -54,7 +54,7 @@ addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/l
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
-fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server '{ find /data/video/Downloads; find /data/video;} | grep --color=auto';}
+fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server "find /data/video |grep --color=auto $1";}
 st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
 }
 qr(){ zbarimg --raw -q $1;}
@@ -364,3 +364,4 @@ alias dt="dig +short @dns.toys"
 alias vid='mpv --vo=tct' # Showing video on terminal
 alias ffp='ffprobe -hide_banner'
 alias ffm='ffmpeg -hide_banner'
+alias recaudio='ffmpeg -f pulse -i $(pactl list sinks |grep $(pactl get-default-sink).monitor |cut -d: -f2)'
