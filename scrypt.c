@@ -5,7 +5,7 @@
 // Install for all users:
 //  sudo gcc scrypt.c -o /usr/local/bin/scrypt
 //  sudo chmod u+s /usr/local/bin/scrypt
-//  sudo ln -s /usr/local/bin/scrypt /usr/local/bin/uscrypt
+//  sudo ln -sf /usr/local/bin/scrypt /usr/local/bin/uscrypt
 //
 // Install instead for local user only:
 //  sudo gcc scrypt.c -o ~/bin/scrypt
@@ -91,7 +91,7 @@ void do_mount(void) {
 	fprintf(stdout, "Mounting %s on %s\n", VAULTFILE, MOUNTPOINT);
 	setreuid(0,0);
 	run("/sbin/cryptsetup", "luksOpen", VAULTFILE, LUKSNAME, NULL);
-	run("/bin/mount", "/dev/mapper/"LUKSNAME, MOUNTPOINT, NULL);
+	run("/bin/mount", "-o", "noatime", "/dev/mapper/"LUKSNAME, MOUNTPOINT, NULL);
 }
 
 void do_umount(void) {

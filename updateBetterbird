@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -ex # Halt on errors, trace
+# updateBetterbird - Install newer version of Betterbird if available
+# Usage:  updateBetterbird
+# Required: procps(pgrep) coreutils(mktemp cd cat mv) tar wget sudo
+
+# lang: en-US/de/fr/it/es-AR/pt-BR/ja
+lang=en-US
+# version: release/previous
+version=release
+# Installation path
+installpath=/opt
+# Path to .desktop file
+desktopfile=/usr/local/share/applications/betterbird.desktop
+
+(($(pgrep -c betterbird-bin))) &&
+	echo "Aborting: Betterbird is running, please close it first" &&
+	exit 1
+
+tmpdir=$(mktemp -d) tmp=$tmpdir/bb.tar.bzip2
+trap "rm -rf $tmpdir" ERR EXIT
+wget -qO $tmp "https://www.betterbird.eu/downloads/get.php?os=linux&lang=$lang&version=$version"
+tar xf $tmp -C $tmpdir
+_=$(grep '^Version=' $tmpdir/betterbird/application.ini) v=${_##*=}
+[[ ! -d $installpath ]] &&
+	mkdir -p "$installpath"
+cd "$installpath"
+[[ -d betterbird-$v ]] &&
+	echo "Aborting: Version '$v' already installed in '$installpath'" &&
+	exit 2
+
+[[ -L betterbird ]] && # Link to directory
+	sudo rm betterbird
+[[ -d betterbird ]] && # Directory
+	old=$(sudo mktemp betterbird_XXXXXXXX) &&
+	sudo mv betterbird $old
+sudo mv $tmpdir/betterbird betterbird-$v
+sudo ln -s betterbird-$v betterbird
+
+cat <<-EOF >$tmpdir/desktop
+	[Desktop Entry]
+	Encoding=UTF-8
+	Version=1.0
+	Type=Application
+	Terminal=false
+	Name=Betterbird
+	Categories=Internet
+	Exec=$installpath/betterbird/betterbird
+	Icon=$installpath/betterbird/chrome/icons/default/default256.png
+EOF
+sudo cp $tmpdir/desktop "$desktopfile"
+echo "Betterbird-$v successfully installed. To choose from multiple profiles, run:"
+echo "$installpath/betterbird/betterbird --ProfileManager"
