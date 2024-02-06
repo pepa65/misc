@@ -197,7 +197,7 @@ cat <<-EOF >$tmpdir/desktop
 	Name[vi]=Viết thư mới
 	Name[zh_CN]=编写新消息
 	Name[zh_TW]=寫一封新訊息
-	Exec=betterbird -compose
+	Exec=$installpath/betterbird/betterbird -compose
 
 	[Desktop Action OpenAddressBook]
 	Name=Open address book
@@ -229,7 +229,7 @@ cat <<-EOF >$tmpdir/desktop
 	Name[vi]=Mở sổ địa chỉ
 	Name[zh_CN]=打开通讯录
 	Name[zh_TW]=開啟通訊錄
-	Exec=betterbird -addressbook
+	Exec=$installpath/betterbird/betterbird -addressbook
 EOF
 sudo cp $tmpdir/desktop "$desktopfile"
 xdg-desktop-menu forceupdate
