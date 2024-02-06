@@ -758,6 +758,9 @@ subshift <infile.sub/srt> <outfile.sub/srt> [action...]
 ## unsubscribe.php
 **Facilitate list-unsubscribe links**
 
+## updateBetterbird
+**Update or install betterbird email client**
+
 ## w2usb
 **Write image/hybridiso to (USB) disk device**
 

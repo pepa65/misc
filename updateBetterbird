@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -E +x # Halt on errors, no trace
-# updateBetterbird - Install newer version of Betterbird if available
+# updateBetterbird - Update or install betterbird email client
 # Usage:  updateBetterbird
-# Required: procps(pgrep) coreutils(mktemp cd cat mv) tar wget sudo
+# Required: procps(pgrep) coreutils(mktemp cd rm cat mv ln cp) tar wget sudo
+#           xdg-utils(xdg-desktop-menu)
 
 # lang: en-US/de/fr/it/es-AR/pt-BR/ja
 lang=en-US
