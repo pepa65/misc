@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ex # Halt on errors, trace
+set +ex # Halt on errors, trace
 # updateBetterbird - Install newer version of Betterbird if available
 # Usage:  updateBetterbird
 # Required: procps(pgrep) coreutils(mktemp cd cat mv) tar wget sudo
@@ -44,10 +44,11 @@ cat <<-EOF >$tmpdir/desktop
 	Type=Application
 	Terminal=false
 	Name=Betterbird
-	Categories=Internet
+	Categories=Network
 	Exec=$installpath/betterbird/betterbird
 	Icon=$installpath/betterbird/chrome/icons/default/default256.png
 EOF
 sudo cp $tmpdir/desktop "$desktopfile"
+xdg-desktop-menu forceupdate
 echo "Betterbird-$v successfully installed. To choose from multiple profiles, run:"
 echo "$installpath/betterbird/betterbird --ProfileManager"
