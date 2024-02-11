@@ -4,7 +4,7 @@
 # Usage:  localdebs
 #   Run once, and add URLs to $hookscript as desired.
 #   Can be run again when updated
-# Required: apt-utils jq
+# Required: apt-utils jq sudo
 
 # Overwriting $hookscript $hook $list if they exist
 repodir=/var/local/deb
@@ -22,7 +22,7 @@ sudo mkdir -p "$repodir"
 # Create the preinvoke script
 # =vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv=
 echo '#!/usr/bin/env bash
-set -e  # Fail on any error
+
 # preinvoke - Run before dpkg/apt
 
 urls=(
@@ -31,7 +31,7 @@ urls=(
 	"https://launcher.mojang.com/download/Minecraft.deb"
 	"caddyserver/caddy"
 	"rclone/rclone"
-	"schollz/croc"
+	#"schollz/croc"
 	"zyedidia/micro"
 )
 

@@ -204,8 +204,8 @@ geo(){ # $1:(optional)ip-quadroctet
 		echo "commandline argument not a numerical IP address in dot notation" &&
 		return 1
 	wget -qO- ipinfo.io/$1 |grep ':' |sed -e 's/"//g' -e 's/,$//';}
-myip(){ #PUREBASH: exec 3<> /dev/tcp/icanhazip.com/80 && echo 'GET /' >&3 && read -u 3 && echo $REPLY && exec 3>&-
-	dig +short @resolver1.opendns.com myip.opendns.com;}
+myip(){ #curl ipinfo.io
+	curl -w'\n' api{4,6}.ipify.org;}
 pb(){ [[ -z $1 ]] && echo "Missing filename to termbin.com:9999" && return
 	while (($#)); do cat $1 |nc termbin.com 9999; shift; done;}
 backlight(){ # $1:level (0/1/2, if empty: toggle)
