@@ -2,13 +2,13 @@
 
 # Recommended packages:
 # CLI:
-#  aria2 ne dfc dcfldd iftop pv w3m htop source-highlight colordiff dwdiff
+#  aria2 ne dfc dcfldd iftop pv w3m htop source-highlight colordiff dwdiff mmv
 #  tty-clock rdiff caca-utils git tmux aptitude gpgsm rsync ghostscript csvtool
 #  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
 #  php-fpm php-xml php-gd shellcheck zint libnss-resolve[github.com/censurfridns/client-configs]
-# tiv: https://github.com/stefanhaustein/TerminalImageViewer (good4.eu/tiv)
+# tiv: https://github.com/stefanhaustein/TerminalImageViewer (4e4.in/tiv) [override LDFLAGS  += -pthread -static]
 # pi: https://justine.lol/printimage.com
 
 # X:
