@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 set -e  # Exit on any error
 # deploy - Provision VPS
-# Usage:  deploy <host> [=]
-#   <host>:    Host from ~/.ssh/config
-#   =:         If '=' is given, setting up the authorized_key is skipped
+# Usage:  deploy <remote> [=]
+#   <remote>:  Host from ~/.ssh/config
+#   If '=' is given, setting up the authorized key is skipped
+# Actions:
+# * Set up authorized_keys [optional]
+# * Copy this script to remote
+# * Execute it with .<myid>
+#   - Update repo
+#   - Install basic software
+#   - Configure TZ
+#   - Uninstall snap (Ubuntu)
+#   - Get github.com/pepa65/misc
+#   - Install nano (from source) and tmux
 
-prov=$0 host=$1 myid=$(</etc/machine-id)
+prov=$0 remote=$1 myid=$(</etc/machine-id)
 
 Inf(){	# 1:msg
 	echo "-- $1"
@@ -15,29 +25,32 @@ Err(){ # 1:msg 2:ret
 	exit $2
 }
 
-# Priming host
-if [[ $host && ! ${host:0:1} = . ]]
+# Priming remote
+if [[ $remote && ! ${remote:0:1} = . ]]
 then # Host specified and not an ID
 	[[ $2 != = ]] &&
-		Inf "Setting up authorized_keys on $host" &&
-		ssh-copy-id -i ~/.ssh/id_ed25519.pub "$host"
-	Inf "From $myid copying '$prov' to $host..."
+		Inf "Setting up authorized_keys on $remote" &&
+		ssh-copy-id -i ~/.ssh/id_ed25519.pub "$remote"
+	Inf "Copying '$prov' from $myid to $remote..."
 	scp -q "$prov" "$1":
 	prov=${prov##*/}
-	Inf "Executing '$prov' on $host..."
+	Inf "Executing '$prov' on $remote..."
 	ssh "$1" "bash $prov" ".$myid"
 	exit
 fi
 
-# On the host?
-[[ -z $1 ]] && Err "Need HOST (from ~/.ssh/config)" 1
+# On the remote already?
+[[ -z $1 ]] &&
+	Err "Need HOST (from ~/.ssh/config)" 1
 
-# On the host??
+# On the remote already??
 me=$(whoami) id=$(</etc/machine-id) fromid=${1:1}
-[[ $fromid = $id ]] && Err "Same machine, exiting" 2
+[[ $fromid = $id ]] &&
+	Err "Same machine, exiting" 2
+
 Inf "User $me on $id (from $fromid): $(hostname -A)"
 
-# On the host!
+# On the remote!
 set -xv
 sudo -S apt update
 sudo -S dpkg-reconfigure tzdata
