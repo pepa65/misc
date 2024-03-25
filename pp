@@ -9,7 +9,7 @@
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
 #  php-fpm php-xml php-gd shellcheck zint libnss-resolve[github.com/censurfridns/client-configs]
 # tiv: https://github.com/stefanhaustein/TerminalImageViewer (4e4.in/tiv) [override LDFLAGS  += -pthread -static]
-# pi: https://justine.lol/printimage.com
+# difft: From https://github.com/Wilfred/difftastic/releases
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
@@ -19,6 +19,7 @@
 #  (if /etc/lightdm/lightdm.conf empty, start with: '[SeatDefaults]')
 #  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf
 # vscodium: https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo
+# signaldesktop: https://signal.org/download
 
 #alias getyoutube-dl='sudo curl -qL https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl; sudo chmod +x /usr/local/bin/youtube-dl'
 alias getytdl='sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/ytdl && sudo chmod a+rx /usr/local/bin/ytdl'
@@ -48,6 +49,7 @@ export SCT=6500
 export GOPATH=~/go GOROOT=/usr/local/go GOBIN=~/go/bin
 export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /:}")
 export MODULAR_HOME="/home/pp/.modular"
+export GIT_EXTERNAL_DIFF=difft
 
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
 addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin ~/.modular/pkg/packages.modular.com_mojo/bin ~/.cargo/bin /opt/cosmo/bin /opt/cosmos/bin
@@ -365,3 +367,4 @@ alias vid='mpv --vo=tct' # Showing video on terminal
 alias ffp='ffprobe -hide_banner'
 alias ffm='ffmpeg -hide_banner'
 alias recaudio='ffmpeg -f pulse -i $(pactl list sinks |grep $(pactl get-default-sink).monitor |cut -d: -f2)'
+alias gor='goreleaser release --clean'

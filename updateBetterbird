@@ -19,7 +19,7 @@ desktopfile=/usr/local/share/applications/betterbird.desktop
 	exit 1
 
 tmpdir=$(mktemp -d) tmp=$tmpdir/bb.tar.bzip2
-trap "rm -rf $tmpdir" ERR EXIT
+trap "rm -rf $tmpdir" EXIT # ERR
 wget -qO $tmp "https://www.betterbird.eu/downloads/get.php?os=linux&lang=$lang&version=$version"
 _=$(sha256sum $tmp) hash=${_%% *}
 tar xf $tmp -C $tmpdir
@@ -232,6 +232,7 @@ cat <<-EOF >$tmpdir/desktop
 	Name[zh_TW]=開啟通訊錄
 	Exec=$installpath/betterbird/betterbird -addressbook
 EOF
+sudo mkdir -p ${desktopfile%/*}
 sudo cp $tmpdir/desktop "$desktopfile"
 xdg-desktop-menu forceupdate
 echo "Betterbird-$v successfully installed. To choose from multiple profiles, run:"
