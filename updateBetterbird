@@ -14,12 +14,17 @@ installpath=/opt
 # Path to .desktop file
 desktopfile=/usr/local/share/applications/betterbird.desktop
 
+current=
+[[ -f $installpath/betterbird/application.ini ]] && # Installed
+	current=$(grep '^Version=' "$installpath/betterbird/application.ini") &&
+	echo "Current: ${current##*=}"
 (($(pgrep -c betterbird-bin))) &&
 	echo "Aborting: Betterbird is running, please close it first" &&
 	exit 1
 
 tmpdir=$(mktemp -d) tmp=$tmpdir/bb.tar.bzip2
 trap "rm -rf $tmpdir" EXIT # ERR
+echo "Downloading release version..."
 wget -qO $tmp "https://www.betterbird.eu/downloads/get.php?os=linux&lang=$lang&version=$version"
 _=$(sha256sum $tmp) hash=${_%% *}
 tar xf $tmp -C $tmpdir

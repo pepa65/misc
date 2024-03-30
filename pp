@@ -13,8 +13,9 @@
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
-#  galculator virtualbox keepassxc googleearth gnumeric #libgtk3-nocsd0
+#  galculator virtualbox keepassxc gnumeric #libgtk3-nocsd0
 #  photofilmstrip vcdimager skype zoom feh flameshot flpsed
+#  google-earth-pro-stable
 # numlockx:
 #  (if /etc/lightdm/lightdm.conf empty, start with: '[SeatDefaults]')
 #  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf

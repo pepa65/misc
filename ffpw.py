@@ -154,7 +154,8 @@ class JsonCredentials(Credentials):
 				LOG.error("Unrecognized format in {0}".format(self.db))
 				raise Exit(Exit.BAD_SECRETS)
 			for i in logins:
-				yield (i["hostname"], i["encryptedUsername"], i["encryptedPassword"], i["encType"])
+				if "hostname" in i:
+					yield (i["hostname"], i["encryptedUsername"], i["encryptedPassword"], i["encType"])
 
 class NSSDecoder(object):
 	class SECItem(ct.Structure):
