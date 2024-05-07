@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# lschars - List printable characters in font
+# Usage lschars [<font>]
+#   When no font is given, list printable characters
+# Required: coreutils(seq) bsdextrautils(column) fontconfig(fc-match)
+
+for range in $(fc-match --format='%{charset}\n' "$1")
+do
+	[[ $range = *-* ]] &&
+		range="$(seq 0x${range%-*} 0x${range#*-})" ||
+		range=0x$range
+	for n in $range
+	do printf "%04x\n" $n
+	done
+done |
+	while read -r hex
+	do printf "%s \u$hex\n" "$hex"
+	done |column -x

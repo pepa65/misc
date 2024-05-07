@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# tpmfido - Start Security key device based on TPM2
+
+# Set uhid
+[[ -z $(lsmod |grep '^uhid\b') ]] &&
+	sudo modprobe uhid &&
+	sudo chgrp tss /dev/uhid &&
+	sudo chmod g+rw /dev/uhid
+
+# User in tss group, and start
+[[ -z $(groups |grep -ow tss) ]] &&
+	sudo gpasswd -a $USER tss &&
+	sudo sg tss ~/git/tpm-fido/tpm-fido 2>~/tpm-fido.log ||
+	~/git/tpm-fido/tpm-fido 2>~/tpm-fido.log &

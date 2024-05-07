@@ -390,8 +390,14 @@ kenburns [options] input1 [input2...] output
 
 * Usage: `kpt2bitwarden keepassx.xml >bitwarden.csv`
 
+## ld
+**Display x86_64 architecture level**
+
 ## localdebs
 **Create a local repo for deb packages**
+
+## lschars
+**List printable characters in font**
 
 ## mailout
 **Send mail according to template and CSV**
@@ -744,6 +750,9 @@ subshift <infile.sub/srt> <outfile.sub/srt> [action...]
 * Usage: 'tpm <command> <entry>'
   - command: help / show / insert / delete
 * Environment variables: `TPM_DIR` `TPM_KEY`
+
+## tpmfido
+**Start Security key device based on TPM2**
 
 ## transfer
 **Transfer files via transfer.sh**

@@ -12,7 +12,7 @@
 # difft: From https://github.com/Wilfred/difftastic/releases
 
 # X:
-#  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx
+#  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx weasyprint
 #  galculator virtualbox keepassxc gnumeric #libgtk3-nocsd0
 #  photofilmstrip vcdimager skype zoom feh flameshot flpsed
 #  google-earth-pro-stable
@@ -21,6 +21,7 @@
 #  echo 'greeter-setup-script=/usr/bin/numlockx on' |sudo tee -a /etc/lightdm/lightdm.conf
 # vscodium: https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo
 # signaldesktop: https://signal.org/download
+# tpm-fido: https://github.com/psanford/tpm-fido (Github:Security Key)
 
 #alias getyoutube-dl='sudo curl -qL https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl; sudo chmod +x /usr/local/bin/youtube-dl'
 alias getytdl='sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/ytdl && sudo chmod a+rx /usr/local/bin/ytdl'
