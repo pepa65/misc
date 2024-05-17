@@ -29,11 +29,11 @@ wget -qO $tmp "https://www.betterbird.eu/downloads/get.php?os=linux&lang=$lang&v
 _=$(sha256sum $tmp) hash=${_%% *}
 tar xf $tmp -C $tmpdir
 _=$(grep '^Version=' $tmpdir/betterbird/application.ini) v=${_##*=} s=${v:0:3}
-[[ ! -d $installpath ]] &&
-	mkdir -p "$installpath"
+echo "Downloaded version $v"
+sudo mkdir -p "$installpath"
 cd "$installpath"
 [[ -d betterbird-$v ]] &&
-	echo "Aborting: Version '$v' already installed in '$installpath'" &&
+	echo "Aborting: Version $v already installed in '$installpath'" &&
 	exit 2
 
 shafile=$tmpdir/sha256.txt
@@ -53,6 +53,7 @@ sudo ln -s betterbird-$v betterbird
 cat <<-EOF >$tmpdir/desktop
 	[Desktop Entry]
 	Version=1.0
+	X-Desktop-File-Install-Version=$v
 	Encoding=UTF-8
 	Type=Application
 	Terminal=false

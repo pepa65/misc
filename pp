@@ -48,13 +48,13 @@ export TERM=xterm-256color
 export LANG="en_US.UTF-8"
 export LC_COLLATE="en_US.UTF-8"
 export SCT=6500
-export GOPATH=~/go GOROOT=/usr/local/go GOBIN=~/go/bin
+export GOROOT=/usr/local/go GOBIN=~/go/bin
 export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /:}")
 export MODULAR_HOME="/home/pp/.modular"
 export GIT_EXTERNAL_DIFF=difft
 
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
-addpath ~/bin ~/env/bin $GOPATH/bin $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin ~/.modular/pkg/packages.modular.com_mojo/bin ~/.cargo/bin /opt/cosmo/bin /opt/cosmos/bin
+addpath ~/bin ~/env/bin $GOBIN $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin ~/.modular/pkg/packages.modular.com_mojo/bin ~/.cargo/bin /opt/cosmo/bin /opt/cosmos/bin
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}
