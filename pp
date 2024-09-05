@@ -4,7 +4,7 @@
 # CLI:
 #  aria2 ne dfc dcfldd iftop pv w3m htop source-highlight colordiff dwdiff mmv
 #  tty-clock rdiff caca-utils git tmux aptitude gpgsm rsync ghostscript csvtool
-#  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx
+#  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx xterm
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
 #  python3-pyasn1 minidlna dovecot-imapd sqlite3 restic rclone uni2ascii nmon
 #  php-fpm php-xml php-gd shellcheck zint libnss-resolve[github.com/censurfridns/client-configs]
@@ -61,7 +61,7 @@ ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RAN
 fv(){ [[ -z $1 ]] && echo "Need video substring to search" && return; ssh server "find /data/video |grep --color=auto $1";}
 st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Display tint" --scale --value=${SCT:=6500} --min-value=1000 --max-value=10000); [[ $SCT ]] && /usr/local/bin/sct $SCT; # sct needs to be compiled from sct.c
 }
-qr(){ zbarimg --raw -q $1;}
+rqr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
 c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
 cx(){ [[ -d $1 ]] && ls --color=auto -AFl $@ |less -RMgx2 +G || less -RMgx2 +G "$@";}
