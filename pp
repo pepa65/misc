@@ -355,7 +355,7 @@ alias cpr="rsync -ah --inplace --no-whole-file --no-compress --info=progress2"
 alias qip='wget -q -O - "http://ip-api.com/csv/"'
 alias ffx='/usr/lib/firefox/firefox'
 alias lsdm='ls -AFl /dev/disk/by-id |gr dm-name |sed "s@.*dm-name-\([^ ]*\) -> \.\./\.\./\(.*\)@\2 \1@" |sort'
-alias reset='\reset;  tmux clear'
+alias reset='\reset;  tmux clear-history'
 alias memes='wget -O - -q reddit.com/r/memes.json | jq ".data.children[] |.data.url" | grep -v "/\"$" |xargs feh -xZ.'
 alias tf=twofat
 alias sun='sunclock -map -dottedlines -twilight -meridianmode 3 -tropics -decimal'
