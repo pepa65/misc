@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 # localdebs - Create a local repo for deb packages
-# Usage:  localdebs
+# Usage:  localdebs [-d|--disable]
 #   Run once, and add URLs to $hookscript as desired.
 #   Can be run again when updated
+#   Run with -d/--disable to deactivate [revert by installing again]
 # Required: apt-utils jq sudo
 
 # Overwriting $hookscript $hook $list if they exist
@@ -11,6 +12,14 @@ repodir=/var/local/deb
 hookscript=/etc/apt/preinvoke
 hook=/etc/apt/apt.conf.d/10update_local_packages
 list=/etc/apt/sources.list.d/localdebs.list
+
+if [[ $1 = -d || $1 = --disable ]]
+then # deactivate the hookscript and apt-source
+	[[ -f $hookscript ]] &&
+		sed -i 1a'exit 0' "$hookscript"
+	[[ -f $list ]] &&
+		sed -i 's/^/#/' "$list"
+fi
 
 # Install needed packages
 req='apt-utils jq'
