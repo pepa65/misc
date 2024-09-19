@@ -19,6 +19,7 @@ then # deactivate the hookscript and apt-source
 		sed -i 1a'exit 0' "$hookscript"
 	[[ -f $list ]] &&
 		sed -i 's/^/#/' "$list"
+	exit 0
 fi
 
 # Install needed packages
