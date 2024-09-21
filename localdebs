@@ -16,9 +16,9 @@ list=/etc/apt/sources.list.d/localdebs.list
 if [[ $1 = -d || $1 = --disable ]]
 then # deactivate the hookscript and apt-source
 	[[ -f $hookscript ]] &&
-		sed -i 1a'exit 0' "$hookscript"
+		sudo sed -i 1a'exit 0' "$hookscript"
 	[[ -f $list ]] &&
-		sed -i 's/^/#/' "$list"
+		sudo sed -i 's/^/#/' "$list"
 	exit 0
 fi
 
