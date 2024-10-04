@@ -7,15 +7,21 @@ set +vx
 #   texinfo make gcc libmagic-dev[optional filetype detection]
 
 Help(){
-	echo "Usage: buildnano [<version> | -g|--git | -c|--current] -h
-    <version>:     Build <version>
-    -g/--git:      Build from current git HEAD (not stable release version)
-    -c/--current:  Build from local git repo (as is)
-    -h/--help:     This help text"
+	echo "Usage: buildnano [<version> | --git | --current] [--help] [--static]
+    <version>:       Build <version>
+    -g/--git:        Build from current git HEAD (not stable release version)
+    -c/--current:    Build from local git repo (as is)
+    -s/--static:     Make a standalone static build, no dynamic linking
+    -h/--help:       This help text"
 	exit 0
 }
 
-[[ ' '$*' ' = *' -h '* || ' '$*' ' = *' --help '* ]] && Help
+[[ ' '$*' ' = *' -h '* || ' '$*' ' = *' --help '* ]] &&
+	Help
+
+[[ ' '$*' ' = *' -s '* || ' '$*' ' = *' --static '* ]] &&
+	static=1 ||
+	static=0
 
 # Configuration options to (un)comment-out
 conf=(
@@ -117,7 +123,7 @@ unset indicator
 unset jumpyscrolling
 unset linenumbers
 unset locking
-set magic
+#set magic
 #set matchbrackets "(<[{)>]}"
 set minibar
 ##set morespace
@@ -236,6 +242,9 @@ EORC
 )
 
 git=0 cur=0
+[[ $1 = -s || $1 == --static ]] &&
+	shift
+
 if [[ $1 ]]
 then
 	if [[ $1 = -g || $1 = --git ]]
@@ -308,10 +317,16 @@ then ./autogen.sh || Abort "error in Autogen"
 fi
 
 # Needs: gcc pkg-config libncursesw5-dev gettext(groff)
-./configure ${conf[@]/#/--} || Abort "error in Configure"
+((!static))
+	! ./configure ${conf[@]/#/--} &&
+	Abort "error in Configure"
 
 # Needs: make texinfo
-make || Abort "error in Make"
+((static)) &&
+	CC=x86_64-linux-gnu-gcc ./configure ${conf[@]/#/--} --host x86_64 CFLAGS="-O2 -Wall --static"
+
+make ||
+	Abort "error in Make"
 
 # Needs: make sudo
 Sudo -S make install || Abort "error in Install"

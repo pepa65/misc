@@ -2,7 +2,7 @@
 
 # Recommended packages:
 # CLI:
-#  aria2 ne dfc dcfldd iftop pv w3m htop source-highlight colordiff dwdiff mmv
+#  aria2 ne dfc dcfldd iftop pv w3m htop colordiff dwdiff mmv
 #  tty-clock rdiff caca-utils git tmux aptitude gpgsm rsync ghostscript csvtool
 #  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx xterm
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
@@ -10,6 +10,8 @@
 #  php-fpm php-xml php-gd shellcheck zint libnss-resolve[github.com/censurfridns/client-configs]
 # tiv: https://github.com/stefanhaustein/TerminalImageViewer (4e4.in/tiv) [override LDFLAGS  += -pthread -static]
 # difft: From https://github.com/Wilfred/difftastic/releases
+# bat: cargo install bat (maybe nightly?) link to ~/bin
+# exa: cargo install exa
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx weasyprint
@@ -37,7 +39,7 @@ export PROMPT_COMMAND='hasjobs=$(jobs -p)'
 PS1='\[\033[01;36m\]${hasjobs:+\j }\[\033[01;32m\]\w \[\033[01;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\033[01;36m\]\$ \[\033[00m\]'
 export WINEPREFIX=~/.wine
 export EDITOR=nano
-export LESSOPEN="| /usr/share/source-highlight/src-hilite-lesspipe.sh %s"
+#export LESSOPEN="| /data/overflow/.cargo/bin/bat %s"
 export QUOTING_STYLE=literal
 export DISPLAY=:0.0
 #export CHROME_DEVEL_SANDBOX=/usr/local/sbin/chrome-devel-sandbox
@@ -63,8 +65,9 @@ st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Disp
 }
 rqr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
-c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
-cx(){ [[ -d $1 ]] && ls --color=auto -AFl $@ |less -RMgx2 +G || less -RMgx2 +G "$@";}
+#c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
+c(){ [[ -d $1 ]] && exa -aBgHlU --time-style=long-iso $@ |less -RMgx2 || bat "$@";}
+cx(){ [[ -d $1 ]] && exa -aBgHlU --time-style=long-iso $@ |less -RMgx2 +G || bat "$@";}
 ff(){ [[ $2 ]] && d="$2" || d='.'; find "$d" |grep -s --color=auto --devices=skip -I "$1";}
 pdfc(){ (($#<2 || $#>3)) && echo "PDF Resize needs: <input.pdf> <output.pdf> [1] (third argument optional, gives better quality)" && return 1; [[ $3 = 1 ]] && q=ebook || q=screen; gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/"$q" -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" "$1";}
 pdfcl(){ (($#!=2)) && echo "PDF Clean needs 2 arguments: <input.pdf> and <output.pdf>" && return 1; t=$(mktemp); pdf2ps "$1" "$t"; ps2pdf "$t" "$2"; rm -- "$t";}
@@ -267,7 +270,7 @@ ghl(){ # 1:user/project on github.com
 alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
 alias python3='PYTHONPATH=/usr/lib/python3/dist-packages; python3'
-alias lesspipe='file “$1” | grep -q text && /usr/share/source-highlight/src-hilite-lesspipe.sh “$1”'
+#alias lesspipe='file “$1” | grep -q text && export LESSOPEN="| /data/overflow/.cargo/bin/bat "$1"'
 alias mpr='abduco -n mpr mate-panel --replace'
 alias glr='gsettings list-recursively'
 alias lockscreen='DISPLAY=:0.0 xdotool key Ctrl+alt+l'
@@ -316,11 +319,12 @@ alias w='w3m https://google.com'
 alias f='find .|egrep --color=auto --devices=skip'
 alias ft='find . -type f -print0|xargs -0 egrep'
 alias h='hexdump -C'
-alias l='ls -AF --color=auto'
-alias ll='ls -AFl --time-style=long-iso --color=auto'
-alias llt='ls -AFltr --time-style=long-iso --color=auto'
-alias lls='ls -AFlSr --time-style=long-iso --color=auto'
-alias lt='ls -tr -AFl --time-style=long-iso --color=auto'
+alias l='exa -a'
+#alias ll='ls -AFl --time-style=long-iso --color=auto'
+alias ll='exa -aBgHlU --time-style=long-iso'
+alias llt='exa -aBgHls modified --time-style=long-iso'
+alias lt='exa -aBgHls modified --time-style=long-iso'
+alias lls='exa -aBgHls size --time-style=long-iso'
 alias sr='sudo -i'
 alias g='egrep -s --color=auto --devices=skip -I'
 alias p='ps wwaux -H'
