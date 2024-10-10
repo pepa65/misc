@@ -14,14 +14,13 @@ installpath=/opt
 # Path to .desktop file
 desktopfile=/usr/local/share/applications/betterbird.desktop
 
+# Get current version
 current=
 [[ -f $installpath/betterbird/application.ini ]] && # Installed
 	current=$(grep '^Version=' "$installpath/betterbird/application.ini") &&
 	echo "Current: ${current##*=}"
-(($(pgrep -c betterbird-bin))) &&
-	echo "Aborting: Betterbird is running, please close it first" &&
-	exit 1
 
+# Downloading the  release, getting the version and check if installed already
 tmpdir=$(mktemp -d) tmp=$tmpdir/bb.tar.bzip2
 trap "rm -rf $tmpdir" EXIT # ERR
 echo "Downloading release version..."
@@ -30,18 +29,25 @@ _=$(sha256sum $tmp) hash=${_%% *}
 tar xf $tmp -C $tmpdir
 _=$(grep '^Version=' $tmpdir/betterbird/application.ini) v=${_##*=} s=${v:0:3}
 echo "Downloaded version $v"
-sudo mkdir -p "$installpath"
-cd "$installpath"
-[[ -d betterbird-$v ]] &&
+[[ -d $installpath/betterbird-$v ]] &&
 	echo "Aborting: Version $v already installed in '$installpath'" &&
 	exit 2
 
+# Checksum
 shafile=$tmpdir/sha256.txt
 wget -qO $shafile "www.betterbird.eu/downloads/sha256-$s.txt"
 ! grep -q $hash $shafile && # no hash match
 	echo "Aborting: Hash '$hash' not in '$shafile'" &&
 	exit 3
 
+# Abort if still running
+(($(pgrep -c betterbird-bin))) &&
+	echo "Aborting: Betterbird is running, please close it first" &&
+	exit 1
+
+# Install
+sudo mkdir -p "$installpath"
+cd "$installpath"
 [[ -L betterbird ]] && # Link to directory
 	sudo rm betterbird
 [[ -d betterbird ]] && # Directory
@@ -50,6 +56,7 @@ wget -qO $shafile "www.betterbird.eu/downloads/sha256-$s.txt"
 sudo mv $tmpdir/betterbird betterbird-$v
 sudo ln -s betterbird-$v betterbird
 
+# Make .desktop file and update it
 cat <<-EOF >$tmpdir/desktop
 	[Desktop Entry]
 	Version=1.0
@@ -241,5 +248,7 @@ EOF
 sudo mkdir -p ${desktopfile%/*}
 sudo cp $tmpdir/desktop "$desktopfile"
 xdg-desktop-menu forceupdate
+
+# Finished
 echo "Betterbird-$v successfully installed. To choose from multiple profiles, run:"
 echo "$installpath/betterbird/betterbird --ProfileManager"

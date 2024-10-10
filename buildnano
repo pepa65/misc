@@ -27,16 +27,19 @@ Help(){
 conf=(
 	#disable-browser
 	#disable-color
+	enable-color
 	disable-comment
 	disable-extra
 	#disable-help
 	#disable-histories
 	disable-justify
 	#disable-libmagic
+	enable-libmagic
 	#disable-linenumbers
 	disable-mouse
 	#disable-multibuffer
 	#disable-nanorc
+  enable-nanorc
 	disable-operatingdir
 	disable-speller
 	#disable-tabcomp
@@ -329,7 +332,7 @@ make ||
 	Abort "error in Make"
 
 # Needs: make sudo
-Sudo -S make install || Abort "error in Install"
+Sudo -S make install-strip || Abort "error in Install"
 rc=$HOME/.nanorc
 
 echo -e "$nanorc" >"$rc.tmp"
