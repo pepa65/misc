@@ -66,8 +66,8 @@ st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Disp
 rqr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
 #c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
-c(){ [[ -d $1 ]] && l -BgHlU --time-style=long-iso $@ |less -RMgx2 || command c --paging always --plain "$@";}
-cx(){ [[ -d $1 ]] && l -BgHlU --time-style=long-iso $@ |less -RMgx2 +G || command c --paging always --plain "$@";}
+c(){ [[ -d $1 ]] && l -ABgHlU --time-style=long-iso $@ |less -RMgx2 || command c --paging always --plain "$@";}
+cx(){ [[ -d $1 ]] && l -ABgHlU --time-style=long-iso $@ |less -RMgx2 +G || command c --paging always --plain "$@";}
 ff(){ [[ $2 ]] && d="$2" || d='.'; find "$d" |grep -s --color=auto --devices=skip -I "$1";}
 pdfc(){ (($#<2 || $#>3)) && echo "PDF Resize needs: <input.pdf> <output.pdf> [1] (third argument optional, gives better quality)" && return 1; [[ $3 = 1 ]] && q=ebook || q=screen; gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/"$q" -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" "$1";}
 pdfcl(){ (($#!=2)) && echo "PDF Clean needs 2 arguments: <input.pdf> and <output.pdf>" && return 1; t=$(mktemp); pdf2ps "$1" "$t"; ps2pdf "$t" "$2"; rm -- "$t";}
@@ -105,11 +105,11 @@ u(){
 joinpdf(){ gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=$*;}
 rotvidr(){ mencoder -ovc lavc -vf rotate=1 -oac copy ${1} -o ${1}.avi;}
 rotvidl(){ mencoder -ovc lavc -vf rotate=2 -oac copy ${1} -o ${1}.avi;}
-reduce4e(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 28 "$b"; l -l "$a" "$b";}
-reduce4(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 24 "$b"; l -l "$a" "$b";}
-reduce3(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/3:ih/3" -vcodec libx265 -crf 24 "$b"; l -l "$a" "$b";}
-reduce2(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/2:ih/2" -vcodec libx265 -crf 24 "$b"; l -l "$a" "$b";}
-reduce(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vcodec libx265 -crf 24 "$b"; l -l "$a" "$b";}
+reduce4e(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 28 "$b"; l -Al "$a" "$b";}
+reduce4(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 24 "$b"; l -Al "$a" "$b";}
+reduce3(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/3:ih/3" -vcodec libx265 -crf 24 "$b"; l -Al "$a" "$b";}
+reduce2(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/2:ih/2" -vcodec libx265 -crf 24 "$b"; l -Al "$a" "$b";}
+reduce(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vcodec libx265 -crf 24 "$b"; l -Al "$a" "$b";}
 adb(){ # adb - analyse max-decibel; USAGE: adb <inputmp3> # if neg, increase possible
 	ffmpeg -i "$1" -af "volumedetect" -vn -sn -dn -f null /dev/null 2>&1 |grep -o 'max_volume.*';}
 bv(){ ffmpeg -i "$1" -af "volume=$2dB" "$1.mp3";}
@@ -321,10 +321,10 @@ alias ft='find . -type f -print0|xargs -0 egrep'
 alias h='hexdump -C'
 #alias l='exa -a'
 #alias ll='ls -AFl --time-style=long-iso --color=auto'
-alias ll='l -BgHlU --time-style=long-iso'
-alias llt='l -BgHls modified --time-style=long-iso'
-alias lt='l -BgHls modified --time-style=long-iso'
-alias lls='l -BgHls size --time-style=long-iso'
+alias ll='l -ABgHlU --time-style=long-iso'
+alias llt='l -ABgHls modified --time-style=long-iso'
+alias lt='l -ABgHls modified --time-style=long-iso'
+alias lls='l -ABgHls size --time-style=long-iso'
 alias sr='sudo -i'
 alias g='egrep -s --color=auto --devices=skip -I'
 alias p='ps wwaux -H'
