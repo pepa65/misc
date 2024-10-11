@@ -10,7 +10,8 @@
 #  php-fpm php-xml php-gd shellcheck zint libnss-resolve[github.com/censurfridns/client-configs]
 # tiv: https://github.com/stefanhaustein/TerminalImageViewer (4e4.in/tiv) [override LDFLAGS  += -pthread -static]
 # difft: From https://github.com/Wilfred/difftastic/releases
-# bat/exa: wget 4e4.in/.c; wget 4e4.in/l
+# bat: sudo wget -qO /usr/local/bin/c wget 4e4.in/c; chmod +x /usr/local/bin/c
+# exa: sudo wget -qO /usr/local/bin/l 4e4.in/l; chmod +x /usr/local/bin/l
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx weasyprint
@@ -66,8 +67,8 @@ st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Disp
 rqr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
 #c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
-c(){ [[ -d $1 ]] && command l -aBgHlU --time-style=long-iso $@ |less -RMgx2 || command c --paging always --plain "$@";}
-cx(){ [[ -d $1 ]] && command l -aBgHlU --time-style=long-iso $@ |less -RMgx2 +G || command c --paging always --plain "$@";}
+c(){ [[ -d $1 ]] && command l -aBgHl --time-style=long-iso $@ |less -RMgx2 || command c --paging always --plain "$@";}
+cx(){ [[ -d $1 ]] && command l -aBgHl --time-style=long-iso $@ |less -RMgx2 +G || less -RMgx2 +G;}
 ff(){ [[ $2 ]] && d="$2" || d='.'; find "$d" |grep -s --color=auto --devices=skip -I "$1";}
 pdfc(){ (($#<2 || $#>3)) && echo "PDF Resize needs: <input.pdf> <output.pdf> [1] (third argument optional, gives better quality)" && return 1; [[ $3 = 1 ]] && q=ebook || q=screen; gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/"$q" -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" "$1";}
 pdfcl(){ (($#!=2)) && echo "PDF Clean needs 2 arguments: <input.pdf> and <output.pdf>" && return 1; t=$(mktemp); pdf2ps "$1" "$t"; ps2pdf "$t" "$2"; rm -- "$t";}
