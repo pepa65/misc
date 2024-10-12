@@ -323,6 +323,9 @@ getjulia [-u|--uninstall | -p|--purge]
 * Environment: `TMP` (optional) root path of the temporary working directory
 * Required: `wget tar coreutils(mktemp rm mv)`
 
+## getrust
+**Install rust simply**
+
 ## healbitrot
 **Automatic check and self-healing for bitrot**
 
