@@ -77,7 +77,10 @@ d2u(){ # Remove all CR/^M/\r at the end of lines (before newline/NL/^J/\n)
 	for f; do sed -i 's/\r$//' "$f"; done;}
 u2d(){ sed -i 's@$@\r@' $1;}
 md(){ mkdir -p "$1" && cd "$1"; }
-al(){ local f="$(declare -f $1)" a="$(alias $1 2>/dev/null)"; [[ "$f" ]] && echo "$f"; [[ "$a" ]] && echo "$a";}
+al(){ local f="$(declare -f "$1")" a="$(alias "$1" 2>/dev/null)" b="$(whereis "$1")"
+	[[ $f ]] && echo "$f"
+	[[ $a ]] && echo "$a"
+	[[ ${b##*:} ]] && echo "$b";}
 sk(){ ((sk)) && sk=0 && xmodmap -e "pointer = 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16" && echo "mousekeys normal" && return
 	export sk=1; xmodmap -e "pointer = 2 1 3 4 5 6 7 8 9 10 11 12 13 14 15 16"; echo "mousekeys 1 and 2 swapped";}
 asf(){ apt-cache search $1 |egrep --color=auto $1;}
@@ -267,6 +270,11 @@ gcd(){ (($#!=2)) && echo 'Need to numbers to get the Greatest Common Divider' &&
 	(($1%$2)) && gcd $2 $(($1%$2)) || echo $2;}
 ghl(){ # 1:user/project on github.com
 	curl --silent --location --max-time 30 "https://api.github.com/repos/$1/releases/latest" |jq .tag_name;}
+vchk(){ # 1:videofile
+	[[ -z $1 ]] && echo "Need videofile to check" && return
+	ffmpeg -v error -i $1 -f null -;}
+vc(){ local out=$(ffprobe -hide_banner "$1" 2>&1)
+ grep Invalid <<<"$out";}
 
 alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
