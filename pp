@@ -109,14 +109,14 @@ u(){
 joinpdf(){ gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=$*;}
 rotvidr(){ mencoder -ovc lavc -vf rotate=1 -oac copy ${1} -o ${1}.avi;}
 rotvidl(){ mencoder -ovc lavc -vf rotate=2 -oac copy ${1} -o ${1}.avi;}
-reduce4e(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 28 "$b"; command l -al "$a" "$b";}
-reduce4(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 24 "$b"; command l -al "$a" "$b";}
-reduce3(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/3:ih/3" -vcodec libx265 -crf 24 "$b"; command l -al "$a" "$b";}
-reduce2(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vf "scale=iw/2:ih/2" -vcodec libx265 -crf 24 "$b"; command l -al "$a" "$b";}
-reduce(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -i "$a" -vcodec libx265 -crf 24 "$b"; command l -al "$a" "$b";}
+reduce4e(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -hide_banner -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 28 "$b"; command l -al "$a" "$b";}
+reduce4(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -hide_banner -i "$a" -vf "scale=iw/4:ih/4" -vcodec libx265 -crf 24 "$b"; command l -al "$a" "$b";}
+reduce3(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -hide_banner -i "$a" -vf "scale=iw/3:ih/3" -vcodec libx265 -crf 24 "$b"; command l -al "$a" "$b";}
+reduce2(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -hide_banner -i "$a" -vf "scale=iw/2:ih/2" -vcodec libx265 -crf 24 "$b"; command l -al "$a" "$b";}
+reduce(){ local a=$1 b; [[ $2 ]] && b=$2 || b=$1.mp4; ffmpeg -hide_banner -i "$a" -vcodec libx265 -crf 24 "$b"; command l -al "$a" "$b";}
 adb(){ # adb - analyse max-decibel; USAGE: adb <inputmp3> # if neg, increase possible
-	ffmpeg -i "$1" -af "volumedetect" -vn -sn -dn -f null /dev/null 2>&1 |grep -o 'max_volume.*';}
-bv(){ ffmpeg -i "$1" -af "volume=$2dB" "$1.mp3";}
+	ffmpeg -hide_banner -i "$1" -af "volumedetect" -vn -sn -dn -f null /dev/null 2>&1 |grep -o 'max_volume.*';}
+bv(){ ffmpeg -hide_banner -i "$1" -af "volume=$2dB" "$1.mp3";}
 clipvid(){
 	# $1:src $2:start(time) $3:fadein(s) $4:fadeout(s) $5:end(time) [$6:dst]
 	local tmp out=$1.mp4 i b e bd ed
@@ -140,10 +140,10 @@ clipvid(){
 	b=${b:0:1}:${b:1:2}:${b:3:2}${b:5} e=${e:0:1}:${e:1:2}:${e:3:2}${e:5}
 	i=$(bc -l <<<"$(date -d $e +%s).$ed-$(date -d $b +%s).$bd-$4")
 	tmp=$(mktemp).mp4
-	ffmpeg -i "$1" -ss "$b" -to "$e" -async 1 $tmp
-	echo "ffmpeg -i '$1' -ss '$b' -to '$e' -async 1 $tmp"
+	ffmpeg -hide_banner -i "$1" -ss "$b" -to "$e" -async 1 $tmp
+	echo "ffmpeg -hide_banner -i '$1' -ss '$b' -to '$e' -async 1 $tmp"
 	(($3+$4)) &&
-		ffmpeg -i $tmp -vf "fade=t=in:st=0:d=$3,fade=t=out:st=$i:d=$4" \
+		ffmpeg -hide_banner -i $tmp -vf "fade=t=in:st=0:d=$3,fade=t=out:st=$i:d=$4" \
 			-af "afade=t=in:st=0:d=$3,afade=t=out:st=$i:d=$4" "$out" &&
 		rm $tmp ||
 		mv "$tmp" "$out"
@@ -156,7 +156,7 @@ speedvid(){
 	[[ ${a:0:1} = . ]] && a=0$a
 	local v=$(bc -l <<<"1/$a")
 	[[ ${v:0:1} = . ]] && v=0$v
-	ffmpeg -i "$1" -filter_complex "[0:v]setpts=$v*PTS[v];[0:a]atempo=$a[a]" -map "[v]" -map "[a]" "$1.mp4"
+	ffmpeg -hide_banner -i "$1" -filter_complex "[0:v]setpts=$v*PTS[v];[0:a]atempo=$a[a]" -map "[v]" -map "[a]" "$1.mp4"
 }
 tn(){ : &>/dev/null <"/dev/tcp/$1/$2" && echo open || echo closed;}
 cd(){ # Print working directory after `cd`
@@ -250,7 +250,7 @@ transfer(){ # Required: tty curl zip cd cat
 #di(){ [[ ! $1 ]] && echo "Need docker container_id to inspect" && return ||
 #	docker inspect --format "$(grep -v '^#' ~/git/misc/docker.tpl)" "$1";}
 di(){ [[ ! -n $1 ]] && echo "Need docker container_id to inspect" && return || docker inspect -f 'docker run --name {{printf "%q" .Name}} {{- with .HostConfig}} {{- if .Privileged}} --privileged {{- end}} {{- if .AutoRemove}} --rm {{- end}} {{- if .Runtime}} --runtime {{printf "%q" .Runtime}} {{- end}} {{- range $b := .Binds}} --volume {{printf "%q" $b}} {{- end}} {{- range $v := .VolumesFrom}} --volumes-from {{printf "%q" $v}} {{- end}} {{- range $l := .Links}} --link {{printf "%q" $l}} {{- end}} {{- if .PublishAllPorts}} --publish-all {{- end}} {{- if .UTSMode}} --uts {{printf "%q" .UTSMode}} {{- end}} {{- with .LogConfig}} --log-driver {{printf "%q" .Type}} {{- range $o, $v := .Config}} --log-opt {{$o}}={{printf "%q" $v}} {{- end}} {{- end}} {{- with .RestartPolicy}} --restart "{{.Name -}} {{- if eq .Name "on-failure"}}:{{.MaximumRetryCount}} {{- end}}" {{- end}} {{- range $e := .ExtraHosts}} --add-host {{printf "%q" $e}} {{- end}} {{- range $v := .CapAdd}} --cap-add {{printf "%q" $v}} {{- end}} {{- range $v := .CapDrop}} --cap-drop {{printf "%q" $v}} {{- end}} {{- range $d := .Devices}} --device {{printf "%q" (index $d).PathOnHost}}:{{printf "%q" (index $d).PathInContainer}}:{{(index $d).CgroupPermissions}} {{- end}} {{- end}} {{- with .NetworkSettings -}} {{- range $p, $conf := .Ports}} {{- with $conf}} --publish " {{- if $h := (index $conf 0).HostIp}}{{$h}}: {{- end}} {{- (index $conf 0).HostPort}}:{{$p}}" {{- end}} {{- end}} {{- range $n, $conf := .Networks}} {{- with $conf}} --network {{printf "%q" $n}} {{- range $a := $conf.Aliases}} --network-alias {{printf "%q" $a}} {{- end}} {{- end}} {{- end}} {{- end}} {{- with .Config}} {{- if .Hostname}} --hostname {{printf "%q" .Hostname}} {{- end}} {{- if .Domainname}} --domainname {{printf "%q" .Domainname}} {{- end}} {{- range $p, $conf := .ExposedPorts}} --expose {{printf "%q" $p}} {{- end}} {{- range $e := .Env}} --env {{printf "%q" $e}} {{- end}} {{- range $l, $v := .Labels}} --label {{printf "%q" $l}}={{printf "%q" $v}} {{- end}} {{- if not (or .AttachStdin (or .AttachStdout .AttachStderr))}} --detach {{- end}} {{- if .AttachStdin}} --attach stdin {{- end}} {{- if .AttachStdout}} --attach stdout {{- end}} {{- if .AttachStderr}} --attach stderr {{- end}} {{- if .Tty}} --tty {{- end}} {{- if .OpenStdin}} --interactive {{- end}} {{- if .Entrypoint}} {{- if eq (len .Entrypoint) 1 }} --entrypoint " {{- range $i, $v := .Entrypoint}} {{- if $i}} {{end}} {{- $v}} {{- end}}" {{- end}} {{- end}} {{printf "%q" .Image}} {{range .Cmd}}{{printf "%q " .}}{{- end}} {{- end}}' "$1" |sed 's/ --/ \\\n  --/g' |less;}
-vp(){ ffprobe "$1" 2>&1 |grep -e Duration: -e Video:;}
+vp(){ ffprobe -hide_banner "$1" 2>&1 |grep -e Duration: -e Video:;}
 i(){ convert -colors 16 "$1" sixel:-;}
 fpw(){ (($#)) && a=$@ c=always || a=. c=never
 	read -sp "Firefox master password: " && echo -n $'\r' &&
@@ -272,7 +272,7 @@ ghl(){ # 1:user/project on github.com
 	curl --silent --location --max-time 30 "https://api.github.com/repos/$1/releases/latest" |jq .tag_name;}
 vchk(){ # 1:videofile
 	[[ -z $1 ]] && echo "Need videofile to check" && return
-	ffmpeg -v error -i $1 -f null -;}
+	ffmpeg -hide_banner -v error -i $1 -f null -;}
 vc(){ local out=$(ffprobe -hide_banner "$1" 2>&1)
  grep Invalid <<<"$out";}
 
@@ -381,5 +381,5 @@ alias dt="dig +short @dns.toys"
 alias vid='mpv --vo=tct' # Showing video on terminal
 alias ffp='ffprobe -hide_banner'
 alias ffm='ffmpeg -hide_banner'
-alias recaudio='ffmpeg -f pulse -i $(pactl list sinks |grep $(pactl get-default-sink).monitor |cut -d: -f2)'
+alias recaudio='ffmpeg -hide_banner -f pulse -i $(pactl list sinks |grep $(pactl get-default-sink).monitor |cut -d: -f2)'
 alias gor='goreleaser release --clean'
