@@ -275,6 +275,8 @@ vchk(){ # 1:videofile
 	ffmpeg -hide_banner -v error -i $1 -f null -;}
 vc(){ local out=$(ffprobe -hide_banner "$1" 2>&1)
  grep Invalid <<<"$out";}
+tomp4(){ ffmpeg -hide-banner -i "$1" -c:a aac -c:v libx265 -x265-params crf=25 "$1.mp4";}
+tomp4s(){ ffmpeg -hide-banner -i "$1" -c:a aac -c:v libx265 -x265-params crf=25 -c:s mov_text "$1.mp4";}
 
 alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
