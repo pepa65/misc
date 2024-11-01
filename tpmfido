@@ -1,15 +1,35 @@
 #!/usr/bin/env bash
 
 # tpmfido - Start Security key device based on TPM2
+# Works on: webauthn.me webauthn.io demo.yubico.com
+# Does not work on: github.com webauthn.org
 
-# Set uhid
+
+log=~/tpm-fido.log
+
+## Sane software...
+# matejsmycka's linux-id
+cmd1=/usr/local/bin/tpmfido
+# Psanford's tpm-fido
+cmd2=~/git/tpm-fido/tpm-fido
+
+[[ ! -f $cmd1 && ! -f $cmd2 ]] &&
+	echo "Abort: neither $cmd1 nor $cmd2 found" &&
+	exit 1
+
+[[ -f $cmd1 ]] &&
+	cmd=$cmd1 ||
+	cmd=$cmd2
+
+# Load and set uhid device
 [[ -z $(lsmod |grep '^uhid\b') ]] &&
 	sudo modprobe uhid &&
 	sudo chgrp tss /dev/uhid &&
 	sudo chmod g+rw /dev/uhid
 
-# User in tss group, and start
+# Setup curent user in tss group and try running in background
+echo "$(date +'%Y/%m/%d %H:%M:%S') Trying to start $cmd 2>>$log" >>"$log"
 [[ -z $(groups |grep -ow tss) ]] &&
 	sudo gpasswd -a $USER tss &&
-	sudo sg tss ~/git/tpm-fido/tpm-fido 2>~/tpm-fido.log ||
-	~/git/tpm-fido/tpm-fido 2>~/tpm-fido.log &
+	sudo sg tss "$cmd" 2>>"$log" ||
+	"$cmd" 2>>"$log" &

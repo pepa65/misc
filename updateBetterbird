@@ -252,3 +252,4 @@ xdg-desktop-menu forceupdate
 # Finished
 echo "Betterbird-$v successfully installed. To choose from multiple profiles, run:"
 echo "$installpath/betterbird/betterbird --ProfileManager"
+echo "(Default seems to be good, default-default bad...)"
