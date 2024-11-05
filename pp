@@ -2,7 +2,7 @@
 
 # Recommended packages:
 # CLI:
-#  aria2 ne dfc dcfldd iftop pv w3m htop colordiff dwdiff mmv fzf timg
+#  aria2 ne dfc dcfldd iftop pv w3m htop colordiff dwdiff mmv fzf timg secure-delete
 #  tty-clock rdiff caca-utils git tmux aptitude gpgsm rsync ghostscript csvtool
 #  jq zbar-tools diskscan smartmontools rename curl ffmpeg gdisk parted lynx xterm
 #  psmisc lsof telnet exfatprogs unrar swath cryptsetup gettext pkg-config lvm2
@@ -196,7 +196,7 @@ fixusb3(){ # i=0000:00:10.0
 }
 getmasterkey(){ # when root and device decrypted
 	xxd -r -p <$(sudo dmsetup table --showkeys |grep '^lvmcrypt: 0' |cut -d' ' -f6) masterkey;}
-smv(){ # Shred-move
+smv(){ # Shred-move (with srm from secure-delete)
 	[[ -z $2 ]] && echo "ABORT: shred-move requires at least 2 arguments" &&
 		return 1
 	local argv=("$@")
@@ -207,9 +207,7 @@ smv(){ # Shred-move
 	[[ ! -e $dir ]] && mkdir -p "$dir"
 	[[ ! -d $dir ]] && echo "ABORT: directory $dir inaccessible" && return 3
 	for a in "${argv[@]}"; do cp -a "$a" "$dir"; done;
-	bleachbit -s "${argv[@]}";}
-srm(){ # Shred
-	bleachbit -s "$@";}
+	srm "${argv[@]}";}
 geo(){ # $1:(optional)ip-quadroctet
 	[[ $1 && ! $1 =~ ^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$ ]] &&
 		echo "commandline argument not a numerical IP address in dot notation" &&
