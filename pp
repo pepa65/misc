@@ -183,7 +183,7 @@ difw(){ (($#!=3)) && echo -e "USAGE: difch <file1> <file2> <outfile>\nERROR: 3 a
 wgt(){ wget -qO- "$1"; echo;}
 togglepad(){ local id=$(xinput list |grep 'PS/2 Logitech Wheel Mouse' |grep -o '=[0-9]*'); id=${id#=}; local s=$(xinput list-props $id |head -n 2 |tail -c 2); xinput set-prop $id "Device Enabled" $((!s)); echo -n "Touchpad "; ((s)) && echo "off" || echo "on";}
 prompt(){ [[ $1 ]] && { local a=($1); while true; do echo -en "$2"; read -r; [[ " ${a[@]} " = *" ${REPLY// /} "* ]] && return 0; echo -en "$3"; done;} || echo "USAGE: prompt \"<space-delimited input>\" [\"<prompt message>\" [\"<error message>\"]]";}
-trim(){ while (($#)); do read -rd '' $1 <<<"${!1}"; shift; done; }
+trim(){ while (($#)); do read -rd '' $1 <<<"${!1}"; shift; done; } # Trim whitespace off all given variables
 fixusb3(){ # i=0000:00:10.0
 	local i d=/sys/bus/pci/drivers/xhci_hcd
 	# cd "$d"
@@ -277,6 +277,37 @@ tomp4(){ ffmpeg -hide_banner -i "$1" -c:a aac -c:v libx265 -x265-params crf=25 "
 tomp4s(){ ffmpeg -hide_banner -i "$1" -c:a aac -c:v libx265 -x265-params crf=25 -c:s mov_text "$1.mp4";}
 len(){ echo "$(($(wc -c <<<"$1")-1))";}
 ord(){ LC_TYPE=C printf '%x' "'$1";}
+erasedrive(){ # Completely hardformat
+	local hd=$1
+	[[ -z $hd ]] && echo "Give devicename of harddrive" && return 1
+	[[ ! -a $hd ]] && echo "Device not found" && return 2
+	local hdpi=$(sudo hdparm -I "$hd")
+	local mins=$(grep '[0-9]*min for ' <<<$hdpi)
+	mins=${mins%%min*}
+	mins=${mins:1}
+	echo "Secure Erase should take $mins minutes"
+	((mins>120)) && local version=$(hdparm -V) && version=${version#hdparm v} && [[ $version < 9.31 ]] && echo "hdparm before v9.31 will time out on large disks after 2 hours!" && return 4
+	local frozen=$(grep frozen <<<"$hdpi")
+	[[ -z frozen ]] && echo "Not a harddrive: '$hd'" && return 5
+	[[ ! $frozen = *not* ]] && echo "Device frozen" && sudo pm-suspend && hdpi=$(sudo hdparm -I "$hd") && frozen=$(grep frozen <<<"$hdpi") && [[ ! $frozen = *not* ]] && echo "Giving up, still frozen..." && return 6
+	read -p "Press Ctrl-C to cancel, or Enter to continue erasing '$hd'"
+	# Set security password: xxxx
+	sudo hdparm --user-master u --security-set-pass xxxx "$hd"
+	hdpi=$(sudo hdparm -I "$hd")
+	local enabled=$(grep enabled <<<"$hdpi")
+	[[ ! $enabled = enabled ]] && echo "Setting security password failed" && return 7
+	local enh=$(grep 'supported: enhanced erase' <<<"$hdpi")
+	[[ $enh ]] &&
+		local cmd="time sudo hdparm --user-master u --security-erase-enhanced xxxx $hd" ||
+		local cmd="time sudo hdparm --user-master u --security-erase xxxx $hd"
+	# ATA Secure (Enhanced?) Erase
+	echo "This might take a while..."
+	$cmd
+	# Check security password reset
+	local reset=$(sudo hdparm -I "$hd" |grep enabled)
+	[[ $reset = enabled ]] && echo "Reset of security password failed" && return 8
+	echo "Drive '$hd' should be completely erased now"
+}
 
 alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
