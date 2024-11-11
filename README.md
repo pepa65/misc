@@ -326,6 +326,9 @@ getjulia [-u|--uninstall | -p|--purge]
 ## getrust
 **Install rust simply**
 
+## gomod-update
+**Update dependencies of specific go projects**
+
 ## healbitrot
 **Automatic check and self-healing for bitrot**
 

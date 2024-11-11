@@ -7,7 +7,7 @@ set -E +x # Halt on errors, no trace
 
 # lang: en-US/de/fr/it/es-AR/pt-BR/ja
 lang=en-US
-# version: release/previous
+# version: release/previous/latest/future
 version=release
 # Installation path
 installpath=/opt
