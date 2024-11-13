@@ -207,7 +207,7 @@ smv(){ # Shred-move (with srm from secure-delete)
 	[[ ! -e $dir ]] && mkdir -p "$dir"
 	[[ ! -d $dir ]] && echo "ABORT: directory $dir inaccessible" && return 3
 	for a in "${argv[@]}"; do cp -a "$a" "$dir"; done;
-	srm "${argv[@]}";}
+	command srm -dlv "${argv[@]}";}
 geo(){ # $1:(optional)ip-quadroctet
 	[[ $1 && ! $1 =~ ^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$ ]] &&
 		echo "commandline argument not a numerical IP address in dot notation" &&
@@ -416,3 +416,4 @@ alias ffp='ffprobe -hide_banner'
 alias ffm='ffmpeg -hide_banner'
 alias recaudio='ffmpeg -hide_banner -f pulse -i $(pactl list sinks |grep $(pactl get-default-sink).monitor |cut -d: -f2)'
 alias gor='goreleaser release --clean'
+alias srm='command srm -dlv'
