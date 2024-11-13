@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -xe
+set -e #-x
 # gomod-update - Update modules in go projects
-# Required: go git coreutils(rm) nano grep goreleaser
+# Required: go git coreutils(rm head) nano grep goreleaser
 # Usage gomod <tool>
 
 pkgs=becrypt/bat/horcrux/m2m/mailer/twofat
@@ -16,7 +16,8 @@ do
 	[[ ! /$pkgs/ = */$dir/* ]] &&
 		echo "Package not one of: $pkgs" &&
 		continue
-	cd /data/git/"$dir"
+	gitdir=/data/git/$dir
+	cd "$gitdir"
 	rm go.mod
 	go mod init github.com/pepa65/"$dir"
 	go mod tidy
@@ -25,11 +26,12 @@ do
 		git checkout go.mod &&
 		echo "====== No module updates" &&
 		continue
-
-	read -p "Ctrl-C to abort, or Enter to update the VERSION in main.go and README.md"
-	nano main.go README.md  # increase to VERSION manually
+	echo "Ctrl-C to abort, or Enter to update the VERSION in $gitdir"
+	echo "(the files 'main.go' and 'README.md' will be opened in nano to edit)"
+	read
+	nano main.go README.md  # increase to VERSION manually in the editor
 	go install
-	_=$($dir -h 2>&1 |grep -o '^[^ ]* v[.0-9]*') version=${_#$dir }
+	version=$($dir -h 2>&1 |grep -o 'v[.0-9]*' |head -1)
 	git commit -a -m "Modules update"
 	git tag -a $version
 	git push
