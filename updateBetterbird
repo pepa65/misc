@@ -250,6 +250,7 @@ sudo cp $tmpdir/desktop "$desktopfile"
 xdg-desktop-menu forceupdate
 
 # Finished
-echo "Betterbird-$v successfully installed. To choose from multiple profiles, run:"
+echo "Betterbird-$v successfully installed. Now running:"
 echo "$installpath/betterbird/betterbird --ProfileManager"
-echo "(Default seems to be good, default-default bad...)"
+#echo "(Default seems to be good, default-default bad...)"
+$installpath/betterbird/betterbird --ProfileManager &
