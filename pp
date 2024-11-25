@@ -55,6 +55,7 @@ export GOROOT=/usr/local/go GOBIN=~/go/bin
 export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /:}")
 export MODULAR_HOME="/home/pp/.modular"
 export GIT_EXTERNAL_DIFF=difft
+export RUSTC_WRAPPER=sccache
 
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
 addpath ~/bin ~/env/bin $GOBIN $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin ~/.modular/pkg/packages.modular.com_mojo/bin ~/.cargo/bin /opt/cosmo/bin /opt/cosmos/bin

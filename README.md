@@ -550,6 +550,16 @@ Usage: mkuki [<option>...]
 
 See the file for instructions to compile and use.
 
+## pdfsig
+**Sign pdf with an image with GUI**
+
+```
+Usage:  pdfsig PDF SIGIMAGE [PAGENUM]
+    PDF: path to pdf-file
+    SIGIMAGE: path to signature image
+    PAGENUM: pagenumber to sign (default: last)
+```
+
 ## pdfslice
 **Make a pdf from a page range in a source document**
 
@@ -656,6 +666,29 @@ Usage:  rmbg [-f PCT] [-s|-S] [-p X,Y] [-v] <image>...
 **Utility to set the screen "temperature" to adjust the red-blue balance**
 
 See the file for instructions on how to compile and use.
+
+## signpdf
+**Add signature image to PDF file**
+
+```
+usage: signpdf [-h] [-o OUTPUT] pdf sig coords
+
+Add signature image to PDF file
+
+positional arguments:
+  pdf                   The pdf file to annotate
+  sig                   The signature image file (png/jpg)
+  coords                Coordinates for signature positioning. Format: PAGE-X-Y-WIDTH. 1-200-300-125 means page 1, 200 units
+                        horizontally from Bottom-left, 300 units vertically from Bottom-left, 125 units wide. Page count
+                        starts at 1. One unit is 1/72 inch.
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Output file (default: input filename plus '_signed')
+
+Find the right 'coords' by trial-and-error or use a GUI: github.com/pepa65/pdfsig
+```
 
 ## spc2tab
 **Convert leading spaces into tabs**
