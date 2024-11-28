@@ -1,3 +1,4 @@
+#!/usr/bin/env bash # Purely for the editor
 # pp - Settings to be included in .bashrc
 
 # Recommended packages:
@@ -35,8 +36,8 @@ shopt -s interactive_comments
 shopt -s dotglob extglob
 set +H  # no more history expansion, use ! safely in strings
 
-export PROMPT_COMMAND='hasjobs=$(jobs -p)'
-PS1='\[\033[01;36m\]${hasjobs:+\j }\[\033[01;32m\]\w \[\033[01;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\033[01;36m\]\$ \[\033[00m\]'
+#export PROMPT_COMMAND='hasjobs=$(jobs -p)'
+#PS1='\[\033[01;36m\]${hasjobs:+\j }\[\033[01;32m\]\w \[\033[01;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\033[01;36m\]\$ \[\033[00m\]'
 export WINEPREFIX=~/.wine
 export EDITOR=nano
 #export LESSOPEN="| command c --paging always --plain %s"
