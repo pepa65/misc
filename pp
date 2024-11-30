@@ -37,7 +37,7 @@ shopt -s dotglob extglob
 set +H  # no more history expansion, use ! safely in strings
 
 #export PROMPT_COMMAND='hasjobs=$(jobs -p)'
-#PS1='\[\033[01;36m\]${hasjobs:+\j }\[\033[01;32m\]\w \[\033[01;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\033[01;36m\]\$ \[\033[00m\]'
+#PS1='\[\e[1;36m\]${hasjobs:+\j }\[\e[1;32m\]\w \[\e[1;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\e[1;36m\]\$ \[\e[0m\]'
 export WINEPREFIX=~/.wine
 export EDITOR=nano
 #export LESSOPEN="| command c --paging always --plain %s"
@@ -162,7 +162,7 @@ speedvid(){
 }
 tn(){ : &>/dev/null <"/dev/tcp/$1/$2" && echo open || echo closed;}
 cd(){ # Print working directory after `cd`
-	[[ $@ == '-' ]] && builtin cd "$@" >/dev/null || builtin cd "$@"; echo -e "   \033[1;30m"`pwd`"\033[0m";}
+	[[ $@ == '-' ]] && builtin cd "$@" >/dev/null || builtin cd "$@"; echo -e "   \e[1;30m"`pwd`"\e[0m";}
 addpk(){ # add PUBKEY
  gpg --keyserver subkeys.pgp.net --recv-keys $1;  gpg --armor --export $1 | sudo apt-key add -;}
 ah(){ # hold package (no upgrades)
@@ -419,3 +419,4 @@ alias ffm='ffmpeg -hide_banner'
 alias recaudio='ffmpeg -hide_banner -f pulse -i $(pactl list sinks |grep $(pactl get-default-sink).monitor |cut -d: -f2)'
 alias gor='goreleaser release --clean'
 alias srm='command srm -dlv'
+alias termcolors='c=(Default White Black DarkGray Red LightRed  Green LightGreen Brown Yellow Blue LightBlue Purple LightPurple Cyan LightCyan LightGray BoldWhite) i=0; echo "   fg:   bg:  40m   41m   42m   43m   44m   45m   46m   47m"; for f in "   0m" " 1;0m" "  30m" "1;30m" "  31m" "1;31m" "  32m" "1;32m" "  33m" "1;33m" "  34m" "1;34m" "  35m" "1;35m" "  36m" "1;36m" "  37m" "1;37m"; do g=${f// }; echo -en " $f \e[$g  #  "; for b in 40m 41m 42m 43m 44m 45m 46m 47m; do echo -en "$EINS \e[$g\e[$b  #  \e[0m"; done; echo "  ${c[i++]}"; done'
