@@ -687,7 +687,7 @@ options:
   -o OUTPUT, --output OUTPUT
                         Output file (default: input filename plus '_signed')
 
-Find the right 'coords' by trial-and-error or use a GUI: github.com/pepa65/pdfsig
+Find the right 'coords' by trial-and-error or use a GUI: pdfsig from github.com/pepa65/misc
 ```
 
 ## spc2tab
