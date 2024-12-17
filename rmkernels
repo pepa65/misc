@@ -8,6 +8,8 @@ set +xv
 ## Required: grep, sed, find, coreutils(sort, uname, tail), dpkg, apt. sudo
 ##  If bootctlu is present and active, it will be called to cull the entries
 
+keep=${RMKERNELS_KEEP:-2}
+
 Usage(){
 	cat <<-EOS
 		 rmkernels - uninstall extraneous kernels on Ubuntu based systems
@@ -19,7 +21,7 @@ Usage(){
 		EOS
 }
 
-Main(){
+Main(){ # 1:flag I:keep
 	## Process commandline
 	local force=0 pat= pkgsf= pkgpat=
 	while [[ $1 ]]
@@ -51,8 +53,8 @@ Main(){
 		sf=$(grep -v "${cur%-*}" <<<"$sf")
 	nall=$(wc -l <<<"$all")
 	nsf=$(wc -l <<<"$sf")
-	((nall-nsf<2 && nsf>0)) &&  ## Keep at least 1 fallback kernel
-		sf=$(tail -n +2 <<<"$sf")  ## Remove most recent from superfluous list
+	((nall-nsf<keep && nsf>0)) &&  ## Keep at least 1 fallback kernel
+		sf=$(tail -n +$keep <<<"$sf")  ## Remove most recent from superfluous list
 	## Check kernel images and commandline patterns against installed packages
 	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'  ## Installed packages sed pattern
 	ipkg=$(dpkg -l | tail -n +6 |sed "$sedpkg")  ## Installed packages

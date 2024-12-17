@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -evx  # Exit on error
+# pdfsig - Sign pdf with an image with GUI
+# Usage:  pdfsig PDF SIGIMAGE [PAGENUM]
+#     PDF: path to pdf-file
+#     SIGIMAGE: path to signature image
+#     PAGENUM: pagenumber to sign (default: last)
+# Required: qpdf grep imagemagick(identify) coreutils(wc rm) python3
+#           python3-pypdf2 python3-reportlab signpdf[github.com/pepa65/misc]
+
+pdf=$1
+[[ ! -f $pdf || ! $pdf = *.pdf ]] &&
+	echo "### First argument must be a pdf-file ending in '.pdf'" &&
+	exit 1
+
+sig=$2
+[[ ! -f $sig ]] &&
+	echo "### Second argument must be a signature image-file" &&
+	exit 2
+
+! dsig=($(identify -format "%w %h %x %y" "$sig")) &&
+	echo "### Second argument is not an image-file" &&
+	exit 3
+
+page=$3 pages=$(identify -density 12 -format "%p " $pdf) npages=$(wc -w <<<"$pages")
+if [[ -n $page ]]
+then
+	[[ ! ${page//[0-9]} = "" && ! $page = 0 ]] &&
+		echo "### Third argmument must be an unsigned positive integer" &&
+		exit 4
+
+	((page>npages)) &&
+		echo "### Third argument is not a valid page number 1..$npages" &&
+		exit 5
+else page=$npages
+fi
+
+dir=$(mktemp -d)
+_=$dir/${pdf##*/} p=${_%.pdf}#$page out=$pdf-signed.pdf
+
+Cleanup(){
+	echo "--- Cleaning up..."
+	rm -r "$dir"
+}
+trap Cleanup EXIT
+
+echo "=== Signing document $pdf on page $page"
+dsig=(${dsig[@]%%.*})
+
+## Extract page
+qpdf "$pdf" --pages --file=$pdf --range=$page -- "$p.pdf"
+
+# Select signature area
+i=0 density=72
+o=($(display -density $density -immutable -alpha off -update 1 -debug X11 -log "%e" \
+		-title "Click in one corner of signature area, then double-click in opposite corner, then Exit" \
+		"$p.pdf" 2>&1 |
+	grep --line-buffered "Button Press" |
+	grep -o "[^ ]*$" |
+	while ((i<2))
+	do
+		read line
+		echo ${line//+/ }
+		((++i))
+	done))
+
+bx=(${o[0]} ${o[2]}) by=(${o[1]} ${o[3]})
+((bx[0] < bx[1])) &&
+	bw=$((bx[1]-bx[0])) x=${bx[0]} ||
+	bw=$((bx[0]-bx[1])) x=${bx[1]}
+((by[0] < by[1])) &&
+	bh=$((by[1]-by[0])) y=${by[0]} ||
+	bh=$((by[0]-by[1])) y=${by[1]}
+iw=${dsig[0]} ih=${dsig[1]}
+((bw*ih > bh*iw)) &&
+	{ resize=$(bc <<<"$bh*100/$ih+.5"); x=$(bc <<<"$x+($bw-$resize*$iw/100)/2+.5");} ||
+	{ resize=$(bc <<<"$bw*100/$iw+.5"); y=$(bc <<<"$y+($bh-$resize*$ih/100)/2+.5");}
+
+echo "=== Outputfile: $out"
+height=$(identify -format %h "$p.pdf")
+sw=$(bc <<<"$iw*$resize/100+.5") sh=$(bc <<<"$ih*$resize/100+.5")
+sw=${sw%.*} sh=${sh%.*} x=${x%.*} y=${y%.*}
+signpdf "$pdf" "$sig" $page-$x-$((height-y-sh))-$sw -o "$out"
+
+exit 0
