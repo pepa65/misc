@@ -57,7 +57,8 @@ export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /
 export MODULAR_HOME="/home/pp/.modular"
 export GIT_EXTERNAL_DIFF=difft
 export RUSTC_WRAPPER=sccache
-
+[[ $UID = 1001 ]] &&
+	PS1=${PS1/\\\$/%}
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
