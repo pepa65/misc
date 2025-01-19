@@ -3,11 +3,11 @@ set -eu #vx
 # mkuki - Create EFI Unified Kernel Image
 # Required: coreutils(tr mktemp uname cat readlink wc mkdir cp ls head cut)
 #   grep sed  [install]:sudo efibootmgr fdisk mount binutils(objcopy) ukify
-#   systemd-boot-efi(/usr/lib/systemd/boot/efi/linux*.efi.stub)
+#   systemd-boot-efi(/usr/lib/systemd/boot/efi/*.efi.stub) sbsigntool(sbsign)
 # Repp: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
-version=0.1.7
+version=0.2.0
 
 Usage(){ # I:self,efistubdir
 	cat<<-EOH
@@ -19,7 +19,8 @@ Usage(){ # I:self,efistubdir
 			<option>:
 		  -h|--help                Only display this help text
 		  -V|--version             Only display the version
-      -S|--signed              Sign the UKI
+		  -S|--signed              Sign the UKI
+		  -U|--ukify               Build with ukify
 		  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
 		  -l|--label <txt>         UEFI label in quotes for install (optional)
 		  -d|--device <device>     '<esp>' to use for install (optional)
@@ -43,7 +44,8 @@ Die(){ # 1:msg
 
 self=${0##*/} efistubdir=/usr/lib/systemd/boot/efi
 efistub= output= imgs= device= label=
-linux=/boot/vmlinuz init=/boot/initrd.img install=0
+linux=/boot/vmlinuz init=/boot/initrd.img
+install=0 sign=0 ukify=0
 commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null
 sbkey=/etc/kernel/secure-boot-key.pem
 sbcert=/etc/kernel/secure-boot-certificate.pem
@@ -56,6 +58,7 @@ do # Process commandline
 	-V|--version) echo "$self $version"; exit 0 ;;
 	-I|--install) install=1 ;;
 	-S|--signed) sign=1 ;;
+	-U|--ukify) ukify=1 ;;
 	-l|--label) label=$2; shift ;;
 	-d|--device)
 		[[ -b $2 ]] || Die "No blockdevice found: '$2'"
@@ -113,29 +116,29 @@ else cmd=$commandline
 fi
 sed -e 's/initrd=[^ ]*//g' -e 's/BOOT_IMAGE=[^ ]*//g' <<<"$cmd" >"$cmdline"
 
-# For alternative (mkuki), see below
-# Might need privileges to get access to some files
-sudo objcopy \
-	--add-section .osrel="$osrel" --change-section-vma .osrel=0x20000    \
-	--add-section .cmdline="$cmdline" --change-section-vma .cmdline=0x30000  \
-	--add-section .splash="$splash" --change-section-vma .splash=0x40000   \
-	--add-section .linux="$linux" --change-section-vma .linux=0x2000000  \
-	--add-section .initrd="$initrd" --change-section-vma .initrd=0x3000000 \
-	"$efistub" "$output"
-#
-if ((sign))
+# Generate key+cert if nonexistent
+((sign)) &&	[[ ! -f $sbkey && ! -f $sbcert ]] &&
+	sudo ukify genkey --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert"
+
+if ((!ukify))
 then
-	[[ ! -f $sbkey && ! -f $sbcert ]] &&
-		sudo ukify genkey --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert"
-	sudo sbsign --key "$sbkey" --cert "$sbcert" --output "$output-signed" "$output"
-	mv -f "$output-signed" "$output"
+	# Need privileges to access to some files
+	sudo objcopy \
+		--add-section .osrel="$osrel" --change-section-vma .osrel=0x20000    \
+		--add-section .cmdline="$cmdline" --change-section-vma .cmdline=0x30000  \
+		--add-section .splash="$splash" --change-section-vma .splash=0x40000   \
+		--add-section .linux="$linux" --change-section-vma .linux=0x2000000  \
+		--add-section .initrd="$initrd" --change-section-vma .initrd=0x3000000 \
+		"$efistub" "$output"
+	((sign)) &&
+		sudo sbsign --key="$sbkey" --cert="$sbcert" --output="$output-signed" "$output" &&
+		mv -f "$output-signed" "$output"
+else
+	# efistub is automatically selected based on arch, not selectable
+	sudo ukify build --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert" --os-release=@"$osrel" --cmdline="$cmdline" --splash="$splash" --linux="$linux" --initrd="$initrd"
+	[[ ! $output = $ukify_defout ]] &&
+		mv -f "$ukify_defout" "$output"
 fi
-#
-## For alternative (objcopy+sbsign), see above
-## efistub is automatically selected based on arch, not selectable
-#sudo ukify build --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert" --os-release=@"$osrel" --cmdline="$cmdline" --splash="$splash" --linux="$linux" --initrd="$initrd"
-#[[ ! $output = $ukify_defout ]] &&
-#	mv "$ukify_defout" "$output"
 
 if ((install))
 then # Determine <esp>, move the UKI and register
@@ -166,8 +169,8 @@ then # Determine <esp>, move the UKI and register
 		mkdir "$mount"
 		sudo mount "$esp" "$mount"
 	fi
-	sudo mkdir -p "$mount/EFI/Linux"
-	sudo cp -- "$output" "$mount/EFI/Linux"
+	sudo mkdir -p -- "$mount/EFI/Linux"
+	sudo cp -- "$output" "$mount/EFI/Linux/"
 	mv -- "$output" "$tmpdir/$output"
 	[[ $mount = $tmpdir/mnt ]] && sudo umount "$mount"
 	partition=$(grep -o '[0-9]*$' <<<"$esp") disk=${esp%$partition}
@@ -181,7 +184,7 @@ then # Determine <esp>, move the UKI and register
 			_=$(grep ^VERSION "$osrel") _=${_//\"} label+=" ${_#*=}
 		fi
 	fi
-	sudo efibootmgr -c -d $disk -p $partition -l "/EFI/Linux/$output" -L "$label" |grep "$label"
+	sudo efibootmgr -C -d $disk -p $partition -l "/EFI/Linux/$output" -L "$label" |grep "$label"
 	output=$tmpdir/$output
 fi
 

@@ -508,11 +508,11 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 **Create EFI Unified Kernel Image**
 
 * Required: `coreutils`(`tr mktemp uname cat readlink wc mkdir cp ls head cut`) `grep sed`
-  - install: `sudo efibootmgr fdisk mount`
-* From: https://github.com/jirutka/efi-mkuki
+  - install: `sudo efibootmgr fdisk mount systemd-boot-efi ukify sbsigntool(sbsign)`
+* After: https://github.com/jirutka/efi-mkuki
 * Usage:
 ```
-mkuki v0.1.6 - Create EFI Unified Kernel Image
+mkuki v0.2.0 - Create EFI Unified Kernel Image
   An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
   combine an EFI stub loader, a kernel image, an initramfs image, a splash
   image, the kernel commandline, and CPU microcode images.
@@ -520,18 +520,20 @@ Usage: mkuki [<option>...]
 <option>:
   -h|--help                Only display this help text
   -V|--version             Only display the version
+  -S|--signed              Sign the UKI
+  -U|--ukify               Build with ukify
   -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
   -l|--label <txt>         UEFI label in quotes for install (optional)
   -d|--device <device>     '<esp>' to use for install (optional)
-  -k|--kernel <file>       Linux kernel file (default: '/boot/vmlinuz')
-  -i|--initrd <file>       Initramfs file (default: '/boot/initrd.img')
+  -k|--kernel <file>       Linux kernel file, default: '/boot/vmlinuz'
+  -i|--initrd <file>       Initramfs file, default: '/boot/initrd.img'
   -m|--microcode <file>    Microcode file (optional, multiple allowed)
-  -c|--cmdline <txt/file>  Kernel cmdline in quotes, or a file containing
-                               it, start with / or . (default: '/proc/cmdline')
-  -o|--output <file>       Output file (default: '')
-  -r|--release <file>      Release file (default: '/etc/os-release')
+  -c|--cmdline <txt/file>  Kernel cmdline in quotes or in a file (starting
+                           with '/' or '.'), default: '/proc/cmdline'
+  -o|--output <file>       Output file, default: 'uki.efi'
+  -r|--release <file>      Release file, default: '/etc/os-release'
   -s|--splash <file>       Splash image: BMP 800x600 24bit (optional)
-  -e|--efistub <file>      EFI stub file (default: 'linux*.efi.stub') in
+  -e|--efistub <file>      EFI stub file, default: 'linux*.efi.stub' in
                            '/usr/lib/systemd/boot/efi', *: x64 | ia32 | aa64 | arm
 ```
 
