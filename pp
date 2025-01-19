@@ -144,7 +144,7 @@ clipvid(){
 	tmp=$(mktemp).mp4
 	ffmpeg -hide_banner -i "$1" -ss "$b" -to "$e" -async 1 $tmp
 	echo "ffmpeg -hide_banner -i '$1' -ss '$b' -to '$e' -async 1 $tmp"
-	(($3+$4)) &&
+	[[ ! $3 = 0 || ! $4 = 0 ]] &&
 		ffmpeg -hide_banner -i $tmp -vf "fade=t=in:st=0:d=$3,fade=t=out:st=$i:d=$4" \
 			-af "afade=t=in:st=0:d=$3,afade=t=out:st=$i:d=$4" "$out" &&
 		rm $tmp ||

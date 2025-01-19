@@ -2,7 +2,8 @@
 set -eu #vx
 # mkuki - Create EFI Unified Kernel Image
 # Required: coreutils(tr mktemp uname cat readlink wc mkdir cp ls head cut)
-#   grep sed  [install]:sudo efibootmgr fdisk mount binutils(objcopy)
+#   grep sed  [install]:sudo efibootmgr fdisk mount binutils(objcopy) ukify
+#   systemd-boot-efi(/usr/lib/systemd/boot/efi/linux*.efi.stub)
 # Repp: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
@@ -18,6 +19,7 @@ Usage(){ # I:self,efistubdir
 			<option>:
 		  -h|--help                Only display this help text
 		  -V|--version             Only display the version
+      -S|--signed              Sign the UKI
 		  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
 		  -l|--label <txt>         UEFI label in quotes for install (optional)
 		  -d|--device <device>     '<esp>' to use for install (optional)
@@ -26,7 +28,7 @@ Usage(){ # I:self,efistubdir
 		  -m|--microcode <file>    Microcode file (optional, multiple allowed)
 		  -c|--cmdline <txt/file>  Kernel cmdline in quotes or in a file (starting
 		                           with '/' or '.'), default: '$commandline'
-		  -o|--output <file>       Output file, default: 'vmlinuz.efi'
+		  -o|--output <file>       Output file, default: 'uki.efi'
 		  -r|--release <file>      Release file, default: '$osrel'
 		  -s|--splash <file>       Splash image: BMP 800x600 24bit (optional)
 		  -e|--efistub <file>      EFI stub file, default: 'linux*.efi.stub' in
@@ -43,6 +45,9 @@ self=${0##*/} efistubdir=/usr/lib/systemd/boot/efi
 efistub= output= imgs= device= label=
 linux=/boot/vmlinuz init=/boot/initrd.img install=0
 commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null
+sbkey=/etc/kernel/secure-boot-key.pem
+sbcert=/etc/kernel/secure-boot-certificate.pem
+ukify_defout=vmlinuz.efi
 
 while (($#))
 do # Process commandline
@@ -50,6 +55,7 @@ do # Process commandline
 	-h|--help) Usage; exit 0 ;;
 	-V|--version) echo "$self $version"; exit 0 ;;
 	-I|--install) install=1 ;;
+	-S|--signed) sign=1 ;;
 	-l|--label) label=$2; shift ;;
 	-d|--device)
 		[[ -b $2 ]] || Die "No blockdevice found: '$2'"
@@ -78,7 +84,7 @@ done
 [[ -f $linux ]] || Die "kernel file not found: '$linux'"
 [[ -f $osrel ]] || Die "OS release file not found: '$osrel'"
 [[ -e $splash ]] || Die "splash image not found: '$splash'"
-[[ $output ]] || output=${linux##*/}.efi
+[[ $output ]] || output=uki.efi
 
 if [[ -z $efistub ]]
 then # Determine architecture for efistub
@@ -107,6 +113,7 @@ else cmd=$commandline
 fi
 sed -e 's/initrd=[^ ]*//g' -e 's/BOOT_IMAGE=[^ ]*//g' <<<"$cmd" >"$cmdline"
 
+# For alternative (mkuki), see below
 # Might need privileges to get access to some files
 sudo objcopy \
 	--add-section .osrel="$osrel" --change-section-vma .osrel=0x20000    \
@@ -115,6 +122,20 @@ sudo objcopy \
 	--add-section .linux="$linux" --change-section-vma .linux=0x2000000  \
 	--add-section .initrd="$initrd" --change-section-vma .initrd=0x3000000 \
 	"$efistub" "$output"
+#
+if ((sign))
+then
+	[[ ! -f $sbkey && ! -f $sbcert ]] &&
+		sudo ukify genkey --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert"
+	sudo sbsign --key "$sbkey" --cert "$sbcert" --output "$output-signed" "$output"
+	mv -f "$output-signed" "$output"
+fi
+#
+## For alternative (objcopy+sbsign), see above
+## efistub is automatically selected based on arch, not selectable
+#sudo ukify build --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert" --os-release=@"$osrel" --cmdline="$cmdline" --splash="$splash" --linux="$linux" --initrd="$initrd"
+#[[ ! $output = $ukify_defout ]] &&
+#	mv "$ukify_defout" "$output"
 
 if ((install))
 then # Determine <esp>, move the UKI and register
