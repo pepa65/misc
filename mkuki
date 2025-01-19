@@ -110,7 +110,8 @@ imgs+=$init
 
 if [[ ${commandline:0:1} = [/.] ]]
 then # File
-	[[ -f $commandline ]] || Die "no cmdline-file: '$commandline'"
+	[[ -f $commandline ]] ||
+		Die "no cmdline-file: '$commandline'"
 	cmd=$(grep -v '^ *#' "$commandline" |tr -s '\n' ' ')
 else cmd=$commandline
 fi
@@ -134,8 +135,8 @@ then
 		sudo sbsign --key="$sbkey" --cert="$sbcert" --output="$output-signed" "$output" &&
 		mv -f "$output-signed" "$output"
 else
-	# efistub is automatically selected based on arch, not selectable
-	sudo ukify build --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert" --os-release=@"$osrel" --cmdline="$cmdline" --splash="$splash" --linux="$linux" --initrd="$initrd"
+	# efistub is automatically selected based on arch (not selectable)
+	sudo ukify build --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert" --os-release=@"$osrel" --cmdline=@"$cmdline" --splash="$splash" --linux="$linux" --initrd="$initrd"
 	[[ ! $output = $ukify_defout ]] &&
 		mv -f "$ukify_defout" "$output"
 fi
@@ -195,3 +196,5 @@ do
 	printf "%-9s" $v
 	ls -lH "$val"
 done
+echo -n "cmdline: "
+cat "$cmdline"
