@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -eu #vx
 # mkuki - Create EFI Unified Kernel Image
-# Required: coreutils(tr mktemp uname cat readlink wc mkdir cp ls head cut)
-#   grep sed  [install]:sudo efibootmgr fdisk mount binutils(objcopy) ukify
-#   systemd-boot-efi(/usr/lib/systemd/boot/efi/*.efi.stub) sbsigntool(sbsign)
-# Repp: https://gitlab.com/pepa65/misc
+# Required: coreutils(tr mktemp cat readlink wc mkdir mv head cut) grep sed
+#   [install:] sudo efibootmgr fdisk mount ukify sbsigntool(sbsign)
+#   systemd-boot-efi(/usr/lib/systemd/boot/efi/*.efi.stub)
+# Repo: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
-version=0.2.0
+version=0.3.0
 
-Usage(){ # I:self,efistubdir
+Usage(){ # I:self,linux,init,commandline,defout,osrel
 	cat<<-EOH
 		$self v$version - Create EFI Unified Kernel Image
 		  An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
@@ -20,20 +20,17 @@ Usage(){ # I:self,efistubdir
 		  -h|--help                Only display this help text
 		  -V|--version             Only display the version
 		  -S|--signed              Sign the UKI
-		  -U|--ukify               Build with ukify
 		  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
 		  -l|--label <txt>         UEFI label in quotes for install (optional)
 		  -d|--device <device>     '<esp>' to use for install (optional)
 		  -k|--kernel <file>       Linux kernel file, default: '$linux'
-		  -i|--initrd <file>       Initramfs file, default: '$init'
+		  -i|--initrd <file>       Initramfs file, default: '$init' ('' for none)
 		  -m|--microcode <file>    Microcode file (optional, multiple allowed)
 		  -c|--cmdline <txt/file>  Kernel cmdline in quotes or in a file (starting
 		                           with '/' or '.'), default: '$commandline'
-		  -o|--output <file>       Output file, default: 'uki.efi'
+		  -o|--output <file>       Output file, default: '$defout'
 		  -r|--release <file>      Release file, default: '$osrel'
 		  -s|--splash <file>       Splash image: BMP 800x600 24bit (optional)
-		  -e|--efistub <file>      EFI stub file, default: 'linux*.efi.stub' in
-		                           '$efistubdir', *: x64 | ia32 | aa64 | arm
 	EOH
 }
 
@@ -42,14 +39,14 @@ Die(){ # 1:msg
 	exit 1
 }
 
-self=${0##*/} efistubdir=/usr/lib/systemd/boot/efi
-efistub= output= imgs= device= label=
+self=${0##*/}
+output= imgs= device= label=
 linux=/boot/vmlinuz init=/boot/initrd.img
-install=0 sign=0 ukify=0
+install=0 sign=0
 commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null
 sbkey=/etc/kernel/secure-boot-key.pem
 sbcert=/etc/kernel/secure-boot-certificate.pem
-ukify_defout=vmlinuz.efi
+defout=ukify.efi ukify_defout=vmlinuz.efi
 
 while (($#))
 do # Process commandline
@@ -58,7 +55,6 @@ do # Process commandline
 	-V|--version) echo "$self $version"; exit 0 ;;
 	-I|--install) install=1 ;;
 	-S|--signed) sign=1 ;;
-	-U|--ukify) ukify=1 ;;
 	-l|--label) label=$2; shift ;;
 	-d|--device)
 		[[ -b $2 ]] || Die "No blockdevice found: '$2'"
@@ -76,7 +72,6 @@ do # Process commandline
 	-o|--output) output=$2; shift ;;
 	-r|--release) osrel=$2; shift ;;
 	-s|--splash) splash=$2; shift ;;
-	-e|--efistub) efistub=$2; shift ;;
 	-*) Die "unknown commandline flag: '$1'" ;;
 	*) Die "unknown commandline argument: '$1'"
 	esac
@@ -87,21 +82,7 @@ done
 [[ -f $linux ]] || Die "kernel file not found: '$linux'"
 [[ -f $osrel ]] || Die "OS release file not found: '$osrel'"
 [[ -e $splash ]] || Die "splash image not found: '$splash'"
-[[ $output ]] || output=uki.efi
-
-if [[ -z $efistub ]]
-then # Determine architecture for efistub
-	arch=$(uname -m)
-	case $arch in
-	aarch64) march=aa64 ;;
-	arm*) march=arm ;;
-	x86|i686) march=ia32 ;;
-	x86_64) march=x64 ;;
-	*) Die "Unsupported machine architecture: '$arch'"
-	esac
-	efistub="$efistubdir/linux$march.efi.stub"
-fi
-[[ -f $efistub ]] || Die "no EFI stub file: '$efistub'"
+[[ $output ]] || output=$defout
 
 tmpdir=$(mktemp -dt $self.XXXXXX) initrd=$tmpdir/initrd cmdline=$tmpdir/cmdline
 trap "rm -rf $tmpdir" EXIT HUP INT TERM
@@ -121,25 +102,16 @@ sed -e 's/initrd=[^ ]*//g' -e 's/BOOT_IMAGE=[^ ]*//g' <<<"$cmd" >"$cmdline"
 ((sign)) &&	[[ ! -f $sbkey && ! -f $sbcert ]] &&
 	sudo ukify genkey --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert"
 
-if ((!ukify))
-then
-	# Need privileges to access to some files
-	sudo objcopy \
-		--add-section .osrel="$osrel" --change-section-vma .osrel=0x20000    \
-		--add-section .cmdline="$cmdline" --change-section-vma .cmdline=0x30000  \
-		--add-section .splash="$splash" --change-section-vma .splash=0x40000   \
-		--add-section .linux="$linux" --change-section-vma .linux=0x2000000  \
-		--add-section .initrd="$initrd" --change-section-vma .initrd=0x3000000 \
-		"$efistub" "$output"
-	((sign)) &&
-		sudo sbsign --key="$sbkey" --cert="$sbcert" --output="$output-signed" "$output" &&
-		mv -f "$output-signed" "$output"
-else
-	# efistub is automatically selected based on arch (not selectable)
-	sudo ukify build --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert" --os-release=@"$osrel" --cmdline=@"$cmdline" --splash="$splash" --linux="$linux" --initrd="$initrd"
-	[[ ! $output = $ukify_defout ]] &&
-		mv -f "$ukify_defout" "$output"
-fi
+# Use label for PRETTY_NAME in osrel
+sed "s/\(PRETTY_NAME=\"\).*\"/\1$label\"/" "$osrel" >"$tmpdir/os-release"
+osrel=$tmpdir/os-release
+
+# efistub is automatically selected based on arch (not selectable)
+sudo ukify build --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert" --os-release=@"$osrel" --cmdline=@"$cmdline" --splash="$splash" --linux="$linux" --initrd="$initrd"
+[[ ! $output = $ukify_defout ]] &&
+	mv -f "$ukify_defout" "$output"
+
+sudo ukify inspect "$output"
 
 if ((install))
 then # Determine <esp>, move the UKI and register
@@ -171,8 +143,7 @@ then # Determine <esp>, move the UKI and register
 		sudo mount "$esp" "$mount"
 	fi
 	sudo mkdir -p -- "$mount/EFI/Linux"
-	sudo cp -- "$output" "$mount/EFI/Linux/"
-	mv -- "$output" "$tmpdir/$output"
+	sudo mv -- "$output" "$mount/EFI/Linux/"
 	[[ $mount = $tmpdir/mnt ]] && sudo umount "$mount"
 	partition=$(grep -o '[0-9]*$' <<<"$esp") disk=${esp%$partition}
 	[[ ${disk: -1} = p && ${disk: -2:1} = [0-9] ]] && disk=${disk%p}
@@ -186,15 +157,5 @@ then # Determine <esp>, move the UKI and register
 		fi
 	fi
 	sudo efibootmgr -C -d $disk -p $partition -l "/EFI/Linux/$output" -L "$label" |grep "$label"
-	output=$tmpdir/$output
 fi
 
-# Show the result
-for v in osrel cmdline splash linux initrd efistub output
-do
-	declare -n val=$v
-	printf "%-9s" $v
-	ls -lH "$val"
-done
-echo -n "cmdline: "
-cat "$cmdline"
