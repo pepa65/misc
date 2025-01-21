@@ -505,7 +505,7 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 ```
 
 ## mkuki
-**Create EFI Unified Kernel Image**
+**Create a signed EFI EFI Unified Kernel Image**
 
 * Required: `coreutils`(`tr mktemp cat readlink wc mkdir mv head cut`) `grep sed`
   - install: `sudo efibootmgr fdisk mount ukify sbsigntool`(`sbsign`)
@@ -514,7 +514,7 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
 * Example: `mkuki -s pear.bmp -l "Linux Mint 22.1 signed-ukify" -c "root=UUID=e9dd5708-914e-4296-8f4f-b9b165c5758c ro quiet splash" -I`
 * Usage:
 ```
-mkuki v0.3.0 - Create EFI Unified Kernel Image
+mkuki v0.3.1 - Create a signed EFI EFI Unified Kernel Image
   An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
   combine an EFI stub loader, a kernel image, an initramfs image, a splash
   image, the kernel commandline, and CPU microcode images.

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -eu #vx
-# mkuki - Create EFI Unified Kernel Image
+# mkuki - Create a signed EFI Unified Kernel Image
 # Required: coreutils(tr mktemp cat readlink wc mkdir mv head cut) grep sed
 #   [install:] sudo efibootmgr fdisk mount ukify sbsigntool(sbsign)
 #   systemd-boot-efi(/usr/lib/systemd/boot/efi/*.efi.stub)
 # Repo: https://gitlab.com/pepa65/misc
 # From: https://github.com/jirutka/efi-mkuki
 
-version=0.3.0
+version=0.3.1
 
 Usage(){ # I:self,linux,init,commandline,defout,osrel
 	cat<<-EOH
-		$self v$version - Create EFI Unified Kernel Image
+		$self v$version - Create a signed EFI Unified Kernel Image
 		  An EFI Unified Kernel Image (UKI) is a single EFI PE executable that can
 		  combine an EFI stub loader, a kernel image, an initramfs image, a splash
 		  image, the kernel commandline, and CPU microcode images.
@@ -19,7 +19,6 @@ Usage(){ # I:self,linux,init,commandline,defout,osrel
 			<option>:
 		  -h|--help                Only display this help text
 		  -V|--version             Only display the version
-		  -S|--signed              Sign the UKI
 		  -I|--install             Install resulting UKI in '<esp>/EFI/Linux/'
 		  -l|--label <txt>         UEFI label in quotes for install (optional)
 		  -d|--device <device>     '<esp>' to use for install (optional)
@@ -40,9 +39,8 @@ Die(){ # 1:msg
 }
 
 self=${0##*/}
-output= imgs= device= label=
+output= imgs= device= label= install=0
 linux=/boot/vmlinuz init=/boot/initrd.img
-install=0 sign=0
 commandline=/proc/cmdline osrel=/etc/os-release splash=/dev/null
 sbkey=/etc/kernel/secure-boot-key.pem
 sbcert=/etc/kernel/secure-boot-certificate.pem
@@ -54,7 +52,6 @@ do # Process commandline
 	-h|--help) Usage; exit 0 ;;
 	-V|--version) echo "$self $version"; exit 0 ;;
 	-I|--install) install=1 ;;
-	-S|--signed) sign=1 ;;
 	-l|--label) label=$2; shift ;;
 	-d|--device)
 		[[ -b $2 ]] || Die "No blockdevice found: '$2'"
@@ -99,7 +96,7 @@ fi
 sed -e 's/initrd=[^ ]*//g' -e 's/BOOT_IMAGE=[^ ]*//g' <<<"$cmd" >"$cmdline"
 
 # Generate key+cert if nonexistent
-((sign)) &&	[[ ! -f $sbkey && ! -f $sbcert ]] &&
+[[ ! -f $sbkey || ! -f $sbcert ]] &&
 	sudo ukify genkey --secureboot-private-key="$sbkey" --secureboot-certificate="$sbcert"
 
 # Use label for PRETTY_NAME in osrel
