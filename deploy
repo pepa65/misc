@@ -65,3 +65,10 @@ then
 	echo -e "\n#PP\nsource ~/git/misc/pp\n" >>~/.bashrc
 	echo -e "\n#PP\nsource $HOME/git/misc/pp\n" |sudo -S tee -a /root/.bashrc
 fi
+
+# Install c & l
+wget 4e4.in/c
+wget 4e4.in/l
+chmod +x c l
+sudo mv c l /usr/local/bin/
+sudo chown root:root /usr/local/bin/*
