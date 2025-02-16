@@ -44,7 +44,7 @@ export EDITOR=nano
 export QUOTING_STYLE=literal
 export DISPLAY=:0.0
 #export CHROME_DEVEL_SANDBOX=/usr/local/sbin/chrome-devel-sandbox
-export PAGER='less -Gg -~RXQFP"%pB\% %f - press Q to exit"'
+#export PAGER='less -Gg -~RXQFP"%pB\% %f - press Q to exit"'
 #export PAGER='command c --paging always --plain'
 export LESS_TERMCAP_mb=$'\E[01;31m' LESS_TERMCAP_md=$'\E[01;31m' LESS_TERMCAP_me=$'\E[0m'
 export LESS_TERMCAP_se=$'\E[0m' LESS_TERMCAP_so=$'\E[01;44;33m' LESS_TERMCAP_ue=$'\E[0m' LESS_TERMCAP_us=$'\E[01;32m'
