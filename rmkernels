@@ -62,7 +62,7 @@ Main(){ # 1:flag I:keep
 	)
 	grep -q $cur <<<"$older" &&  # Currently running kernel is older
 		echo -e "\nThe currently running kernel is older itself" &&
-		echo "It can only be removed after a reboot with a newer kernel" &&
+		echo "(It could only be removed after a reboot with a newer kernel)" &&
 		remove=$(grep -v $cur <<<"$older")
 	n_all=$(wc -l <<<"$all")
 	n_remove=$(wc -l <<<"$remove")
