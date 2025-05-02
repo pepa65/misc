@@ -48,7 +48,8 @@ Main(){ # 1:flag I:keep
 			grep -v '\.efi\.signed' |  # Exclude additional efi-signed versions
 			sort -Vr)  # Sort by version
 	cur=$(uname -r)  # Currently running kernel version
-	non=$(grep -v "$cur" <<<"$all")  ## Non-running kernels in /boot
+	non=$(grep -v "$cur" <<<"$all")  # Non-running kernels in /boot
+	echo "Keeping at least $keep kernels installed"
 	echo -e "Found kernel images in /boot:\n$cur (currently running)\n$non"
 	# Older versions: all except the newest of same major.minor.patch version all kernels
 	older=$(ao= bo= co=
@@ -79,11 +80,11 @@ Main(){ # 1:flag I:keep
 		echo "No to-be-removed packages found based on kernel images in /boot"
 	fi
 
-	## Check the commandline patterns
+	# Check the commandline patterns
 	if [[ $pat ]]
 	then
 		pkgpat=$(echo "$ipkg" |grep ${pat// / -e })
-		pkgpat=$(grep -v "$cur" <<<"$pkgpat")  ## Not current kernel
+		pkgpat=$(grep -v "$cur" <<<"$pkgpat")  # Not current kernel
 		if [[ $pkgpat ]]
 		then
 			echo -e "\nExtra removal patterns from commandline:$pat\nPackages:" $pkgpat
@@ -92,13 +93,13 @@ Main(){ # 1:flag I:keep
 		fi
 	fi
 
-	## Removing incompletely uninstalled packages
+	# Removing incompletely uninstalled packages
 	rc=$(dpkg -l |grep ^rc |sed "$sedpkg")
 	ic=$(dpkg -l |grep ^ic |sed "$sedpkg")
 	[[ $rc || $ic ]] &&
 		echo -e "\nUninstalled but not properly removed packages:\n" $rc $ic "\n"
 
-	## Purge all superfluous and extra versions, and improperly removed packages
+	# Purge all superfluous and extra versions, and improperly removed packages
 	if [[ $pkgremove || $pkgpat || $rc ]]
 	then # Something to remove was found
 		((norun)) &&
@@ -111,7 +112,7 @@ Main(){ # 1:flag I:keep
 		((norun)) &&
 			echo "### Not actually purging packages" ||
 			sudo dpkg -P $ic
-	else echo "Nothing to purge"
+	else echo "Nothing found to be purged"
 	fi
 }
 
