@@ -1,70 +1,82 @@
 #!/usr/bin/env bash
 set +xv
-## rmkernels - uninstall extraneous kernels on Ubuntu based systems
-## Usage: bash rmkernels [-h|--help] [-f|--force] [<version>]...
-##   -h, --help:    display help text
-##   -f, --force:   force removal of newer than currently running kernel
-##  anything installed that matches <version> will be proposed for removal
-## Required: grep, sed, find, coreutils(sort, uname, tail), dpkg, apt. sudo
-##  If bootctlu is present and active, it will be called to cull the entries
+# rmkernels - Uninstall extraneous kernels on Ubuntu based systems
+# Usage: bash rmkernels [-h|--help] [-f|--force] [<version>]...
+#   -h|--help:     Display help text
+#   -f|--force:    Force removal of newer than currently running kernel
+#   -n|--norun:    Do not actually uninstall packages
+#   Anything installed that matches <version> will be proposed for removal
+#   If bootctlu is present and active, it will be called to cull the entries
+# Required: grep, sed, find, coreutils(sort, uname, tail), dpkg, apt. sudo
 
 keep=${RMKERNELS_KEEP:-2}
 
 Usage(){
 	cat <<-EOS
-		 rmkernels - uninstall extraneous kernels on Ubuntu based systems
+		 rmkernels - Uninstall older kernels on Debian based systems
 
-		 Usage: bash rmkernels [-h|--help] [-f|--force] [<version>]...
-		  -h, --help:   display help text
-		  -f, --force:  force removal of newer than currently running kernel
-		  <version>:    pattern for proposed removal of installed packages
+		 Usage:  rmkernels [-h|--help] [-f|--force] [<version>...]
+		  -h, --help:   Display help text
+		  -f, --force:  Force removal of newer than currently running kernel
+		  <version>:    Pattern for proposed removal of installed packages
 		EOS
 }
 
 Main(){ # 1:flag I:keep
-	## Process commandline
-	local force=0 pat= pkgsf= pkgpat=
-	while [[ $1 ]]
+	# Process commandline
+	local force=0 norun=0 pat= pkgremove= pkgpat=
+	while (($#))
 	do
-		[[ $1 = -h || $1 = --help ]] && Usage && return 0
-		[[ $1 = -f || $1 = --force ]] && force=1 || pat+=" $1"  ## Extra removals
+		[[ $1 = -h || $1 = --help ]] &&
+			Usage &&
+			return 0
+		[[ $1 = -f || $1 = --force ]] &&
+			force=1 &&
+			shift &&
+			continue
+		[[ $1 = -n || $1 = --norun ]] &&
+			norun=1 &&
+			shift &&
+			continue
+		pat+=" $1"  # Extra removals
 		shift
 	done
 
-	## Find superfluous kernels
-	all=$(find /boot/vmlinuz-* |  ## Kernel images in /boot
-			sed 's@^/boot/vmlinuz-@@' |  ## Truncate to the version
-			grep -v '\.efi\.signed' |  ## Exclude additional efi-signed versions
-			sort -Vr)  ## Sort by version
-	cur=$(uname -r)  ## Currently running kernel version
+	# Find superfluous kernels
+	all=$(find /boot/vmlinuz-* |  # Kernel images in /boot
+			sed 's@^/boot/vmlinuz-@@' |  # Truncate to the version
+			grep -v '\.efi\.signed' |  # Exclude additional efi-signed versions
+			sort -Vr)  # Sort by version
+	cur=$(uname -r)  # Currently running kernel version
 	non=$(grep -v "$cur" <<<"$all")  ## Non-running kernels in /boot
 	echo -e "Found kernel images in /boot:\n$cur (currently running)\n$non"
-	## Superfluous versions: latest of same major.minor version all kernels
-	sf=$(ao= bo=
+	# Older versions: all except the newest of same major.minor.patch version all kernels
+	older=$(ao= bo= co=
 		while IFS='.' read a b c
 		do
-			[[ $a || $b || $c ]] && [[ $ao = $a && $bo = $b ]] && echo "$a.$b.${c%-*}"
-			ao=$a bo=$b
+			v=${c#*-} c=${c%%-*}
+			[[ $a || $b || $c ]] && [[ $ao = $a && $bo = $b && $co=$c ]] && echo "$a.$b.$c-$v"
+			ao=$a bo=$b co=$c
 		done <<<"$all"
 	)
-	grep -q "${cur%-*}" <<<"$sf" &&  ## Currently running kernel is superfluous!
-		echo -e "\nThe currently running kernel is superfluous itself!" &&
+	grep -q $cur <<<"$older" &&  # Currently running kernel is older
+		echo -e "\nThe currently running kernel is older itself" &&
 		echo "It can only be removed after a reboot with a newer kernel" &&
-		sf=$(grep -v "${cur%-*}" <<<"$sf")
-	nall=$(wc -l <<<"$all")
-	nsf=$(wc -l <<<"$sf")
-	((nall-nsf<keep && nsf>0)) &&  ## Keep at least 1 fallback kernel
-		sf=$(tail -n +$keep <<<"$sf")  ## Remove most recent from superfluous list
-	## Check kernel images and commandline patterns against installed packages
-	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'  ## Installed packages sed pattern
-	ipkg=$(dpkg -l | tail -n +6 |sed "$sedpkg")  ## Installed packages
-	sedsf=$(sed 's@^@ -e @g' <<<' '$sf)  ## Sed pattern for superfluous kernels
-	[[ $sf ]] && pkgsf=$(grep $sedsf <<<"$ipkg")  ## Superfluous packages
-	if [[ $pkgsf ]]
-	then  ## Superflous kernels installed as packages
-		echo -e "\nRemoving:\n$sf\n\nFound packages:\n$pkgsf"
+		remove=$(grep -v $cur <<<"$older")
+	n_all=$(wc -l <<<"$all")
+	n_remove=$(wc -l <<<"$remove")
+	((n_all-n_remove<keep && n_remove>0)) &&  # Keep at least 1 fallback kernel
+		remove=$(tail -n +$keep <<<"$remove")  # Remove most recent from 'remove' list
+	# Check kernel images and commandline patterns against installed packages
+	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'  # Installed packages sed pattern
+	ipkg=$(dpkg -l | tail -n +6 |sed "$sedpkg")  # Installed packages
+	sedremove=$(sed 's@^@ -e @g' <<<' '$remove)  # Sed pattern for older kernels
+	[[ $remove ]] && pkgremove=$(grep $sedremove <<<"$ipkg")  # To-be-removed packages
+	if [[ $pkgremove ]]
+	then # Superflous kernels installed as packages
+		echo -e "\nRemoving:\n$remove\n\nFound packages:\n$pkgremove"
 	else
-		echo "No superfluous packages found based on kernel images in /boot"
+		echo "No to-be-removed packages found based on kernel images in /boot"
 	fi
 
 	## Check the commandline patterns
@@ -87,9 +99,20 @@ Main(){ # 1:flag I:keep
 		echo -e "\nUninstalled but not properly removed packages:\n" $rc $ic "\n"
 
 	## Purge all superfluous and extra versions, and improperly removed packages
-	[[ $pkgsf || $pkgpat || $rc ]] && sudo apt purge $pkgsf $pkgpat $rc ||
-		echo "Nothing to remove"
-	[[ $ic ]] && sudo dpkg -P $ic || echo "Nothing to wipe"
+	if [[ $pkgremove || $pkgpat || $rc ]]
+	then # Something to remove was found
+		((norun)) &&
+			echo "### Not actually removing packages" ||
+			sudo apt purge $pkgremove $pkgpat $rc
+	else echo "Nothing found to be removed"
+	fi
+	if [[ $ic ]]
+	then
+		((norun)) &&
+			echo "### Not actually purging packages" ||
+			sudo dpkg -P $ic
+	else echo "Nothing to purge"
+	fi
 }
 
 Main $*

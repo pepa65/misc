@@ -2,7 +2,7 @@
 set -e #-x
 # gomod-update - Update modules in go projects
 # Required: go git coreutils(rm head) nano grep goreleaser
-# Usage gomod <tool>
+# Usage gomod-update <tool>
 
 pkgs=becrypt/bat/horcrux/m2m/mailer/twofat
 

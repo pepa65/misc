@@ -10,6 +10,7 @@ def repdec(numerator, denominator):
 	p1,p2,p3 = 0,0,0
 	if head != "0":
 		p1 = len(head)
+
 	print(f"{numerator} / {denominator} = {head}", end="")
 	remainder = numerator % denominator
 	position = 0
@@ -29,12 +30,14 @@ def repdec(numerator, denominator):
 	if decimals != "":
 		p2 = len(decimals)
 		print(f".{decimals}", end="")
+
 	print(f"  ({p1},{p2},0)")
 	return p1,p2,0
 
 if len(sys.argv) > 2:
 	repdec(int(sys.argv[1]),int(sys.argv[2]))
 	sys.exit(0)
+
 
 repdec(3,1)
 repdec(0,4)
