@@ -46,13 +46,14 @@ Main(){ # 1:flag I:keep
 	all=$(find /boot/vmlinuz-* |  # Kernel images in /boot
 			sed 's@^/boot/vmlinuz-@@' |  # Truncate to the version
 			grep -v '\.efi\.signed' |  # Exclude additional efi-signed versions
-			sort -Vr)  # Sort by version
+			sort -Vr)  # Sort by version, newest first
 	cur=$(uname -r)  # Currently running kernel version
 	non=$(grep -v "$cur" <<<"$all")  # Non-running kernels in /boot
 	echo "Keeping at least $keep kernels installed"
 	echo -e "Found kernel images in /boot:\n$cur (currently running)\n$non"
 	# Older versions: all except the newest of same major.minor.patch version all kernels
-	older=$(ao= bo= co=
+	older=$(
+		ao= bo= co=
 		while IFS='.' read a b c
 		do
 			v=${c#*-} c=${c%%-*}
@@ -60,13 +61,14 @@ Main(){ # 1:flag I:keep
 			ao=$a bo=$b co=$c
 		done <<<"$all"
 	)
+	remove=$older
 	grep -q $cur <<<"$older" &&  # Currently running kernel is older
 		echo -e "\nThe currently running kernel is older itself" &&
 		echo "(It could only be removed after a reboot with a newer kernel)" &&
 		remove=$(grep -v $cur <<<"$older")
 	n_all=$(wc -l <<<"$all")
 	n_remove=$(wc -l <<<"$remove")
-	((n_all-n_remove<keep && n_remove>0)) &&  # Keep at least 1 fallback kernel
+	((n_all-n_remove<=keep && n_remove>0)) &&  # Keep at least 1 fallback kernel
 		remove=$(tail -n +$keep <<<"$remove")  # Remove most recent from 'remove' list
 	# Check kernel images and commandline patterns against installed packages
 	sedpkg='s@^[^ ]*[ ]*\([^ ]*\).*@\1@'  # Installed packages sed pattern
