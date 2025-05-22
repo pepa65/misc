@@ -31,9 +31,9 @@ do
 	read
 	nano main.go README.md  # increase to VERSION manually in the editor
 	go install
-	version=$($dir -h 2>&1 |grep -o 'v[.0-9]*' |head -1)
+	version=$(~/go/bin/$dir -h 2>&1 |grep -o 'v[.0-9]*' |head -1)
 	git commit -a -m "Modules update"
 	git tag -a $version
-	git push
+	git push origin $version
 	goreleaser --clean
 done
