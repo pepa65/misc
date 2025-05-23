@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set +vx -e # Stop on any error
+# cargo-update
+# Usage:  cargo-update  # While PWD is a Rust cargo project directory
+
+toml=Cargo.toml readme=README.md
+
+# Get current version
+! curr=$(grep '^version = ' $toml) curr=${curr##* } curr=${curr:1: -1} &&
+	echo "### Abort: Not a Rust cargo project directory" &&
+	exit 1
+
+# Check git status
+status=$(git status)
+grep -q 'Untracked files:' <<<"$status" &&
+	echo -e "--- Warning: Ucommitted files, will be ignored:\n$(grep -P '^\t' <<<"$status")\n"
+
+grep -q 'use "git push"' <<<"$status" &&
+	echo -e "### Abort: Unpushed commits:\n$(grep ' commits\.$' <<<"$status")" &&
+	exit 2
+
+! repo=$(git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/') &&
+	echo "### Abort: Not pushing to github.com/pepa65" &&
+	exit 3
+
+# Check updates
+nochange=$(cargo update -n 2>&1 |grep 'Locking 0 packages') || true
+[[ $nochange ]] &&
+	echo "=== No updates in dependencies" &&
+	exit
+
+! update=$(cargo update 2>&1) &&
+	echo -e "$update\n### Abort: Cargo update failed" &&
+	exit 5
+echo "--- Cargo update done"
+
+# Patch
+patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1
+! sed -i "s/^version = \"$curr\"$/version = \"$new\"/" $toml &&
+	echo "### Abort: version update in $toml unsuccesful" &&
+	exit 4
+echo "--- $toml version increased"
+
+! sed -i "s/$curr/$new/" $readme &&
+	echo "### Abort: version update in $readme unsuccesful" &&
+	exit 5
+lines=$(grep $new $readme) &&
+	echo -e "--- Versions in $readme increased:\n$lines\n" ||
+	echo -e "--- Old version $curr not found in $readme\n"
+
+! build=$(cargo rel 2>&1) &&
+	echo -e "$build\n### Abort: Cargo release build failed" &&
+	exit 6
+
+# Compress the binaries
+binaries=
+## Fails if targets of symlinks have space(s)!
+for f in $(command ls -l |grep ^l |sed 's/.* -> //')
+do
+	b=~/bin/${f##*/}
+	cp "$f" "$b"
+	upx --best --lzma "$b"
+	binaries+="$b "
+done
+[[ -z $f ]] &&
+	echo "### Abort: No binaries symlinked" &&
+	exit 7
+
+# Commit, tag and push to Github
+git commit -a -m 'Update deps'
+echo "--- Changes committed"
+git tag $new -m $new
+echo "--- New tag $new created locally"
+git push origin --tags
+echo "--- Changes pushed to Github"
+
+# Make release
+repo=${repo% (push)} repo=${repo##* }
+gh repo set-default $repo
+gh release create $new $binaries -t 'Update deps' --verify-tag -n ''
+echo "--- Release $new created"
+
+# Publish on crates.io
+cargo pub
+echo "=== Release published to crates.io"

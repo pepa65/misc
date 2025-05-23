@@ -33,7 +33,7 @@ do
 	go install
 	version=$(~/go/bin/$dir -h 2>&1 |grep -o 'v[.0-9]*' |head -1)
 	git commit -a -m "Modules update"
-	git tag -a $version
+	git tag $version -m $version
 	git push origin $version
 	goreleaser --clean
 done
