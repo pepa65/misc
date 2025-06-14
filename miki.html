@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<style>
+body{background-color:#ddd; margin:0}
+svg{background-color:#ddd;margin-top:10px}
+div{position:fixed; width:100%; background-color:#bbb}
+.param{font-size:20px; font-weight:bold; font-family:sans-serif; padding-right:2em}
+input[type="range"]{width: 150px}
+.tile{fill:#fff}
+.tile:hover{fill:#bbb}
+</style>
+<div>
+	<input type="range" id="M_slider" value="2" min="1" max="12" oninput="redraw();">
+	<span class="param" id="M"></span>
+	<input type="range" id="K_slider" value="5" min="2" max="24" oninput="redraw();">
+	<span class="param" id="K"></span>
+	<input type="range" id="N_slider" value="10" min="2" max="80" oninput="redraw();">
+	<span class="param" id="N"></span>
+	<input class="param" type="checkbox" id="O_checkbox" oninput="redraw();">
+	<span class="param">Offset</span>
+	<input type="range" id="L_slider" value="3" min="1" max="60" oninput="redraw();">
+	<span class="param" id="L"></span>
+	<button id="C">Center</button>
+	<button id="D">Download</button>
+</div>
+<svg width="6000" height="6000">
+	<defs>
+		<g id='tile'>
+			<polygon id='poly' points='0,0 1,0 0,1' stroke='black' fill='white' stroke-width='0.05'>
+		</g>
+	</defs>
+	<g id="stage" transform='translate(3000,3000) scale(20) scale(1,-1)'>
+</svg>
+<script>
+const dl = document.getElementById('D');
+dl.addEventListener('click', ()=>{
+	const svg = document.querySelector('svg');
+	const data = new XMLSerializer().serializeToString(svg);
+	const blob = new Blob([data], { type: 'image/svg+xml' });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = 'miki.svg';
+	a.click();
+	URL.revokeObjectURL(url);
+});
+const center = document.getElementById('C');
+center.addEventListener('click', ()=>{
+	const scrollWidth = document.documentElement.scrollWidth;
+	const scrollHeight = document.documentElement.scrollHeight;
+	const clientWidth = document.documentElement.clientWidth;
+	const clientHeight = document.documentElement.clientHeight;
+	window.scrollTo({
+		top: (scrollHeight - clientHeight) / 2,
+		left: (scrollWidth - clientWidth) / 2,
+		behavior: 'smooth'
+	});
+});
+class XY{ // 2-d point
+	constructor(x, y){this.x = x; this.y = y}
+	add(p){return new XY(this.x + p.x, this.y + p.y)}
+	sub(p){return new XY(this.x - p.x, this.y - p.y)}
+	mul(m){return new XY(this.x * m, this.y * m)}
+	rotated(angle){var cs = Math.cos(angle); var sn = Math.sin(angle); return new XY(this.x * cs - this.y * sn, this.x * sn + this.y * cs)}
+}
+function v(i, n){ // unit vector
+	var angle = 2 * Math.PI * i / n;
+	return new XY(Math.cos(angle), Math.sin(angle));
+}
+function vsum(arr, n){ // sum of unit vectors
+	return arr.reduce((sum, i) => sum.add(v(i,n)), new XY(0, 0));
+}
+class MikiTile{
+	constructor(M, K, N){ 
+		this.M = M;
+		this.K = K;
+		this.N = N;
+		this.l = [];
+		for (var i = 0; i < K; i++) this.l.push(i * M % K);
+		this.l.push(K);
+		this.u = this.l.slice(); // copy array
+		this.u[0] = K;
+		this.u[K] = 0;
+		this.endingPoint = vsum(this.l, N);
+		this.poly = [];
+		var sum = new XY(0, 0);		
+		for (var i of this.l) {this.poly.push(sum); sum = sum.add(v(i, N))}
+		for (var i of this.u.toReversed()){this.poly.push(sum); sum = sum.sub(v(i, N))}
+	}
+	svgPoints(){
+		var ret = "";
+		for (var p of this.poly) ret += `${p.x},${p.y} `;
+		return ret;
+	}
+}
+class MikiFront{
+	constructor(mikiTile){
+		this.mikiTile = mikiTile;
+		this.front = mikiTile.u;
+		this.wedgePos = [new XY(0,0)]; // first wedge is positioned at origin
+		for (var i = 1; i < mikiTile.N; i++) this.addWedge(i);
+	}
+	addWedge(angle){
+		var index = this.front.findIndex((e) => e == angle);
+		this.front = this.front.slice(0, index);
+		this.wedgePos.push(vsum(this.front, this.mikiTile.N));
+		for (var x of this.mikiTile.u) this.front.push((x + angle) % this.mikiTile.N);
+	}
+}
+function forEachTileInProtoWedge(mikiTile, Layers, func){
+	var d0 = mikiTile.endingPoint.sub(mikiTile.poly[1]);
+	var d1 = mikiTile.endingPoint.sub(mikiTile.poly[mikiTile.poly.length-1]);
+	for (var i0 = 0; i0 < Layers; i0++)
+		for (var i1 = 0; i0 + i1 < Layers; i1++)
+			func(d0.mul(i0).add(d1.mul(i1)), i0, i1);
+}
+function forEachTileInWedge(wedgePos, wedgeAngle, mikiTile, Layers, func){
+	var angle = 2 * Math.PI * wedgeAngle / mikiTile.N;
+	forEachTileInProtoWedge(mikiTile, Layers, (pos, i0, i1) => func(pos.rotated(angle).add(wedgePos), i0, i1));
+}
+function createTile(pos, angle, N){
+	var svgTile = document.createElementNS("http://www.w3.org/2000/svg", 'use');
+	svgTile.setAttribute("class","tile");
+	svgTile.setAttribute("href","#tile");
+	svgTile.setAttribute("transform",`translate(${pos.x},${pos.y}) rotate(${360*angle/N})`);
+	return svgTile;
+}
+function redraw(){
+	var M = parseInt(document.getElementById('M_slider').value);
+	var K = parseInt(document.getElementById('K_slider').value);
+	var N = parseInt(document.getElementById('N_slider').value);
+	var offset = document.getElementById('O_checkbox').checked;
+	var Layers = parseInt(document.getElementById('L_slider').value);
+	document.getElementById('M').textContent='M='+M;
+	document.getElementById('K').textContent='K='+K;
+	document.getElementById('N').textContent='N='+N;
+	document.getElementById('L').textContent='Layers='+Layers;
+	var mikiTile = new MikiTile(M, K, N);
+	// over-write prototile geometry
+	var svgPoly = document.getElementById('poly');
+	svgPoly.setAttribute('points', mikiTile.svgPoints());
+	var stage = document.getElementById('stage');		
+	while (stage.firstChild) stage.removeChild(stage.lastChild); // clear stage
+	var mikiFront = new MikiFront(mikiTile);
+	if (offset){
+		for (var angle = 0; angle < mikiTile.N / 2; angle++)
+			forEachTileInWedge(mikiFront.wedgePos[angle], angle, mikiTile, Layers, (pos, i0, i1) => { stage.appendChild(createTile(pos, angle, mikiTile.N)); });	
+		for (var angle = 0; angle < mikiTile.N / 2; angle++)
+			forEachTileInWedge(mikiFront.wedgePos[angle], angle, mikiTile, Layers, (pos, i0, i1) => { stage.appendChild(createTile((new XY(1,0)).sub(pos), angle + mikiTile.N/2, mikiTile.N)); });	
+	}else{
+		for (var angle = 0; angle < mikiTile.N ; angle++)
+			forEachTileInWedge(mikiFront.wedgePos[angle], angle, mikiTile, Layers, (pos, i0, i1) => { stage.appendChild(createTile(pos, angle, mikiTile.N)); });
+	}
+}
+redraw();
+</script>

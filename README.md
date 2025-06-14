@@ -504,6 +504,9 @@ mgcfs [-c|--console] | [-w|--whiptail] [-i|--init [<dir> [<name>]] |
    s (seconds), m (minutes), h (hours), d (days).
 ```
 
+## miki.html
+**Create centered wedge-tilings that are non-repeating**
+
 ## mkuki
 **Create a signed EFI EFI Unified Kernel Image**
 
@@ -773,6 +776,9 @@ subshift <infile.sub/srt> <outfile.sub/srt> [action...]
           *<s>.<ms>                  [Time stretch/contract factor in seconds]
           @<framerate>               [like: 23.976 / 25 / 29.97]'
 ```
+
+## suspend.c
+**Make suspend binary**
 
 ## ti
 **Show images with filename in terminal using Sixel**
