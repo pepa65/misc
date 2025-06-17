@@ -71,15 +71,15 @@ git commit -a -m 'Update deps'
 echo "--- Changes committed"
 git tag $new -m $new
 echo "--- New tag $new created locally"
-git push origin --tags
+git push origin --all
 echo "--- Changes pushed to Github"
 
 # Make release
-repo=${repo% (push)} repo=${repo##* }
+repo=${repo% (push)} repo=${repo:7}  # Strip 'origin '
 gh repo set-default $repo
 gh release create $new $binaries -t 'Update deps' --verify-tag -n ''
 echo "--- Release $new created"
 
 # Publish on crates.io
-cargo pub
+cargo pub --allow-dirty
 echo "=== Release published to crates.io"
