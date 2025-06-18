@@ -1,14 +1,25 @@
 #!/usr/bin/env bash
 set +vx -e # Stop on any error
-# cargo-update
+# cargo-update [-h|--help]
 # Usage:  cargo-update  # While PWD is a Rust cargo project directory
 
 toml=Cargo.toml readme=README.md
 
 # Get current version
-! curr=$(grep '^version = ' $toml) curr=${curr##* } curr=${curr:1: -1} &&
-	echo "### Abort: Not a Rust cargo project directory" &&
+help=0
+[[ $1 = -h || $1 = --help ]] &&
+	help=1
+if ! curr=$(grep '^version = ' $toml) curr=${curr##* } curr=${curr:1: -1} || ((help))
+then
+	((!help)) &&
+		echo "### Abort: Not a Rust cargo project directory"
+	echo "--- Valid directories to run from:"
+	for f in $(find ~/git/ |grep '/Cargo.toml$' |grep -v /target/package/)
+	do grep '^authors' "$f" |grep -q pepa65 &&
+			echo "    ${f%/Cargo.toml}"
+	done
 	exit 1
+fi
 
 # Check git status
 status=$(git status)
@@ -19,7 +30,7 @@ grep -q 'use "git push"' <<<"$status" &&
 	echo -e "### Abort: Unpushed commits:\n$(grep ' commits\.$' <<<"$status")" &&
 	exit 2
 
-! repo=$(git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/') &&
+! repo=$(git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/' |head -1) &&
 	echo "### Abort: Not pushing to github.com/pepa65" &&
 	exit 3
 
