@@ -2,38 +2,69 @@
 set -e #-x
 # gomod-update - Update modules in go projects
 # Required: go git coreutils(rm head) nano grep goreleaser
-# Usage gomod-update <tool>
+# Usage:  gomod-update [-a|--all | <pkg>...]
 
-pkgs=becrypt/bat/horcrux/m2m/mailer/twofat
+git=$HOME/git/ readme=README.md
 
-[[ -z $1 ]] &&
-	echo "Need one or more from $pkgs as argument" &&
+all=0
+[[ $1 = -a || $1 = --all ]] &&
+	all=1
+
+declare -A pkgs
+for f in $(find "$git" |grep '/go.mod$')
+do
+	grep -q '^module github.com/pepa65/' "$f" &&
+		[[ -f ${f%go.mod}main.go ]] &&
+		v=$(grep 'version [ ]*= "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"$' "${f%go.mod}main.go") &&
+		v=${v##* } v=${v//\"} p=${f#$git} p=${p%/go.mod} &&
+		pkgs[$p]=$v
+done
+((${#pkgs[@]}==0)) &&
+	echo "### No suitable packages found" &&
 	exit 1
 
-# Check: becrypt bat? horcrux m2m mailer? twofat
-for dir in $@
+packages=$(grep -o '[^ ]*' <<<${!pkgs[@]} |sort |tr $'\n' ' ')
+packages=${packages%?}
+echo -e "--- Suitable packages:\n    $packages"
+
+((!$#)) &&
+	echo "### Need one or more suitable packages as arguments" &&
+	exit 2
+
+((all)) &&
+	set -- $packages
+for pkg in $@
 do
-	[[ ! /$pkgs/ = */$dir/* ]] &&
-		echo "Package not one of: $pkgs" &&
+	[[ ! ,${packages// /,}, = *,$pkg,* ]] &&
+		echo -e "### Given package not suitable: $pkg\n" &&
 		continue
-	gitdir=/data/git/$dir
+
+	gitdir=$git$pkg
 	cd "$gitdir"
 	rm go.mod
-	go mod init github.com/pepa65/"$dir"
+	go mod init github.com/pepa65/"$pkg"
 	go mod tidy
 	# If go.sum same, checkout go.mod and bail
 	[[ -z $(git diff -- go.sum) ]] &&
 		git checkout go.mod &&
-		echo "====== No module updates" &&
+		echo -e "=== No module updates: $pkg\n" &&
 		continue
-	echo "Ctrl-C to abort, or Enter to update the VERSION in $gitdir"
-	echo "(the files 'main.go' and 'README.md' will be opened in nano to edit)"
-	read
-	nano main.go README.md  # increase to VERSION manually in the editor
+
+	curr=${pkgs[$pkg]}
+	patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1
+	echo "--- Patching from $curr to $new"
+	! sed -i "s/ \"$curr\"/ \"$new\"/" "$gitdir/main.go" &&
+	  echo -e "### Version update in main.go unsuccesful: $pkg\n" &&
+	  continue
+
+	! sed -i "s/ \"$curr\"/ \"$new\"/" "$gitdir/$readme" &&
+	  echo -e "--- Version update in $readme unsuccesful: $pkg\n"
+		#continue
+
 	go install
-	version=$(~/go/bin/$dir -h 2>&1 |grep -o 'v[.0-9]*' |head -1)
 	git commit -a -m "Modules update"
-	git tag $version -m $version
+	git tag v$new -m $new
 	git push origin --all
 	goreleaser --clean
+	echo "=== Update successful: $pkg"
 done

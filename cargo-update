@@ -1,96 +1,115 @@
 #!/usr/bin/env bash
 set +vx -e # Stop on any error
-# cargo-update [-h|--help]
-# Usage:  cargo-update  # While PWD is a Rust cargo project directory
+# cargo-update - Update dependencies of Rust project(s)
+# Usage:  cargo-update [-h|--help | -n|--norun | -a|--all]  # While PWD is a Rust cargo project directory
 
-toml=Cargo.toml readme=README.md
+toml=Cargo.toml readme=README.md git=$HOME/git/
 
-# Get current version
-help=0
+# Check flags
+help=0 norun=0 all=0
 [[ $1 = -h || $1 = --help ]] &&
 	help=1
-if ! curr=$(grep '^version = ' $toml) curr=${curr##* } curr=${curr:1: -1} || ((help))
-then
-	((!help)) &&
-		echo "### Abort: Not a Rust cargo project directory"
-	echo "--- Valid directories to run from:"
-	for f in $(find ~/git/ |grep '/Cargo.toml$' |grep -v /target/package/)
-	do grep '^authors' "$f" |grep -q pepa65 &&
-			echo "    ${f%/Cargo.toml}"
-	done
-	exit 1
-fi
 
-# Check git status
-status=$(git status)
-grep -q 'Untracked files:' <<<"$status" &&
-	echo -e "--- Warning: Ucommitted files, will be ignored:\n$(grep -P '^\t' <<<"$status")\n"
+[[ $1 = -n || $1 = --norun ]] &&
+	norun=1
 
-grep -q 'use "git push"' <<<"$status" &&
-	echo -e "### Abort: Unpushed commits:\n$(grep ' commits\.$' <<<"$status")" &&
-	exit 2
-
-! repo=$(git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/' |head -1) &&
-	echo "### Abort: Not pushing to github.com/pepa65" &&
-	exit 3
-
-# Check updates
-nochange=$(cargo update -n 2>&1 |grep 'Locking 0 packages') || true
-[[ $nochange ]] &&
-	echo "=== No updates in dependencies" &&
-	exit
-
-! update=$(cargo update 2>&1) &&
-	echo -e "$update\n### Abort: Cargo update failed" &&
-	exit 5
-echo "--- Cargo update done"
-
-# Patch
-patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1
-! sed -i "s/^version = \"$curr\"$/version = \"$new\"/" $toml &&
-	echo "### Abort: version update in $toml unsuccesful" &&
-	exit 4
-echo "--- $toml version increased"
-
-! sed -i "s/$curr/$new/" $readme &&
-	echo "### Abort: version update in $readme unsuccesful" &&
-	exit 5
-lines=$(grep $new $readme) &&
-	echo -e "--- Versions in $readme increased:\n$lines\n" ||
-	echo -e "--- Old version $curr not found in $readme\n"
-
-! build=$(cargo rel 2>&1) &&
-	echo -e "$build\n### Abort: Cargo release build failed" &&
-	exit 6
-
-# Compress the binaries
-binaries=
-## Fails if targets of symlinks have space(s)!
-for f in $(command ls -l |grep ^l |sed 's/.* -> //')
+# Show owned Rust projects
+declare -A pkgs
+echo "=== Valid packages to update:"
+for f in $(find "$git" |grep '/Cargo.toml$' |grep -v /target/package/)
 do
-	b=~/bin/${f##*/}
-	cp "$f" "$b"
-	upx --best --lzma "$b"
-	binaries+="$b "
+	pkg=${f#$git} pkg=${pkg%/Cargo.toml}
+	grep '^authors' "$f" |grep -q pepa65 &&
+		curr=$(grep '^version = ' "$f") curr=${curr##* } curr=${curr//\"} &&
+		pkgs[$pkg]=$curr
+	#echo "    ${f%/Cargo.toml}"
 done
-[[ -z $f ]] &&
-	echo "### Abort: No binaries symlinked" &&
-	exit 7
+echo "    ${!pkgs[@]}"
+((help)) &&
+	exit 0
 
-# Commit, tag and push to Github
-git commit -a -m 'Update deps'
-echo "--- Changes committed"
-git tag $new -m $new
-echo "--- New tag $new created locally"
-git push origin --all
-echo "--- Changes pushed to Github"
+((all)) &&
+	set -- ${!pkgs[@]}
+for pkg in $@
+do
+	cd "$git$pkg"
+	! repo=$(git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/' |head -1) &&
+		echo -e "### Skip: Repo not pushing to github.com/pepa65: $pkg\n" &&
+		continue
 
-# Make release
-repo=${repo% (push)} repo=${repo:7}  # Strip 'origin '
-gh repo set-default $repo
-gh release create $new $binaries -t 'Update deps' --verify-tag -n ''
-echo "--- Release $new created"
+	# Check updates
+	update=$(cargo update -n 2>&1)
+	locking=$(grep -o 'Locking .*' <<<"$update")
+	[[ ${locking:8:1} = 0 ]] &&
+		echo -e "=== No updates in dependencies: $pkg\n" &&
+		continue
 
-# Publish on crates.io
-cargo pub --allow-dirty
-echo "=== Release published to crates.io"
+	echo -e "=== Updates found:\n$(grep Updating <<<"$update" |tail +2)"
+	((norun)) &&
+		echo &&
+		continue
+
+	# Check git status
+	status=$(git status)
+	grep -q 'Untracked files:' <<<"$status" &&
+		echo -e "--- Warning: Ucommitted files, will be ignored:\n$(grep -P '^\t' <<<"$status")"
+
+	grep -q 'use "git push"' <<<"$status" &&
+		echo -e "### Skip: Unpushed commits:\n$(grep ' commits\.$' <<<"$status") in: $pkg\n" &&
+		continue
+
+	! update=$(cargo update 2>&1) &&
+		echo -e "$update\n### Skip: Cargo update failed: $pkg\n" &&
+		continue
+
+	# Patch
+	echo "--- Cargo update done"
+	curr=${pkgs[$pkg]} patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1
+	! sed -i "s/^version = \"$curr\"$/version = \"$new\"/" $toml &&
+		echo "### Skip: version update in $toml unsuccesful: $pkg\n" &&
+		continue
+
+	echo "--- $toml version increased"
+	! sed -i "s/$curr/$new/" $readme &&
+		echo -e "### Skip: version update in $readme unsuccesful: $pkg\n" &&
+		continue
+
+	lines=$(grep $new $readme) &&
+		echo -e "--- Versions in $readme increased:\n$lines\n" ||
+		echo -e "--- Old version $curr not found in $readme\n"
+	! build=$(cargo rel 2>&1) &&
+		echo -e "$build\n### Skip: Cargo release build failed: $pkg\n" &&
+		continue
+
+	# Compress the binaries
+	binaries=
+	## Fails if targets of symlinks have space(s)!
+	for f in $(command ls -l |grep ^l |sed 's/.* -> //')
+	do
+		b=~/bin/${f##*/}
+		cp "$f" "$b"
+		upx --best --lzma "$b"
+		binaries+="$b "
+	done
+	[[ -z $f ]] &&
+		echo "### Skip: No binaries symlinked: $pkg\n" &&
+		continue
+
+	# Commit, tag and push to Github
+	git commit -a -m 'Update deps'
+	echo "--- Changes committed"
+	git tag $new -m $new
+	echo "--- New tag $new created locally"
+	git push origin --all
+	echo "--- Changes pushed to Github"
+
+	# Make release
+	repo=${repo% (push)} repo=${repo:7}  # Strip 'origin '
+	gh repo set-default $repo
+	gh release create $new $binaries -t 'Update deps' --verify-tag -n ''
+	echo "--- Release $new created"
+
+	# Publish on crates.io
+	cargo pub --allow-dirty
+	echo -e "=== Release published to crates.io: $pkg\n"
+done
