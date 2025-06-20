@@ -69,7 +69,7 @@ st(){ [[ $1 ]] && (($1>=1000 && $1<=10000)) && SCT=$1 || SCT=$(yad --title "Disp
 rqr(){ zbarimg --raw -q $1;}
 bt(){ [[ $1 == *\&* ]] && aria2c "$1" || echo "Use single quotes!";}
 #c(){ [[ -d $1 ]] && ls -AFl $@ |less -RMgx2 || less -RMgx2 "$@";}
-c(){ [[ -d $1 ]] && command l -aBgHl --time-style=long-iso $@ |less -RMgx2 || command c --paging always --plain "$@";}
+c(){ [[ -d $1 ]] && command l -aBgHl --time-style=long-iso $@ |less -RMgx2 || command c --paging always --tabs 2 --plain "$@";}
 cx(){ [[ -d $1 ]] && command l -aBgHl --time-style=long-iso "$1" |less -RMgx2 +G || less -RMgx2 +G "$1";}
 ff(){ [[ $2 ]] && d="$2" || d='.'; find "$d" |grep -s --color=auto --devices=skip -I "$1";}
 pdfc(){ (($#<2 || $#>3)) && echo "PDF Resize needs: <input.pdf> <output.pdf> [1] (third argument optional, gives better quality)" && return 1; [[ $3 = 1 ]] && q=ebook || q=screen; gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/"$q" -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" "$1";}

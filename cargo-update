@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
 set +vx -e # Stop on any error
 # cargo-update - Update dependencies of Rust project(s)
-# Usage:  cargo-update [-h|--help | -n|--norun | -a|--all]  # While PWD is a Rust cargo project directory
+# Usage:  cargo-update [-h|--help] | [-n|--norun] -a|--all | <pkg>...
 
 toml=Cargo.toml readme=README.md git=$HOME/git/
 
 # Check flags
 help=0 norun=0 all=0
-[[ $1 = -h || $1 = --help ]] &&
+[[ $# = 0 || $1 = -h || $1 = --help ]] &&
 	help=1
+
+[[ $1 = -n || $1 = --norun ]] &&
+	norun=1 &&
+	shift
+
+[[ $1 = -a || $1 = --all ]] &&
+	all=1 &&
+	shift
 
 [[ $1 = -n || $1 = --norun ]] &&
 	norun=1
@@ -22,10 +30,10 @@ do
 	grep '^authors' "$f" |grep -q pepa65 &&
 		curr=$(grep '^version = ' "$f") curr=${curr##* } curr=${curr//\"} &&
 		pkgs[$pkg]=$curr
-	#echo "    ${f%/Cargo.toml}"
 done
 echo "    ${!pkgs[@]}"
 ((help)) &&
+	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] -a|--all | <pkg>..." &&
 	exit 0
 
 ((all)) &&
@@ -44,7 +52,7 @@ do
 		echo -e "=== No updates in dependencies: $pkg\n" &&
 		continue
 
-	echo -e "=== Updates found:\n$(grep Updating <<<"$update" |tail +2)"
+	echo -e "=== Updates found: $pkg\n$(grep Updating <<<"$update" |tail +2)"
 	((norun)) &&
 		echo &&
 		continue
