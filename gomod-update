@@ -8,7 +8,7 @@ git=$HOME/git/ readme=README.md mod=go.mod sum=go.sum main=main.go
 
 # Check flags
 all=0 help=0 norun=0
-[[ $1 = -h || $1 = --help ]] &&
+[[ $# = 0 || $1 = -h || $1 = --help ]] &&
 	help=1
 
 [[ $1 = -a || $1 = --all ]] &&
