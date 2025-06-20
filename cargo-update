@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-set +vx -e # Stop on any error
+set +vx -e  # Stop on any error
 # cargo-update - Update dependencies of Rust project(s)
+# Required: find grep sed git cargo coreutils(cd head ls)
 # Usage:  cargo-update [-h|--help] | [-n|--norun] -a|--all | <pkg>...
 
 toml=Cargo.toml readme=README.md git=$HOME/git/
@@ -21,38 +22,46 @@ help=0 norun=0 all=0
 [[ $1 = -n || $1 = --norun ]] &&
 	norun=1
 
-# Show owned Rust projects
+# Show suitable Rust projects
 declare -A pkgs
-echo "=== Valid packages to update:"
-for f in $(find "$git" |grep '/Cargo.toml$' |grep -v /target/package/)
+for t in $(find "$git" |grep "/$toml$" |grep -v /target/package/)
 do
-	pkg=${f#$git} pkg=${pkg%/Cargo.toml}
-	grep '^authors' "$f" |grep -q pepa65 &&
-		curr=$(grep '^version = ' "$f") curr=${curr##* } curr=${curr//\"} &&
-		pkgs[$pkg]=$curr
+	repo=$(cd ${t%$toml}; [[ -d .git ]] &&
+			git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/' |head -1) &&
+		grep '^authors' "$t" |grep -q pepa65 &&
+		v=$(grep '^version = ' "$t") &&
+		v=${v##* } v=${v//\"} p=${t#$git} p=${p%/$toml} &&
+		pkgs[$p]=$v
 done
-echo "    ${!pkgs[@]}"
+((${#pkgs[@]}==0)) &&
+  echo "### No suitable packages found" &&
+  exit 1
+
+packages=$(grep -o '[^ ]*' <<<${!pkgs[@]} |sort |tr $'\n' ' ')
+packages=${packages%?}
+echo -e "--- Suitable packages:\n    $packages"
 ((help)) &&
 	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] -a|--all | <pkg>..." &&
 	exit 0
 
+echo
 ((all)) &&
-	set -- ${!pkgs[@]}
+	set -- $packages
 for pkg in $@
 do
-	cd "$git$pkg"
-	! repo=$(git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/' |head -1) &&
-		echo -e "### Skip: Repo not pushing to github.com/pepa65: $pkg\n" &&
-		continue
+  [[ ! ,${packages// /,}, = *,$pkg,* ]] &&
+    echo -e "### Given package not suitable: $pkg\n" &&
+    continue
 
 	# Check updates
+	cd "$git$pkg"
 	update=$(cargo update -n 2>&1)
 	locking=$(grep -o 'Locking .*' <<<"$update")
 	[[ ${locking:8:1} = 0 ]] &&
 		echo -e "=== No updates in dependencies: $pkg\n" &&
 		continue
 
-	echo -e "=== Updates found: $pkg\n$(grep Updating <<<"$update" |tail +2)"
+	echo -e "$(grep ' v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' <<<"$update")\n=== Updates found: $pkg"
 	((norun)) &&
 		echo &&
 		continue

@@ -1,22 +1,37 @@
 #!/usr/bin/env bash
-set -e #-x
-# gomod-update - Update modules in go projects
-# Required: go git coreutils(rm head) nano grep goreleaser
-# Usage:  gomod-update [-a|--all | <pkg>...]
+set +x -e  # Stop on any error
+# gomod-update - Update modules in Go projects
+# Required: find grep sed go git goreleaser coreutils(cd rm head)
+# Usage:  gomod-update [-h|--help] | [-n|--norun] -a|--all | <pkg>...
 
-git=$HOME/git/ readme=README.md
+git=$HOME/git/ readme=README.md mod=go.mod sum=go.sum main=main.go
 
-all=0
+# Check flags
+all=0 help=0 norun=0
+[[ $1 = -h || $1 = --help ]] &&
+	help=1
+
+[[ $1 = -a || $1 = --all ]] &&
+	all=1 &&
+	shift
+
+[[ $1 = -n || $1 = --norun ]] &&
+	norun=1 &&
+	shift
+
 [[ $1 = -a || $1 = --all ]] &&
 	all=1
 
+# Show suitable Go projects
 declare -A pkgs
-for f in $(find "$git" |grep '/go.mod$')
+for f in $(find "$git" |grep "/$mod$")
 do
-	grep -q '^module github.com/pepa65/' "$f" &&
-		[[ -f ${f%go.mod}main.go ]] &&
-		v=$(grep 'version [ ]*= "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"$' "${f%go.mod}main.go") &&
-		v=${v##* } v=${v//\"} p=${f#$git} p=${p%/go.mod} &&
+	repo=$(cd ${f%$mod}; [[ -d .git ]] &&
+			git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/' |head -1) &&
+		grep -q '^module github.com/pepa65/' "$f" &&
+		[[ -f ${f%$mod}$main ]] &&
+		v=$(grep 'version [ ]*= "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"$' "${f%$mod}$main") &&
+		v=${v##* } v=${v//\"} p=${f#$git} p=${p%/$mod} &&
 		pkgs[$p]=$v
 done
 ((${#pkgs[@]}==0)) &&
@@ -26,10 +41,9 @@ done
 packages=$(grep -o '[^ ]*' <<<${!pkgs[@]} |sort |tr $'\n' ' ')
 packages=${packages%?}
 echo -e "--- Suitable packages:\n    $packages"
-
-((!$#)) &&
-	echo "### Need one or more suitable packages as arguments" &&
-	exit 2
+((help)) &&
+	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] -a|--all | <pkg>..." &&
+	exit 0
 
 ((all)) &&
 	set -- $packages
@@ -39,25 +53,31 @@ do
 		echo -e "### Given package not suitable: $pkg\n" &&
 		continue
 
-	gitdir=$git$pkg
-	cd "$gitdir"
-	rm go.mod
-	go mod init github.com/pepa65/"$pkg"
+	# Check update
+	cd "$git$pkg"
+	rm "$mod"
+	update=$(go mod init "github.com/pepa65/$pkg" 2>&1 |head -1)
 	go mod tidy
+echo "$update"
 	# If go.sum same, checkout go.mod and bail
-	[[ -z $(git diff -- go.sum) ]] &&
-		git checkout go.mod &&
+	[[ -z $(git diff -- $sum) ]] &&
+		git checkout $mod 2>/dev/null &&
 		echo -e "=== No module updates: $pkg\n" &&
 		continue
+
+	echo -e "=== Updates found: $pkg\n$(head -1 <<<"$update")"
+  ((norun)) &&
+    echo &&
+    continue
 
 	curr=${pkgs[$pkg]}
 	patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1
 	echo "--- Patching from $curr to $new"
-	! sed -i "s/ \"$curr\"/ \"$new\"/" "$gitdir/main.go" &&
+	! sed -i "s/ \"$curr\"/ \"$new\"/" $main &&
 	  echo -e "### Version update in main.go unsuccesful: $pkg\n" &&
 	  continue
 
-	! sed -i "s/ \"$curr\"/ \"$new\"/" "$gitdir/$readme" &&
+	! sed -i "s/ \"$curr\"/ \"$new\"/" $readme &&
 	  echo -e "--- Version update in $readme unsuccesful: $pkg\n"
 		#continue
 
