@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set +vx -e  # Stop on any error
 # cargo-update - Update dependencies of Rust project(s)
+#  Searching $git for all git repos that are pushing to "$user" on "$host",
+#  with "$author" matching the 'authors' field in `Cargo.toml`.
 # Required: find grep sed git cargo coreutils(cd head ls)
 # Usage:  cargo-update [-h|--help] | [-n|--norun] -a|--all | <pkg>...
 
-toml=Cargo.toml readme=README.md git=$HOME/git/
+git=$HOME/git/ host=github.com user=pepa65 author=pepa65
+toml=Cargo.toml readme=README.md
 
 # Check flags
 help=0 norun=0 all=0
@@ -27,8 +30,8 @@ declare -A pkgs
 for t in $(find "$git" |grep "/$toml$" |grep -v /target/package/)
 do
 	repo=$(cd ${t%$toml}; [[ -d .git ]] &&
-			git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/' |head -1) &&
-		grep '^authors' "$t" |grep -q pepa65 &&
+			git remote -v |grep '^origin' |grep ' (push)$' |grep "${host//./\\.}[:/]$user/" |head -1) &&
+		grep '^authors' "$t" |grep -q "$author" &&
 		v=$(grep '^version = ' "$t") &&
 		v=${v##* } v=${v//\"} p=${t#$git} p=${p%/$toml} &&
 		pkgs[$p]=$v
@@ -61,7 +64,7 @@ do
 		echo -e "=== No updates in dependencies: $pkg\n" &&
 		continue
 
-	echo -e "$(grep ' v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' <<<"$update")\n=== Updates found: $pkg"
+	echo -e "$(grep 'v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' <<<"$update")\n=== Updates found: $pkg"
 	((norun)) &&
 		echo &&
 		continue
@@ -86,7 +89,7 @@ do
 		echo "### Skip: version update in $toml unsuccesful: $pkg\n" &&
 		continue
 
-	echo "--- $toml version increased"
+	echo "--- $toml version increased: $new"
 	! sed -i "s/$curr/$new/" $readme &&
 		echo -e "### Skip: version update in $readme unsuccesful: $pkg\n" &&
 		continue
@@ -121,8 +124,8 @@ do
 	echo "--- Changes pushed to Github"
 
 	# Make release
-	repo=${repo% (push)} repo=${repo:7}  # Strip 'origin '
-	gh repo set-default $repo
+	#repo=${repo% (push)} repo=${repo:7}  # Strip 'origin '
+	gh repo set-default "$host/$user/$pkg"
 	gh release create $new $binaries -t 'Update deps' --verify-tag -n ''
 	echo "--- Release $new created"
 
