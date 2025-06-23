@@ -106,7 +106,7 @@ do
 	## Fails if targets of symlinks have space(s)!
 	for f in $(command ls -l |grep ^l |sed 's/.* -> //')
 	do
-		b=~/bin/${f##*/}
+		b=$HOME/bin/${f##*/}
 		cp "$f" "$b"
 		upx --best --lzma "$b"
 		binaries+="$b "
