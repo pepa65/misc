@@ -11,7 +11,7 @@
 // Install instead for local user only:
 //  sudo gcc scrypt.c -o ~/bin/scrypt
 //  sudo chmod 4501 ~/bin/scrypt
-//  sudo ln -sf ~/bin/scrypt ~/bin/uscrypt
+//  ln -sf ~/bin/scrypt ~/bin/uscrypt
 //
 // Example vault creation (matching the variables):
 //  truncate -s 400M /data/MyDocuments/SECURE/vault
@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 
 char * replacement_environment[] = {
@@ -90,6 +91,8 @@ void run(char *exec, ...) {
 
 void do_mount(void) {
 	fprintf(stdout, MOUNTING, VAULTFILE, MOUNTPOINT);
+	run("/bin/mkdir", "-p", MOUNTPOINT, NULL);
+	run("/bin/chmod", "0400", MOUNTPOINT, NULL);
 	setreuid(0,0);
 	run("/sbin/cryptsetup", "luksOpen", VAULTFILE, LUKSNAME, NULL);
 	run("/bin/mount", "-o", "noatime", "/dev/mapper/"LUKSNAME, MOUNTPOINT, NULL);
@@ -98,8 +101,8 @@ void do_mount(void) {
 void do_umount(void) {
 	fprintf(stdout, UNMOUNTING, LUKSNAME, MOUNTPOINT);
 	setreuid(0,0);
-	run("/bin/umount", MOUNTPOINT, 0);
-	run("/sbin/cryptsetup", "luksClose", LUKSNAME, 0);
+	run("/bin/umount", MOUNTPOINT, NULL);
+	run("/sbin/cryptsetup", "luksClose", LUKSNAME, NULL);
 }
 
 int main(int argc, char **argv) {

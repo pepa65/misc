@@ -54,7 +54,7 @@ Inf "User $me on $id (from $fromid): $(hostname -A)"
 set -xv
 sudo -S apt update
 sudo -S dpkg-reconfigure tzdata
-sudo -S apt-get install -y ne dfc iftop iotop source-highlight colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
+sudo -S apt-get install -y ne dfc iftop iotop colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
 sudo -S apt purge snapd
 [[ -d git ]] || mkdir git
 cd git
