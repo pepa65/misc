@@ -47,6 +47,7 @@ echo -e "--- Suitable packages:\n    $packages"
 
 ((all)) &&
 	set -- $packages
+updates=
 for pkg in $@
 do
 	[[ ! ,${packages// /,}, = *,$pkg,* ]] &&
@@ -65,6 +66,7 @@ echo "$update"
 		echo -e "=== No module updates: $pkg\n" &&
 		continue
 
+	updates+="$pkg "
 	echo -e "=== Updates found: $pkg\n$(head -1 <<<"$update")"
   ((norun)) &&
     echo &&
@@ -88,3 +90,7 @@ echo "$update"
 	goreleaser --clean
 	echo "=== Update successful: $pkg"
 done
+
+[[ $updates ]] &&
+	echo "=== Updates in: $updates" ||
+	echo "=== No updates found at all"

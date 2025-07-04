@@ -58,7 +58,7 @@ do
 
 	# Check updates
 	cd "$git$pkg"
-	update=$(cargo update -n 2>&1)
+	update=$(cargo update --verbose -n 2>&1)
 	locking=$(grep -o 'Locking .*' <<<"$update")
 	[[ ${locking:8:1} = 0 ]] &&
 		echo -e "=== No updates in dependencies: $pkg\n" &&
