@@ -52,6 +52,7 @@ echo
 	set -- $packages
 
 updates= success=
+declare -A failed
 for pkg in $@
 do
   [[ ! ,${packages// /,}, = *,$pkg,* ]] &&
@@ -66,7 +67,7 @@ do
 		echo -e "=== No updates in dependencies: $pkg\n" &&
 		continue
 
-	updates+="$pkg "
+	updates+="$pkg " failed[$pkg]=1
 	echo -e "$(grep 'v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' <<<"$update")\n=== Updates found: $pkg"
 	((norun)) &&
 		echo &&
@@ -136,8 +137,13 @@ do
 	cargo pub --allow-dirty
 	echo -e "=== Release published to crates.io: $pkg\n"
 	success+="$pkg "
+	unset failed[$pkg]
 done
 
 [[ $updates ]] &&
-	echo -e "=== Updates found: $updates\n=== Updated successfully: $success" ||
+	echo "=== Updates found: $updates" ||
 	echo "=== No updates found at all"
+[[ -z $success ]] &&
+	success=NONE
+((!norun)) &&
+	echo -e "=== Updated successfully: $success\n### Feiled updates: ${!failed[@]}"
