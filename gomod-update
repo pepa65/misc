@@ -48,6 +48,7 @@ echo -e "--- Suitable packages:\n    $packages"
 ((all)) &&
 	set -- $packages
 updates=
+declare -A failed
 for pkg in $@
 do
 	[[ ! ,${packages// /,}, = *,$pkg,* ]] &&
@@ -59,7 +60,7 @@ do
 	rm "$mod"
 	update=$(go mod init "github.com/pepa65/$pkg" 2>&1 |head -1)
 	go mod tidy
-echo "$update"
+#echo "$update"
 	# If go.sum same, checkout go.mod and bail
 	[[ -z $(git diff -- $sum) ]] &&
 		git checkout $mod 2>/dev/null &&
@@ -67,6 +68,7 @@ echo "$update"
 		continue
 
 	updates+="$pkg "
+	failed[$pkg]=1
 	echo -e "=== Updates found: $pkg\n$(head -1 <<<"$update")"
   ((norun)) &&
     echo &&
@@ -89,8 +91,12 @@ echo "$update"
 	git push origin --all
 	goreleaser --clean
 	echo "=== Update successful: $pkg"
+	unset failed[$pkg]
 done
 
 [[ $updates ]] &&
 	echo "=== Updates in: $updates" ||
 	echo "=== No updates found at all"
+
+[[ $failed ]] &&
+	echo "### Failed updates: ${failed[@]}"

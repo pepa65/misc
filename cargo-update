@@ -141,9 +141,11 @@ do
 done
 
 [[ $updates ]] &&
-	echo "=== Updates found: $updates" ||
+	echo "=== Found updates: $updates" ||
 	echo "=== No updates found at all"
 [[ -z $success ]] &&
 	success=NONE
 ((!norun)) &&
-	echo -e "=== Updated successfully: $success\n### Feiled updates: ${!failed[@]}"
+	echo "=== Updated OK: $success" &&
+	[[ $failed ]] &&
+	echo "### Failed updates: ${!failed[@]}"
