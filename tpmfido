@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# tpmfido - Start Security key device based on TPM2
+# tpmfido - Start Security key device based on TPM2 - Needs root-access!
 # Works on: webauthn.me webauthn.io demo.yubico.com
 # Does not work on: github.com webauthn.org
 

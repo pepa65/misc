@@ -6,24 +6,24 @@ set +vx -e  # Stop on any error
 # Required: find grep sed git cargo coreutils(cd head ls)
 # Usage:  cargo-update [-h|--help] | [-n|--norun] -a|--all | <pkg>...
 
-git=$HOME/git/ host=github.com user=pepa65 author=pepa65
-toml=Cargo.toml readme=README.md
+git=$HOME/git/ host=github.com user=pepa65 author=pepa65 toml=Cargo.toml readme=README.md
 
 # Check flags
-help=0 norun=0 all=0
-[[ $# = 0 || $1 = -h || $1 = --help ]] &&
+all=0 help=0 norun=0 args=
+(($#==0)) &&
 	help=1
+for a in $@
+do
+	case $a in
+	-h|--help) help=1 ;;
+	-a|--all) all=1 ;;
+	-n|--norun) norun=1 ;;
+	*) args+="$a "
+	esac
+done
 
-[[ $1 = -n || $1 = --norun ]] &&
-	norun=1 &&
-	shift
-
-[[ $1 = -a || $1 = --all ]] &&
-	all=1 &&
-	shift
-
-[[ $1 = -n || $1 = --norun ]] &&
-	norun=1
+[[ -z $args && $norun = 1 ]] &&
+	all=1
 
 # Show suitable Rust projects
 declare -A pkgs
@@ -44,12 +44,13 @@ packages=$(grep -o '[^ ]*' <<<${!pkgs[@]} |sort |tr $'\n' ' ')
 packages=${packages%?}
 echo -e "--- Suitable packages:\n    $packages"
 ((help)) &&
-	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] -a|--all | <pkg>..." &&
-	exit 0
+	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] [-a|--all | <pkg>...]" &&
+	exit
 
 echo
 ((all)) &&
-	set -- $packages
+	set -- $packages ||
+	set -- $args
 
 updates= success=
 declare -A failed
@@ -141,11 +142,11 @@ do
 done
 
 [[ $updates ]] &&
-	echo "=== Found updates: $updates" ||
+	echo "=== Updates found: $updates" ||
 	echo "=== No updates found at all"
 [[ -z $success ]] &&
 	success=NONE
 ((!norun)) &&
-	echo "=== Updated OK: $success" &&
+	echo "=== Updated okay:  $success" &&
 	[[ $failed ]] &&
-	echo "### Failed updates: ${!failed[@]}"
+	echo "### Update failed: ${!failed[@]}"

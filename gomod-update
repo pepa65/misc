@@ -7,19 +7,20 @@ set +x -e  # Stop on any error
 git=$HOME/git/ readme=README.md mod=go.mod sum=go.sum main=main.go
 
 # Check flags
-all=0 help=0 norun=0
-[[ $# = 0 || $1 = -h || $1 = --help ]] &&
+all=0 help=0 norun=0 args=
+(($#==0)) &&
 	help=1
+for a in $@
+do
+	case $a in
+	-h|--help) help=1 ;;
+	-a|--all) all=1 ;;
+	-n|--norun) norun=1 ;;
+	*) args+="$a "
+	esac
+done
 
-[[ $1 = -a || $1 = --all ]] &&
-	all=1 &&
-	shift
-
-[[ $1 = -n || $1 = --norun ]] &&
-	norun=1 &&
-	shift
-
-[[ $1 = -a || $1 = --all ]] &&
+[[ -z $args && $norun = 1 ]] &&
 	all=1
 
 # Show suitable Go projects
@@ -42,11 +43,12 @@ packages=$(grep -o '[^ ]*' <<<${!pkgs[@]} |sort |tr $'\n' ' ')
 packages=${packages%?}
 echo -e "--- Suitable packages:\n    $packages"
 ((help)) &&
-	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] -a|--all | <pkg>..." &&
-	exit 0
+	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] [-a|--all | <pkg>...]" &&
+	exit
 
 ((all)) &&
-	set -- $packages
+	set -- $packages ||
+	set -- $args
 updates=
 declare -A failed
 for pkg in $@
@@ -95,8 +97,8 @@ do
 done
 
 [[ $updates ]] &&
-	echo "=== Updates in: $updates" ||
+	echo "=== Updates found: $updates" ||
 	echo "=== No updates found at all"
 
 [[ $failed ]] &&
-	echo "### Failed updates: ${failed[@]}"
+	echo "### Update failed: ${failed[@]}"
