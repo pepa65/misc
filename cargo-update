@@ -117,8 +117,7 @@ do
 		binaries+="$b "
 	done
 	[[ -z $f ]] &&
-		echo "### Skip: No binaries symlinked: $pkg\n" &&
-		continue
+		echo -e "--- Warning: No binaries symlinked: $pkg\n"
 
 	# Commit, tag and push to Github
 	git commit -a -m 'Update deps'
