@@ -56,7 +56,7 @@ export GOROOT=/usr/local/go GOBIN=~/go/bin
 export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /:}")
 export MODULAR_HOME="/home/pp/.modular"
 export GIT_EXTERNAL_DIFF=difft
-export RUSTC_WRAPPER=sccache
+#export RUSTC_WRAPPER=sccache
 [[ $UID = 1001 ]] &&
 	PS1=${PS1/\\\$/%}
 addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}

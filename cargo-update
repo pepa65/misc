@@ -100,7 +100,7 @@ do
 		continue
 
 	lines=$(grep $new $readme) &&
-		echo -e "--- Versions in $readme increased:\n$lines\n" ||
+		echo -e "--- Versions in $readme increased:\n$(sed 's/^/    /' <<<"$lines")\n" ||
 		echo -e "--- Old version $curr not found in $readme\n"
 	! build=$(cargo rel 2>&1) &&
 		echo -e "$build\n### Skip: Cargo release build failed: $pkg\n" &&
@@ -111,6 +111,8 @@ do
 	## Fails if targets of symlinks have space(s)!
 	for f in $(command ls -l |grep ^l |sed 's/.* -> //')
 	do
+		grep -q " ELF " <<<$(file "$f") ||
+			continue
 		b=$HOME/bin/${f##*/}
 		cp "$f" "$b"
 		upx --best --lzma "$b"
@@ -134,7 +136,7 @@ do
 	echo "--- Release $new created"
 
 	# Publish on crates.io
-	cargo pub --allow-dirty
+	cargo pub --allow-dirty || continue  # Continue on failed crates.io upload
 	echo -e "=== Release published to crates.io: $pkg\n"
 	success+="$pkg "
 	unset failed[$pkg]
