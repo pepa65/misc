@@ -92,7 +92,7 @@ do
 	git tag v$new -m $new
 	git push origin --all
 	goreleaser --clean
-	echo "=== Update successful: $pkg"
+	echo -e "=== Update successful: $pkg\n"
 	unset failed[$pkg]
 done
 
@@ -101,4 +101,5 @@ done
 	echo "=== No updates found at all"
 
 [[ $failed ]] &&
-	echo "### Update failed: ${failed[@]}"
+	echo "### Update failed: ${failed[@]}" ||
+	echo "=== All updates successful"
