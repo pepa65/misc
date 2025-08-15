@@ -102,4 +102,4 @@ done
 
 [[ $failed ]] &&
 	echo "### Update failed: ${failed[@]}" ||
-	echo "=== All updates successful"
+	echo "=== No updates failed"
