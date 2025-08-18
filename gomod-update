@@ -41,7 +41,7 @@ done
 
 packages=$(grep -o '[^ ]*' <<<${!pkgs[@]} |sort |tr $'\n' ' ')
 packages=${packages%?}
-echo -e "--- Suitable packages:\n    $packages"
+echo -e "--- Suitable packages:\n    $packages\n"
 ((help)) &&
 	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] [-a|--all | <pkg>...]" &&
 	exit
