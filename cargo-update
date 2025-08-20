@@ -62,6 +62,7 @@ do
 
 	# Check updates
 	cd "$git$pkg"
+	echo "--- Start checking $pkg"
 	update=$(cargo update --verbose -n 2>&1)
 	locking=$(grep -o 'Locking .*' <<<"$update")
 	[[ ${locking:8:1} = 0 ]] &&
@@ -137,6 +138,8 @@ do
 
 	# Publish on crates.io
 	cargo pub --allow-dirty || continue  # Continue on failed crates.io upload
+	rm -rf "$git$pkg/target" &&
+		echo "--- Target cache $git/$pkg/target deleted!"
 	echo -e "=== Release published to crates.io: $pkg\n"
 	success+="$pkg "
 	unset failed[$pkg]

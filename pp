@@ -141,7 +141,7 @@ clipvid(){
 	[[ $6 ]] && out=$6
 	b=${b:0:1}:${b:1:2}:${b:3:2}${b:5} e=${e:0:1}:${e:1:2}:${e:3:2}${e:5}
 	i=$(bc -l <<<"$(date -d $e +%s).$ed-$(date -d $b +%s).$bd-$4")
-	tmp=$(mktemp).mp4
+	tmp=$(mktemp --suffix=.mp4)
 	ffmpeg -hide_banner -i "$1" -ss "$b" -to "$e" -async 1 $tmp
 	echo "ffmpeg -hide_banner -i '$1' -ss '$b' -to '$e' -async 1 $tmp"
 	[[ ! $3 = 0 || ! $4 = 0 ]] &&
