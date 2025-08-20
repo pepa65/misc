@@ -96,10 +96,13 @@ do
 	unset failed[$pkg]
 done
 
-[[ $updates ]] &&
-	echo "=== Updates found: $updates" ||
-	echo "=== No updates found at all"
-
+if [[ $updates ]]
+then
+	echo "=== Updates found: $updates"
 [[ $failed ]] &&
 	echo "### Update failed: ${failed[@]}" ||
 	echo "=== No updates failed"
+else
+	echo "=== No updates found at all"
+fi
+
