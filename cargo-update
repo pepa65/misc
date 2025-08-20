@@ -62,7 +62,7 @@ do
 
 	# Check updates
 	cd "$git$pkg"
-	echo "--- Start checking $pkg"
+	echo "--- Start checking package: $pkg"
 	update=$(cargo update --verbose -n 2>&1)
 	locking=$(grep -o 'Locking .*' <<<"$update")
 	[[ ${locking:8:1} = 0 ]] &&
@@ -148,9 +148,10 @@ done
 [[ $updates ]] &&
 	echo "=== Updates found: $updates" ||
 	echo "=== No updates found at all"
-[[ -z $success ]] &&
-	success=NONE
-((!norun)) &&
-	echo "=== Updated okay:  $success" &&
+if ((!norun))
+then
+	[[ $success ]] &&
+		echo "=== Updated okay:  $success"
 	[[ $failed ]] &&
-	echo "### Update failed: ${!failed[@]}"
+		echo "### Update failed: ${!failed[@]}"
+fi
