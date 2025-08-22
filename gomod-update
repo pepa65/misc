@@ -58,11 +58,11 @@ do
 		continue
 
 	# Check update
+	echo "--- Check for module updates: $pkg"
 	cd "$git$pkg"
 	rm "$mod"
 	update=$(go mod init "github.com/pepa65/$pkg" 2>&1 |head -1)
 	go mod tidy
-#echo "$update"
 	# If go.sum same, checkout go.mod and bail
 	[[ -z $(git diff -- $sum) ]] &&
 		git checkout $mod 2>/dev/null &&

@@ -240,7 +240,7 @@ fi
 
 # Making new entries for each kernel binary
 shopt -s nullglob extglob
-n=0 kernels=$(printf '%s\n' /boot/vmlinuz-* |sort -r)
+n=0 kernels=$(printf '%s\n' /boot/vmlinuz-* |sort -Vr)
 for kernel in $kernels
 do
 	((++n>maxkernels)) && break
