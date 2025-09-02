@@ -1,0 +1,51 @@
+syntax "VLANGSHELL" "\.vsh$"
+
+# BEGIN variables
+# Starting caps then mixed case green
+color red             "\<(_*[0-9]*[A-Z]+[A-Z0-9_]*[a-z]+[A-Za-z0-9_]*)\>"
+
+# ALL_CAPS variables red
+color green               "\<([a-z0-9_]+)\>"
+# END
+
+# BEGIN fn | struct | union | enum names
+color blue              "^\s*[A-Za-z0-9_]+\s*::(\s*inline)?\s*proc"
+color green             "^\s*[A-Za-z0-9_]+\s*::\s*(struct|enum|union)"
+# END
+
+# BEGIN members + functions
+color blue              "\.[A-Za-z0-9_]+|[A-Za-z0-9_]+\("
+color white             "\.|\("
+# END
+
+# BEGIN symbols
+color red               "[:;]{1}"
+color brightred         ":{2}|[-+/*<>!~%&|^=$]|:="
+color yellow            "\[|\]|(->)"
+color cyan              "@"
+# END
+
+# BEGIN values
+color red               "\<(0x[0-9]+|0o[0-9]+|[0-9]+)\>"
+# END
+
+# BEGIN compiler keywords
+color brightblue        "\<(size_of|type_of|typeid_of|align_of|alloc|realloc|clone|new|new_clone|make|clamp|append|free|free_all|delete|delete_key|delete_all|delete_string|len|cap|#(assert|align|packed|raw_union)|offset_of|min|max|abs|type_info_of|swizzle|complex|quaternion|real|imag|jmag|kmag|conj|expand_to_tuple|cast|transmute)\>"
+color brightgreen       "\<(u?int|(i|u)(8|16|32|64|128)|f(16|32|64)|complex(32|64|128)|(i|u)(16|32|64|128)(le|be))\>"
+color brightgreen       "\<(uintptr|rawptr|any|string|rune|nil|false|true|byte|bool|b(8|16|32|64))\>"
+color brightgreen       "\<(quaternion(128|256)|context|map|typeid|cstring)\>"
+color brightcyan        "\<(package|import|foreign|inline|enum|struct|union|proc|in|when)\>"
+color brightcyan        "\<(using|where|for|if|else|case|switch|dynamic|distinct|do)\>"
+color brightcyan        "#(assert|(no_)?bounds_check|align|packed|raw_union|no_nil|procedure)"
+color brightyellow      "\<(break|fallthrough|continue|defer|return)\>"
+# END
+
+# BEGIN strings
+color yellow            ""(\\.|[^"])*"|'(\\.|[^'])*'"
+# END
+
+# BEGIN comments
+color brightblue        "//.*$"
+color brightblue        start="/\*" end="\*/"
+color brightwhite,red   "TODO:?"
+# END

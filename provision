@@ -53,6 +53,7 @@ set -xv
 dpkg-reconfigure tzdata
 apt update
 apt-get purge -y snapd
+apt-mark hold snapd
 apt-get install -y nano dfc iftop iotop colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
 apt-get full-upgrade -y
 apt-get autoremove -y
