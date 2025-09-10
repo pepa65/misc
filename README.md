@@ -694,6 +694,12 @@ options:
 Find the right 'coords' by trial-and-error or use a GUI: pdfsig from github.com/pepa65/misc
 ```
 
+## song2pdf
+**Convert song to pdf**
+
+## song2png
+**Convert song to png**
+
 ## spc2tab
 **Convert leading spaces into tabs**
 
