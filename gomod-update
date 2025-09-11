@@ -87,7 +87,7 @@ do
 	  echo -e "--- Version update in $readme unsuccesful: $pkg\n"
 		#continue
 
-	go install
+	CGO_ENABLED=0 go install -ldflags="-s -w"
 	git commit -a -m "Modules update"
 	git tag v$new -m $new
 	git push origin --all
