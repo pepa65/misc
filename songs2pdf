@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# songs2pdf - Convert song to pdf
+# song format:
+# - A line starting with '!' is ignored
+# - A line starting with '+' is bolded
+# - Every empty line yields a paragraph
+# - Every line with '-' gives a page break
+# Usage:  songs2pdf <songfile>
+#  Output will be the .txt extension replaced (if present) or appended by .pdf
+# Required: typst coreutils(mktemp cat ls)
+
+song=$1
+[[ ! -f $song ]] &&
+	echo "Abort: Input file '$song' not found" &&
+	exit 1
+
+ty=$(mktemp --suffix=.ty) pdf=${song%.txt}.pdf
+
+cat <<-EOH >"$ty"
+	#set page(width:1368pt, height:768pt, margin:4mm, fill: black)
+	#set align(center)
+	#set align(horizon)
+	#set text(font:"Garuda", size:40pt, fill: white)
+EOH
+while read line
+do # Process line
+	[[ ${line:0:1} = ! ]] && # Comment
+		continue
+
+	[[ ${line:0:1} = + ]] && # Title
+		echo "#text(size: 1.2em)[*${line:1}*]\\" >>"$ty" &&
+		continue
+
+	[[ -z $line ]] && # Empty line
+		echo >>"$ty" &&
+		continue
+
+	[[ $line = - ]] &&
+		echo '#pagebreak()' >>"$ty" && # Page break
+		continue
+
+	echo "$line\\" >>"$ty"
+done <"$song"
+
+typst c "$ty" "$pdf"
+ls -l "$pdf"

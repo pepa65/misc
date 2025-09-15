@@ -41,6 +41,6 @@ do # Process line
 		echo "$line<br>" >>"$htm"
 done <"$song"
 
-chromium --headless=new --window-size=512,4096 --disable-gpu --enable-chrome-browser-cloud-management --force-device-scale-factor=1 --screenshot="$png" "$htm"
+chromium --headless=new --window-size=512,4096 --disable-gpu --enable-chrome-browser-cloud-management --force-device-scale-factor=2 --screenshot="$png" "$htm"
 rm "$htm"
 mogrify -depth 3 -trim +repage -bordercolor white -border 24 -define png:color-type=3 "$png"
