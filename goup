@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -e  # Exit on error
+# goup - Update golang
+# Required: wget go[in /usr/local] coreutils(mktemp cd mv) tar sudo
+
+cur=$(go tool dist version)
+new=$(wget -qO- golang.org/VERSION?m=text |head -1)
+[[ $cur = $new ]] &&
+	echo "--- Installed $cur is latest" &&
+	exit 0
+
+echo "--- Installed now: $cur,  latest: $new"
+tmp=$(mktemp -d)
+cd $tmp
+file=$new.linux-amd64.tar.gz
+echo "--- Downloading go.dev/dl/$file..."
+wget -q go.dev/dl/$file
+tar xf $file
+sudo chown root:root -R go
+sudo mv /usr/local/go /usr/local/go_$cur
+sudo mv go /usr/local/
+rm -rf -- $tmp
+echo "=== Upgraded from $cur to $new"

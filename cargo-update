@@ -4,12 +4,12 @@ set +vx -e  # Stop on any error
 #  Searching $git for all git repos that are pushing to "$user" on "$host",
 #  with "$author" matching the 'authors' field in `Cargo.toml`.
 # Required: find grep sed git cargo coreutils(cd head ls)
-# Usage:  cargo-update [-h|--help] | [-n|--norun] -a|--all | <pkg>...
+# Usage:  cargo-update [-h|--help] | [-n|--norun] [-i|--ignoreupdates] -a|--all | <pkg>...
 
 git=$HOME/git/ host=github.com user=pepa65 author=pepa65 toml=Cargo.toml readme=README.md
 
 # Check flags
-all=0 help=0 norun=0 args=
+help=0 all=0 ignoreupdates=0 norun=0 args=
 (($#==0)) &&
 	help=1
 for a in $@
@@ -17,6 +17,7 @@ do
 	case $a in
 	-h|--help) help=1 ;;
 	-a|--all) all=1 ;;
+	-i|--ignoreupdates) ignoreupdates=1 ;;
 	-n|--norun) norun=1 ;;
 	*) args+="$a "
 	esac
@@ -60,20 +61,23 @@ do
     echo -e "### Given package not suitable: $pkg\n" &&
     continue
 
-	# Check updates
-	cd "$git$pkg"
-	echo "--- Start checking package: $pkg"
-	update=$(cargo update --verbose -n 2>&1)
-	locking=$(grep -o 'Locking .*' <<<"$update")
-	[[ ${locking:8:1} = 0 ]] &&
-		echo -e "=== No updates in dependencies: $pkg\n" &&
-		continue
+	if ((!ignoreupdates))
+	then
+		# Check updates
+		cd "$git$pkg"
+		echo "--- Start checking package: $pkg"
+		update=$(cargo update --verbose -n 2>&1)
+		locking=$(grep -o 'Locking .*' <<<"$update")
+		[[ ${locking:8:1} = 0 ]] &&
+			echo -e "=== No updates in dependencies: $pkg\n" &&
+			continue
 
-	updates+="$pkg " failed[$pkg]=1
-	echo -e "$(grep 'v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' <<<"$update")\n=== Updates found: $pkg"
-	((norun)) &&
-		echo &&
-		continue
+		updates+="$pkg " failed[$pkg]=1
+		echo -e "$(grep 'v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' <<<"$update")\n=== Updates found: $pkg"
+		((norun)) &&
+			echo &&
+			continue
+	fi
 
 	# Check git status
 	status=$(git status)
@@ -89,7 +93,8 @@ do
 		continue
 
 	# Patch
-	echo "--- Cargo update done"
+	((ignoreupdates)) ||
+		echo "--- Cargo update done"
 	curr=${pkgs[$pkg]} patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1
 	! sed -i "s/^version = \"$curr\"$/version = \"$new\"/" $toml &&
 		echo "### Skip: version update in $toml unsuccesful: $pkg\n" &&
