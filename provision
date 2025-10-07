@@ -14,7 +14,7 @@ set -e  # Exit on any error
 # * Get github.com/pepa65/misc
 # * Get config files set up
 
-prov=$0 remoteorid=$1 mainid=$(</etc/machine-id)
+prov=$0 remote=$1 mainid=$(</etc/machine-id)
 
 Inf(){	# 1:msg
 	echo "--- $1"
@@ -25,15 +25,15 @@ Err(){ # 1:msg 2:ret
 }
 
 # Exit if no argument
-[[ -z $remoteorid ]] &&
+[[ -z $remote ]] &&
 	Err "Need HOST (from ~/.ssh/config)" 1
 
 # Priming remote
-if [[ $remoteorid && ! ${remoteorid:0:1} = . ]]
+if [[ $remote && ! ${remote:0:1} = . ]]
 then # On main, remote given (not an id)
 	Inf "Setting up authorized_keys on $remote"
 	ssh-copy-id -i ~/.ssh/id_ed25519.pub "$remote"
-	Inf "Copying '$prov' from $myid to $remote..."
+	Inf "Copying '$prov' from $mainid to $remote..."
 	scp "$prov" "$1":
 	provname=${prov##*/}
 	Inf "Executing '$provname' on $remote..."
@@ -42,7 +42,7 @@ then # On main, remote given (not an id)
 fi
 
 # Check if on remote
-me=$(whoami) id=$(</etc/machine-id) fromid=${remoteorid:1} sudo=
+me=$(whoami) id=$(</etc/machine-id) fromid=${remote:1} sudo=
 [[ $fromid = $id ]] &&
 	Err "Not on remote (same machine id), exiting" 2
 
@@ -54,10 +54,7 @@ dpkg-reconfigure tzdata
 apt update
 apt-get purge -y snapd
 apt-mark hold snapd
-apt-get install -y nano dfc iftop iotop colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
-apt-get full-upgrade -y
-apt-get autoremove -y
-apt-get clean -y
+apt-get install -y nano dfc iftop iotop colordiff dwdiff dcfldd caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
 id pp ||
 	adduser pp
 id PeterPasschier1965 ||
@@ -86,14 +83,23 @@ wget 4e4.in/l
 chmod +x c l
 mv c l /usr/local/bin/
 chown root:root /usr/local/bin/*
+apt-get full-upgrade -y
+apt-get autoremove -y
+apt-get clean -y
 
 # Setup tmux
-echo -e "\n#PP\nalias s='su -l pp -c \"tmux new-session -A -t pp\"'\n" |tee -a /home/PeterPasschier1965/.bashrc
+echo -e "\n#PP\nalias s='su -l pp -c \"tmux new-session -A -t pp\"'\nalias e=nano\n" |
+	tee -a /home/PeterPasschier1965/.bashrc
 
 # Setup sshd
 for a in X11Forwarding PrintMotd AllowUsers Port
 do sed -i "s/^$a/#$a/" /etc/ssh/sshd_config
 done
 echo -e "\nPort 5691\nAllowUsers PeterPasschier1965\nX11Forwarding no\nPrintMotd no\n" |tee -a /etc/ssh/sshd_config
+# Get ssh-key authorized
+sudo -u PeterPasschier1965 ssh-keygen -q -t ed25519 -P '' -f /home/PeterPasschier1965/.ssh/id_ed25519
+cp /root/.ssh/authorized_keys /home/PeterPasschier1965/.ssh/
+chown PeterPasschier1965:PeterPasschier1965 /home/PeterPasschier1965/.ssh/authorized_keys
+sudo adduser pp sudo
 systemctl daemon-reload
 systemctl restart ssh

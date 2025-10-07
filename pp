@@ -31,7 +31,7 @@ alias getytdl='sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/dow
 
 # Best adjust them in the terminal used
 #eval $(dircolors |sed 's/:di=01;34:/:di=01;33:/; s/:ow=34;42:/:ow=34;40:/')
-
+stty -ixon  # Disallow Ctrl-S
 shopt -s interactive_comments
 shopt -s dotglob extglob
 set +H  # no more history expansion, use ! safely in strings

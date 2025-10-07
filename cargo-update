@@ -142,7 +142,9 @@ do
 	echo "--- Release $new created"
 
 	# Publish on crates.io
-	cargo pub --allow-dirty || continue  # Continue on failed crates.io upload
+	! cargo pub --allow-dirty &&
+		echo -e "### Cannot publish on crates.io\n" &&
+		continue  # Continue on failed crates.io upload
 	rm -rf "$git$pkg/target" &&
 		echo "--- Target cache $git/$pkg/target deleted!"
 	echo -e "=== Release published to crates.io: $pkg\n"
