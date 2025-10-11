@@ -15,6 +15,7 @@ help=0 all=0 ignoreupdates=0 norun=0 args=
 for a in $@
 do
 	case $a in
+	-an|-na) norun=1 all=1 ;;
 	-h|--help) help=1 ;;
 	-a|--all) all=1 ;;
 	-i|--ignoreupdates) ignoreupdates=1 ;;
@@ -74,10 +75,10 @@ do
 
 		updates+="$pkg " failed[$pkg]=1
 		echo -e "$(grep 'v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' <<<"$update")\n=== Updates found: $pkg"
-		((norun)) &&
-			echo &&
-			continue
 	fi
+	# Bail out if norun
+	((norun)) &&
+		continue
 
 	# Check git status
 	status=$(git status)

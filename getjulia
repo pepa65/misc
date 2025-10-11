@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+set -evx
 # getjulia - Installing Julia from the linux-x64 binaries
 # Usage: getjulia [ <version> | -u|--uninstall | -p|--purge ]
 #   version:         <versionstring> [when left out: latest]
@@ -10,19 +10,28 @@
 # - USR (optional, default: /usr/local): install location
 # Required: wget tar coreutils(mktemp rm mv fold)
 
-[[ $- = *i* ]] && echo "Run like: sudo bash ${1##*/}" && return 1
+[[ $- = *i* ]] &&
+	echo "### Run like: sudo bash ${1##*/}" &&
+	return 1
 
 url='https://julialang-s3.julialang.org'
 archurl="$url/bin/linux/x64" tarurl='-linux-x86_64.tar.gz'
 
 usr=${USR:-/usr/local} #ics=share/icons/hicolor/scalable/apps
 uninstall=0 purge=0
-[[ $1 = -u || $1 = --uninstall || $1 = uninstall ]] && uninstall=1
-[[ $1 = -p || $1 = --purge || $1 = purge ]] && purge=1 uninstall=1
+[[ $1 = -u || $1 = --uninstall || $1 = uninstall ]] &&
+	uninstall=1 &&
+	shift
+[[ $1 = -p || $1 = --purge || $1 = purge ]] &&
+	purge=1 uninstall=1 &&
+	shift
+[[ -z ${1//[0-9.]} ]] &&
+	version=$1
 
 if ((uninstall))
 then
-	((EUID)) && echo "Privileges needed!"
+	((EUID)) &&
+		echo "--- Privileges needed!"
 	sudo rm -fv -- "$usr"/bin/julia
 	sudo rm -rfv -- "$usr"/include/julia
 	sudo rm -rfv -- "$usr"/lib/julia
@@ -32,17 +41,22 @@ then
 	sudo rm -fv -- "$usr"/"$ics"/julia.svg
 	sudo rm -rfv -- "$usr"/share/julia
 	sudo rm -fv -- "$usr"/share/man/man1/julia.1
-	((purge)) && sudo rm -rfv -- /home/*/.julia /home/*/.juliarc.jl /etc/julia /root/.julia /root/.juliarc.jl
+	((purge)) &&
+		sudo rm -rfv -- /home/*/.julia /home/*/.juliarc.jl /etc/julia /root/.julia /root/.juliarc.jl
 else
 	xml=$(wget -O- "$url") versions=()
 	for v in $(grep -o [^/]*sha256 <<<"$xml")
 	#do versions+=(${v:6: -7})
 	do [[ ${v:6: -7} = *beta* || ${v:6: -7} = *alpha* || ${v:6: -7} = *rc* ]] || versions+=(${v:6: -7})
 	done
-	echo "Available Julia versions: ${versions[@]}" |fold -s
-	version=${versions[-1]}
-	echo "Installing Julia v$version"
-	binary="$archurl/${version:0:3}/julia-$version$tarurl"
+	vs=" ${versions[@]} "
+	echo "--- Available Julia versions:$vs" |fold -s
+	: ${version:=${versions[-1]}}
+	[[ ! $vs = *' '$version' '* ]] &&
+		echo "### version $version is not available" &&
+		exit 1
+	echo "--- Installing Julia v$version"
+	binary="$archurl/${version%.*}/julia-$version$tarurl"
 	tar=${binary##*/} tmp=$(mktemp --tmpdir="$TMP" -d getjulia-XXXXXX)
 	trap "sudo rm -rf -- '$tmp'" QUIT EXIT INT
 	wget -qP "$tmp" "$binary" -O- |tar xzC "$tmp"
@@ -54,30 +68,30 @@ else
 	sudo mkdir -p -- "$usr"/share/man/man1
 	sudo chown -R root:root -- "$d"
 	sudo mv -f "$d"/bin/julia "$usr"/bin/ &&
-		echo "INSTALLED: $usr/bin/julia"
+		echo "=== INSTALLED: $usr/bin/julia"
 	sudo mv -n "$d"/etc/julia/startup.jl /etc/julia/ &&
-		echo "INSTALLED: /etc/julia/startup.jl"
+		echo "=== INSTALLED: /etc/julia/startup.jl"
 	sudo rm -rf "$usr"/include/julia
 	sudo mv "$d"/include/julia "$usr"/include/ &&
-		echo "INSTALLED: $usr/include/julia"
+		echo "=== INSTALLED: $usr/include/julia"
 	sudo rm -rf "$usr"/lib/julia
 	sudo mv -f "$d"/lib/* "$usr"/lib/ &&
-		echo "INSTALLED: $usr/include/julia"
+		echo "=== INSTALLED: $usr/include/julia"
 	sudo mv -f "$d"/share/appdata/julia.appdata.xml "$usr"/share/appdata/ &&
-		echo "INSTALLED: $usr/share/appdata/julia.appdata.xml"
+		echo "=== INSTALLED: $usr/share/appdata/julia.appdata.xml"
 	sudo mv -f "$d"/share/applications/julia.desktop "$usr"/share/applications/ &&
-		echo "INSTALLED: $usr/share/applications/julia.desktop"
+		echo "=== INSTALLED: $usr/share/applications/julia.desktop"
 	sudo rm -rf "$usr"/share/doc/julia
 	sudo mv "$d"/share/doc/julia "$usr"/share/doc/ &&
-		echo "INSTALLED: $usr/share/doc/julia"
+		echo "=== INSTALLED: $usr/share/doc/julia"
 	#sudo mv -f "$d"/"$ics"/julia.svg "$usr"/"$ics"/ &&
-	#	echo "INSTALLED: $usr/$ics/julia.svg"
+	#	echo "=== INSTALLED: $usr/$ics/julia.svg"
 	sudo rm -rf "$usr"/share/julia
 	sudo mv "$d"/share/julia "$usr"/share/ &&
-		echo "INSTALLED: $usr/share/julia"
+		echo "=== INSTALLED: $usr/share/julia"
 	sudo mv -f "$d"/share/man/man1/julia.1 "$usr"/share/man/man1/ &&
-		echo "INSTALLED: $usr/share/man/man1/julia.1"
-	echo -n "VERSION: "
+		echo "=== INSTALLED: $usr/share/man/man1/julia.1"
+	echo -n "=== VERSION: "
 	julia -v
 fi
 

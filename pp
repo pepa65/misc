@@ -211,7 +211,7 @@ smv(){ # Shred-move (with srm from secure-delete)
 	for a in "${argv[@]}"; do cp -a "$a" "$dir"; done;
 	command srm -dlv "${argv[@]}";}
 geo(){ # $1:(optional)ip-quadroctet
-	[[ $1 && ! $1 =~ ^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$ ]] &&
+	[[ $1 && ! $1 =~ ^[1-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$ ]] &&
 		echo "commandline argument not a numerical IP address in dot notation" &&
 		return 1
 	wget -qO- ipinfo.io/$1 |grep ':' |sed -e 's/"//g' -e 's/,$//';}
