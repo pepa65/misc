@@ -88,6 +88,8 @@ do
 		#continue
 
 	CGO_ENABLED=0 go install -ldflags="-s -w"
+	cp ~/go/bin/$pkg ~/bin/
+	upx --best --lzma ~/bin/$pkg
 	git commit -a -m "Modules update"
 	git tag v$new -m $new
 	git push origin --all
