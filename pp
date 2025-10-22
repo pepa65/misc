@@ -34,11 +34,21 @@ alias getytdl='sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/dow
 stty -ixon  # Disallow Ctrl-S
 shopt -s interactive_comments
 shopt -s dotglob extglob
+shopt -s histappend
 set +H  # no more history expansion, use ! safely in strings
 
-export PROMPT_COMMAND='hasjobs=$(jobs -p)'
-export PS1='\[\e[1;36m\]${hasjobs:+\j }\[\e[1;32m\]\w \[\e[1;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\e[1;36m\]\$ \[\e[0m\]'
-export WINEPREFIX=~/.wine
+((UID)) && S=@ || S=#
+((UID==1000)) && S='$'
+((UID==1001)) && S=%
+R=$'\e[31m' G=$'\e[32m' Br=$'\e[33m' B=$'\e[34m' P=$'\e[35m' C=$'\e[36m' Lg=$'\e[37m' N=$'\e[0m'
+Dg=$'\e[1;30m' LR=$'\e[1;31m' LG=$'\e[1;32m' Y=$'\e[1;33m' LB=$'\e[1;34m' LP=$'\e[1;35m' LC=$'\e[1;36m' W=$'\e[1;37m'
+#export PROMPT_COMMAND='hasjobs=$(jobs -p)'
+export PROMPT_COMMAND='hasjobs=$(s=$(jobs -s |wc -l) r=$(jobs -r |wc -l); ((s+r)) && printf "$LG$r$N-$LR$s$N ")'
+export PS1='\[$LC\]$hasjobs\[\e[1;$(($? ? 36 : 32))m\]\w\[$Y\]$(ls .git &>/dev/null && printf " " && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[$LP\]$S \[$N\]'
+#export PS1='\[\e[1;36m\]${hasjobs:+\j }\[\e[1;32m\]\w \[\e[1;33m\]$(ls .git &>/dev/null && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[\e[1;36m\]\$ \[\e[0m\]'
+export HISTSIZE=5000  # Default: 2000
+export HISTFILESIZE=-1
+#export WINEPREFIX=~/.wine
 export EDITOR=nano
 #export LESSOPEN="| command c --paging always --plain %s"
 export QUOTING_STYLE=literal
@@ -54,12 +64,11 @@ export LC_COLLATE="en_US.UTF-8"
 export SCT=6500
 export GOROOT=/usr/local/go GOBIN=~/go/bin
 export PYTHONPATH=$(e=(/usr/lib/python*/dist-packages); e=${e[@]}; echo "${e// /:}")
-export MODULAR_HOME="/home/pp/.modular"
+#export MODULAR_HOME="/home/pp/.modular"
 export GIT_EXTERNAL_DIFF=difft
 #export RUSTC_WRAPPER=sccache
-[[ $UID = 1001 ]] &&
-	PS1=${PS1/\\\$/%}
-addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done; export PATH;}
+
+addpath(){ for p; do [[ -e $p && ":$PATH:" != *:"$p":* ]] && PATH+=":$p"; done;}
 ods2csv(){ soffice --invisible --nofirststartwizard --norestore --headless "$1" macro:///ExportAllToCsv.Module.ExportAllToCsvAndExit ;}
 ds(){ [[ $1 ]] && sudo smartctl -t long "$1" && sudo diskscan -f -o ${1%%*/}$RANDOM.diskscan "$1" ||
 	echo "ds needs a valid blockdevice that refers to a harddrive!";}

@@ -4,36 +4,36 @@
 // Adjust the #define variables below before compiling
 //
 // Install for all users:
-//  sudo gcc scrypt2.c -o /usr/local/bin/scrypt2
-//  sudo chmod u+s /usr/local/bin/scrypt2
-//  sudo ln -sf /usr/local/bin/scrypt2 /usr/local/bin/uscrypt2
+//  sudo gcc scrypt2.c -o /usr/local/bin/scrypt
+//  sudo chmod u+s /usr/local/bin/scrypt
+//  sudo ln -sf /usr/local/bin/scrypt /usr/local/bin/uscrypt
 // Add this to /etc/sudoers: "ALL ALL = (root) NOPASSWD: /usr/sbin/vgchange -an"
 //
 // Install instead for local user only:
-//  sudo gcc scrypt2.c -o ~/bin/scrypt2
-//  sudo chmod 4501 ~/bin/scrypt2
-//  ln -sf ~/bin/scrypt2 ~/bin/uscrypt2
+//  sudo gcc scrypt2.c -o ~/bin/scrypt
+//  sudo chmod 4501 ~/bin/scrypt
+//  ln -sf ~/bin/scrypt ~/bin/uscrypt
 // Add this to /etc/sudoers: "ALL ALL = (root) NOPASSWD: /usr/sbin/vgchange -an"
 //
 // Example integrity raid1 vault creation (matching the variables):
 //  truncate -s 1G ~/vault2
 //  # LUKS type 2 with integrity checksums
-//  sudo cryptsetup -I hmac-sha256 luksFormat ~/vault2
-//  sudo cryptsetup luksOpen ~/vault2 vault2
-//  pvcreate /dev/mapper/vault2
-//  vgcreate vault2 /dev/mapper/vault2
-//  lvcreate -n v0 vault2 -l 123  # half of the extents of vg:vault2
-//  lvcreate -n v1 vault2 -l 123  # half of the extents of vg:vault2
-//  sudo mkfs.btrfs --csum xxhash /dev/mapper/vault2-v0
-//  sudo mount /dev/mapper/vault2-v0 /home/pp/Private2
-//  sudo btrfs device add /dev/mapper/vault2-v1 /home/pp/Private2
-//  sudo btrfs balance start -dconvert=raid1 -mconvert=raid1 /home/pp/Private2
+//  sudo cryptsetup -I hmac-sha256 luksFormat ~/vault
+//  sudo cryptsetup luksOpen ~/vault vault
+//  pvcreate /dev/mapper/vault
+//  vgcreate vault /dev/mapper/vault
+//  lvcreate -n v0 vault -l 123  # half of the extents of vg:vault2
+//  lvcreate -n v1 vault -l 123  # half of the extents of vg:vault2
+//  sudo mkfs.btrfs --csum xxhash /dev/mapper/vault-v0
+//  sudo mount /dev/mapper/vault-v0 /home/pp/Private
+//  sudo btrfs device add /dev/mapper/vault-v1 /home/pp/Private
+//  sudo btrfs balance start -dconvert=raid1 -mconvert=raid1 /home/pp/Private
 
 // Configuration parameters, change to fit
-#define LUKSNAME "vault2"
-#define VG_LV "vault2-v0"
-#define MOUNTPOINT "/home/pp/Private2"
-#define VAULTFILE "/home/pp/vault2"
+#define LUKSNAME "vault"
+#define VG_LV "vault"
+#define MOUNTPOINT "/home/pp/Private"
+#define VAULTFILE "/data/MyDocuments/SECURE/vault"
 #define MOUNT_MSG "Mounting %s on %s\n"
 #define UNMOUNT_MSG "Un-mounting %s from %s\n"
 // If the commands starts with UNMOUNTCHAR, it will unmount, otherwise mount

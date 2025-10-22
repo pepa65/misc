@@ -68,6 +68,8 @@ do
 		cd "$git$pkg"
 		echo "--- Start checking package: $pkg"
 		update=$(cargo update --verbose -n 2>&1)
+		unch=$(grep -o ' Unchanged .*' <<<"$update") &&
+			sed 's/^/###/' <<<"$unch"
 		locking=$(grep -o 'Locking .*' <<<"$update")
 		[[ ${locking:8:1} = 0 ]] &&
 			echo -e "=== No updates in dependencies: $pkg\n" &&
@@ -83,7 +85,7 @@ do
 	# Check git status
 	status=$(git status)
 	grep -q 'Untracked files:' <<<"$status" &&
-		echo -e "--- Warning: Ucommitted files, will be ignored:\n$(grep -P '^\t' <<<"$status")"
+		echo -e "### Ucommitted files, will be ignored:\n$(grep -P '^\t' <<<"${status//$'\n'    /$'\n'###}")"
 
 	grep -q 'use "git push"' <<<"$status" &&
 		echo -e "### Skip: Unpushed commits:\n$(grep ' commits\.$' <<<"$status") in: $pkg\n" &&
