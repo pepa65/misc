@@ -306,6 +306,18 @@ Usage:  fonttable [-c] [-s] [-u] [START..END] [-f FONT]
 ## forks
 **Check forks of significance on github**
 
+## genmp3
+**Make language practice mp3 file from list of phrases**
+```
+Usage:  genmp3 LIST [MP3]
+  - LIST is a newline-delimited list of source phrases with in the first line the 2-letter language code
+  - MP3 is the optional name of the outputfile (default: genmp3_$from-$to.mp3)
+  Every entry gets audio output like: "Source [Pause Translation]"
+  with "Pause Translation" $repeat times and Pause of length $pause seconds
+  Env.variables GENMP3_PAUSE, GENMP3_REPEAT and GENMP3_TO can be set for $pause, $repeat and $to
+Required: coreurils(mktemp) ffmpeg wget
+```
+
 ## getborg
 **Get borgbackup for Pi (armv7l) or PC (x86_64)**
 

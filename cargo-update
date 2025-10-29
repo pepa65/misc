@@ -76,7 +76,8 @@ do
 			continue
 
 		updates+="$pkg " failed[$pkg]=1
-		echo -e "$(grep 'v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' <<<"$update")\n=== Updates found: $pkg"
+		grep -v Unchanged <<<"$update" |grep 'v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' |sed 's/^   /---/'
+		echo "=== Updates found: $pkg"
 	fi
 	# Bail out if norun
 	((norun)) &&
@@ -85,7 +86,7 @@ do
 	# Check git status
 	status=$(git status)
 	grep -q 'Untracked files:' <<<"$status" &&
-		echo -e "### Ucommitted files, will be ignored:\n$(grep -P '^\t' <<<"${status//$'\n'    /$'\n'###}")"
+		echo -e "### Uncommitted files, will be ignored:\n$(grep -P '^\t' <<<"${status//$'\n'    /$'\n'###}")"
 
 	grep -q 'use "git push"' <<<"$status" &&
 		echo -e "### Skip: Unpushed commits:\n$(grep ' commits\.$' <<<"$status") in: $pkg\n" &&
@@ -165,3 +166,5 @@ then
 	[[ $failed ]] &&
 		echo "### Update failed: ${!failed[@]}"
 fi
+
+exit 0

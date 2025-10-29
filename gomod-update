@@ -2,18 +2,19 @@
 set +x -e  # Stop on any error
 # gomod-update - Update modules in Go projects
 # Required: find grep sed go git goreleaser coreutils(cd rm head)
-# Usage:  gomod-update [-h|--help] | [-n|--norun] -a|--all | <pkg>...
+# Usage:  gomod-update [-h|--help] | [-n|--norun] [-i|--ignore-update] | -a|--all | <pkg>...
 
 git=$HOME/git/ readme=README.md mod=go.mod sum=go.sum main=main.go
 
 # Check flags
-all=0 help=0 norun=0 args=
+all=0 help=0 norun=0 ignore=0 args=
 (($#==0)) &&
 	help=1
 for a in $@
 do
 	case $a in
 	-h|--help) help=1 ;;
+	-i|--ignore-update) ignore=1 ;;
 	-a|--all) all=1 ;;
 	-n|--norun) norun=1 ;;
 	*) args+="$a "
@@ -43,7 +44,7 @@ packages=$(grep -o '[^ ]*' <<<${!pkgs[@]} |sort |tr $'\n' ' ')
 packages=${packages%?}
 echo -e "--- Suitable packages:\n    $packages\n"
 ((help)) &&
-	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] [-a|--all | <pkg>...]" &&
+	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] [-i|--ignore-update] -a|--all | <pkg>..." &&
 	exit
 
 ((all)) &&
@@ -64,17 +65,28 @@ do
 	update=$(go mod init "github.com/pepa65/$pkg" 2>&1 |head -1)
 	go mod tidy
 	# If go.sum same, checkout go.mod and bail
-	[[ -z $(git diff -- $sum) ]] &&
-		git checkout $mod 2>/dev/null &&
-		echo -e "=== No module updates: $pkg\n" &&
-		continue
+	if [[ -z $(git diff -- $sum) ]]
+	then
+		git checkout $mod 2>/dev/null
+		((!ignore)) &&
+			echo -e "=== No module updates: $pkg\n" &&
+			continue ||
+			echo "--- Ignoring module updates"
+	fi
 
-	updates+="$pkg "
-	failed[$pkg]=1
-	echo -e "=== Updates found: $pkg\n$(head -1 <<<"$update")"
-  ((norun)) &&
-    echo &&
+	((ignore && norun)) &&
+   	echo &&
     continue
+
+	if ((!ignore))
+	then
+		updates+="$pkg "
+		failed[$pkg]=1
+		echo -e "=== Updates found: $pkg\n$(head -1 <<<"$update")"
+  	((norun)) &&
+    	echo &&
+	    continue
+	fi
 
 	curr=${pkgs[$pkg]}
 	patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1

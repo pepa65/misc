@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set +xv
+# genmp3 - Make language practice mp3 file from list of phrases
+# Usage:  genmp3 LIST [MP3]
+#   - LIST is a newline-delimited list of source phrases with in the first line the 2-letter language code
+#   - MP3 is the optional name of the outputfile (default: genmp3_$from-$to.mp3)
+#   Every entry gets audio output like: "Source [Pause Translation]"
+#   with "Pause Translation" $repeat times and Pause of length $pause seconds
+#   Env.variables GENMP3_PAUSE, GENMP3_REPEAT and GENMP3_TO can be set for $pause, $repeat and $to
+# Required: coreurils(mktemp) ffmpeg wget
+
+def_pause=2 def_repeat=2 def_from=en def_to=th def_out=genmp3_$def_from-$def_to
+
+pause=${GENMP3_PAUSE:-$def_pause} repeat=${GENMP3_REPEAT:-$def_repeat} to=${GENMP3_TO:-$def_to}
+
+dir=$(mktemp -d) pwd=$PWD in=$1 counter=0 concat=
+[[ ! -f $in ]] &&
+	echo "### Inputfile '$in' not found" &&
+	exit 1
+
+read from <"$in"
+((!${#from}==2)) &&
+	echo "### First line of inputfile must have 2-letter language code" &&
+	exit 2
+
+[[ ! /~ = *${in:0:1}* ]] &&
+	in=$pwd/$in
+out=${2:-genmp3_$from-$to.mp3}
+cd $dir
+ffmpeg -hide_banner -loglevel error -f lavfi -i anullsrc=channel_layout=mono:sample_rate=24576 -t $pause -c:a libmp3lame -async 1 -b:a 64k -ar 24000 -write_xing 0 -id3v2_version 0 -y pause.mp3
+
+Genconcat(){ # 1:English I:pause,repeat,pwd,counter
+	local thai=$(wget -qO- "https://translate.google.com/translate_a/t?client=genmp3&sl=$from&tl=$to&tbb=1&ie=UTF-8&oe=UTF-8&q=$1")
+	local i=$repeat
+	wget -qU Mozilla "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=$from&q=$1" -O $from$counter.mp3
+	wget -qU Mozilla "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=$to&q=$thai" -O $to$counter.mp3
+	# The output of Google's translate_tts is Mono 24kHz mp3 with no tags
+	concat+="|$from$counter.mp3"
+	while ((i--))
+	do concat+="|pause.mp3|$to$counter.mp3"
+	done
+}
+
+while read line
+do
+	((!counter++)) &&  # Ignore first line
+		continue
+	Genconcat "$line"
+done <"$in"
+((!counter)) &&
+	echo "### No input phrases found" &&
+	exit 3
+
+concat="concat:${concat:1}"
+ffmpeg -hide_banner -loglevel error -i "$concat" -c copy -id3v2_version 0 -y "$pwd/$out"
+echo "=== Audio written to: $out"
+rm -r "$dir"
+
+exit 0
