@@ -706,11 +706,26 @@ options:
 Find the right 'coords' by trial-and-error or use a GUI: pdfsig from github.com/pepa65/misc
 ```
 
-## song2pdf
-**Convert song to pdf**
-
 ## song2png
 **Convert song to png**
++ song format:
+  - First line is the title (will be bolded)
+  - Every empty line yields a paragraph
+  - Every '['...']' clause will be italicized and grayed
+  - Skip lineas starting with a '!'
+* Usage:  'song2png <songfile>'
+  - Output will be the .txt extension replaced (if present) or appended by .png
+
+## songs2pdf
+**Convert songs to pdf**
+* song format:
+  - A line starting with '!' is ignored
+  - A line starting with '+' is bolded
+  - Every empty line yields a paragraph
+  - Every line with '-' gives a page break
+  - '['...']' gets italicized and grayed
+* Usage:  `songs2pdf <songsfile>`
+  - Output will be the .txt extension replaced (if present) or appended by .pdf
 
 ## spc2tab
 **Convert leading spaces into tabs**

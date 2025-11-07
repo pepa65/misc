@@ -3,6 +3,8 @@
 # song format:
 # - First line is the title (will be bolded)
 # - Every empty line yields a paragraph
+# - Every '['...']' clause will be italicized and grayed
+# - Skip lineas starting with a '!'
 # Usage:  song2png <songfile>
 #  Output will be the .txt extension replaced (if present) or appended by .png
 # Required: chromium imagemagick(mogrify) coreutils(mktemp cat ls)
@@ -19,9 +21,9 @@ Starthtml() { # I:title,htm
 		<!DOCTYPE html>
 		<title>$title</title>
 		<style>
-		body{font-family:"Garuda",serif; font-size:16pt; font-kerning:normal;}
-		i{font-size:90%; font-style:normal; color:#888;}
-		@page{size:299mm 999mm; margin:.4in;}
+		body{font-family:"Garuda",serif; font-size:16pt; font-kerning:normal; line-height:20pt;}
+		i{font-size:80%; font-style:italic; color:#aaa;}
+		@page{size:399mm 1999mm; margin:.4in;}
 		</style>
 		<p><b>$title</b>
 	EOH
@@ -31,16 +33,22 @@ Starthtml() { # I:title,htm
 title=
 while read line
 do # Process line
+	[[ ${line:0:1} = ! ]] &&
+		continue
+
 	[[ -z $title ]] &&
 		title=$line &&
 		Starthtml &&
 		continue
 
 	[[ -z $line ]] &&
-		echo -n "<p>" >>"$htm" ||
-		echo "$line<br>" >>"$htm"
+		echo -n "<p>" >>"$htm" &&
+		continue
+
+	line=${line//[/<i>[} line=${line//]/]</i>}
+	echo "$line<br>" >>"$htm"
 done <"$song"
 
-chromium --headless=new --window-size=512,4096 --disable-gpu --enable-chrome-browser-cloud-management --force-device-scale-factor=2 --screenshot="$png" "$htm"
+chromium --headless=new --window-size=1024,4096 --disable-gpu --enable-chrome-browser-cloud-management --force-device-scale-factor=2 --screenshot="$png" "$htm"
 rm "$htm"
 mogrify -depth 3 -trim +repage -bordercolor white -border 24 -define png:color-type=3 "$png"

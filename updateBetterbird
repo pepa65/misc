@@ -18,31 +18,31 @@ desktopfile=/usr/local/share/applications/betterbird.desktop
 current=
 [[ -f $installpath/betterbird/application.ini ]] && # Installed
 	current=$(grep '^Version=' "$installpath/betterbird/application.ini") &&
-	echo "Current: ${current##*=}"
+	echo "--- Current: ${current##*=}"
 
 # Downloading the  release, getting the version and check if installed already
 tmpdir=$(mktemp -d) tmp=$tmpdir/bb.tar.bzip2
 trap "rm -rf $tmpdir" EXIT # ERR
-echo "Downloading release version..."
+echo "--- Downloading release version..."
 wget -qO $tmp "https://www.betterbird.eu/downloads/get.php?os=linux&lang=$lang&version=$version"
 _=$(sha256sum $tmp) hash=${_%% *}
 tar xf $tmp -C $tmpdir
 _=$(grep '^Version=' $tmpdir/betterbird/application.ini) v=${_##*=} s=${v:0:3}
-echo "Downloaded version $v"
+echo "--- Downloaded version $v"
 [[ -d $installpath/betterbird-$v ]] &&
-	echo "Aborting: Version $v already installed in '$installpath'" &&
+	echo "### Version $v already installed in '$installpath'" &&
 	exit 2
 
 # Checksum
 shafile=$tmpdir/sha256.txt
 wget -qO $shafile "www.betterbird.eu/downloads/sha256-$s.txt"
 ! grep -q $hash $shafile && # no hash match
-	echo "Aborting: Hash '$hash' not in '$shafile'" &&
+	echo "### Hash '$hash' not in '$shafile'" &&
 	exit 3
 
 # Abort if still running
 (($(pgrep -c betterbird-bin))) &&
-	echo "Aborting: Betterbird is running, please close it first" &&
+	echo "### Betterbird is running, please close it first" &&
 	exit 1
 
 # Install
@@ -250,7 +250,7 @@ sudo cp $tmpdir/desktop "$desktopfile"
 xdg-desktop-menu forceupdate
 
 # Finished
-echo "Betterbird-$v successfully installed. Now running:"
-echo "$installpath/betterbird/betterbird --ProfileManager"
+echo "=== Betterbird-$v successfully installed. Now running:"
+echo "    $installpath/betterbird/betterbird --ProfileManager"
 #echo "(Default seems to be good, default-default bad...)"
 $installpath/betterbird/betterbird --ProfileManager &

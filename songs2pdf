@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# songs2pdf - Convert song to pdf
+# songs2pdf - Convert songs to pdf
 # song format:
 # - A line starting with '!' is ignored
 # - A line starting with '+' is bolded
 # - Every empty line yields a paragraph
 # - Every line with '-' gives a page break
-# Usage:  songs2pdf <songfile>
-#  Output will be the .txt extension replaced (if present) or appended by .pdf
+# - '['...']' gets italicized and grayed
+# Usage:  songs2pdf <songsfile>
+#   Output will be the .txt extension replaced (if present) or appended by .pdf
 # Required: typst coreutils(mktemp cat ls)
 
 song=$1
@@ -39,7 +40,7 @@ do # Process line
 		echo '#pagebreak()' >>"$ty" && # Page break
 		continue
 
-	echo "$line\\" >>"$ty"
+	echo "$line\\" |sed 's/\[[^]]*]/#text(size: 0.8em)[_\0_]/g' >>"$ty"
 done <"$song"
 
 typst c "$ty" "$pdf"
