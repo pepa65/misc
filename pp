@@ -40,8 +40,8 @@ set +H  # no more history expansion, use ! safely in strings
 ((UID)) && S=@ || S=#
 ((UID==1000)) && S='$'
 ((UID==1001)) && S=%
-R=$'\e[31m' G=$'\e[32m' Br=$'\e[33m' B=$'\e[34m' P=$'\e[35m' C=$'\e[36m' Lg=$'\e[37m' N=$'\e[0m'
-Dg=$'\e[1;30m' LR=$'\e[1;31m' LG=$'\e[1;32m' Y=$'\e[1;33m' LB=$'\e[1;34m' LP=$'\e[1;35m' LC=$'\e[1;36m' W=$'\e[1;37m'
+export R=$'\e[31m' G=$'\e[32m' Br=$'\e[33m' B=$'\e[34m' P=$'\e[35m' C=$'\e[36m' Lg=$'\e[37m' N=$'\e[0m' S
+export Dg=$'\e[1;30m' LR=$'\e[1;31m' LG=$'\e[1;32m' Y=$'\e[1;33m' LB=$'\e[1;34m' LP=$'\e[1;35m' LC=$'\e[1;36m' W=$'\e[1;37m'
 #export PROMPT_COMMAND='hasjobs=$(jobs -p)'
 export PROMPT_COMMAND='hasjobs=$(s=$(jobs -s |wc -l) r=$(jobs -r |wc -l); ((s+r)) && printf "$LG$r$N-$LR$s$N ")'
 export PS1='\[$LC\]$hasjobs\[\e[1;$(($? ? 36 : 32))m\]\w\[$Y\]$(ls .git &>/dev/null && printf " " && git rev-parse --abbrev-ref HEAD 2>/dev/null)\[$LP\]$S \[$N\]'
