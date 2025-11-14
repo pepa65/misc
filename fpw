@@ -401,14 +401,8 @@ class NSSProxy:
 
     def __init__(self, non_fatal_decryption=False):
         # Locate libnss and try loading it
-        #self.libnss = load_libnss()
-        #PP Handloading
-        #self.libnss1 = ct.CDLL("/usr/lib/firefox/libnspr4.so", mode=ct.RTLD_GLOBAL)
-        #self.libnss2 = ct.CDLL("/usr/lib/firefox/libplc4.so", mode=ct.RTLD_GLOBAL)
-        #self.libnss3 = ct.CDLL("/usr/lib/firefox/libplds4.so", mode=ct.RTLD_GLOBAL)
         self.libnss = ct.CDLL("/usr/lib/firefox/libnssutil3.so")
-        self.libnss = ct.CDLL("/usr/lib/firefox/libnss3.so")
-        LOG.debug("Handloaded libnssutil3.so and libnss3.so instead of using load_libnss()")
+        self.libnss = load_libnss()
         self.non_fatal_decryption = non_fatal_decryption
 
         SlotInfoPtr = ct.POINTER(self.PK11SlotInfo)

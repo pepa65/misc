@@ -428,4 +428,4 @@ alias gor='goreleaser release --clean'
 alias srm='command srm -dlv'
 alias termcolors='c=(Default White Black DarkGray Red LightRed  Green LightGreen Brown Yellow Blue LightBlue Purple LightPurple Cyan LightCyan LightGray BoldWhite) i=0; echo "   fg:   bg:  40m   41m   42m   43m   44m   45m   46m   47m"; for f in "   0m" " 1;0m" "  30m" "1;30m" "  31m" "1;31m" "  32m" "1;32m" "  33m" "1;33m" "  34m" "1;34m" "  35m" "1;35m" "  36m" "1;36m" "  37m" "1;37m"; do g=${f// }; echo -en " $f \e[$g  #  "; for b in 40m 41m 42m 43m 44m 45m 46m 47m; do echo -en "$EINS \e[$g\e[$b  #  \e[0m"; done; echo "  ${c[i++]}"; done'
 
-addpath ~/bin ~/env/bin $GOBIN $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin ~/.modular/pkg/packages.modular.com_mojo/bin ~/.cargo/bin /opt/cosmo/bin /opt/cosmos/bin
+addpath ~/bin $GOBIN $GOROOT/bin ~/.luav/bin ~/.nimble/bin /usr/lib/dart/bin ~/.cargo/bin /opt/flutter/bin ~/.cabal/bin ~/.modular/pkg/packages.modular.com_mojo/bin ~/.cargo/bin /opt/cosmo/bin /opt/cosmos/bin
