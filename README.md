@@ -187,6 +187,9 @@ buildnano [<version> | -g|--git | -c|--current]
 * Usage: `count <file> [-s]`
   - `-s means sort by code point instead of frequency`
 
+## debsizes
+**List deb packages from small to large**
+
 ## difth
 **Show differences between 2 Thai language sources in html or terminal**
 

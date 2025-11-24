@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# debsizes - List deb packages small to large
+# Requires: dpkg awk
+
+dpkg-query --show --showformat='${Package}\t${Installed-size}\t${Status}\n' |awk '
+	{if($3 == "install"){packages[$1] = $2}}
+	END {
+		PROCINFO["sorted_in"] = "@val_num_asc"
+		for (i in packages){
+			printf "%05.2fM %s\n",
+			packages[i] / 1024, # convert from kilobytes to megabytes
+			i
+		}
+	}
+' # End of awk
