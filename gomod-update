@@ -78,10 +78,10 @@ do
    	echo &&
     continue
 
+	updates+="$pkg "
+	failed[$pkg]=1
 	if ((!ignore))
 	then
-		updates+="$pkg "
-		failed[$pkg]=1
 		echo -e "=== Updates found: $pkg\n$(head -1 <<<"$update")"
   	((norun)) &&
     	echo &&
@@ -95,9 +95,9 @@ do
 	  echo -e "### Version update in main.go unsuccesful: $pkg\n" &&
 	  continue
 
-	! sed -i "s/ \"$curr\"/ \"$new\"/" $readme &&
-	  echo -e "--- Version update in $readme unsuccesful: $pkg\n"
-		#continue
+	! sed -i "s/$curr/$new/" $readme &&
+	  echo -e "### Version update in $readme unsuccesful: $pkg\n" &&
+		continue
 
 	CGO_ENABLED=0 go install -ldflags="-s -w"
 	cp ~/go/bin/$pkg ~/bin/
