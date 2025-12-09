@@ -92,10 +92,10 @@ echo -e "\n#PP\nalias s='su -l pp -c \"tmux new-session -A -t pp\"'\nalias e=nan
 	tee -a /home/PeterPasschier1965/.bashrc
 
 # Setup sshd
-for a in X11Forwarding PrintMotd AllowUsers Port
+for a in X11Forwarding PrintMotd AllowUsers Port PasswordAuthentication
 do sed -i "s/^$a/#$a/" /etc/ssh/sshd_config
 done
-echo -e "\nPort 5691\nAllowUsers PeterPasschier1965\nX11Forwarding no\nPrintMotd no\n" |tee -a /etc/ssh/sshd_config
+echo -e "\nPort 5691\nAllowUsers PeterPasschier1965\nX11Forwarding no\nPrintMotd no\nMatch User PeterPasschier1965\n\tPasswordAuthentication yes\n" |tee -a /etc/ssh/sshd_config
 # Get ssh-key authorized
 sudo -u PeterPasschier1965 ssh-keygen -q -t ed25519 -P '' -f /home/PeterPasschier1965/.ssh/id_ed25519
 cp /root/.ssh/authorized_keys /home/PeterPasschier1965/.ssh/
