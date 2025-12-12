@@ -2,30 +2,55 @@
 set +x -e  # Stop on any error
 # gomod-update - Update modules in Go projects
 # Required: find grep sed go git goreleaser coreutils(cd rm head)
-# Usage:  gomod-update [-h|--help] | [-n|--norun] [-i|--ignore-update] | -a|--all | <pkg>...
+# Usage:  gomod-update [-h|--help] | [-n|--norun] [-r|--release PKG] | -a|--all | PKG...
 
 git=$HOME/git/ readme=README.md mod=go.mod sum=go.sum main=main.go
 
 # Check flags
-all=0 help=0 norun=0 ignore=0 args=
+all=0 help=0 norun=0 release=0 multiple=0 pkgs= title=
 (($#==0)) &&
 	help=1
-for a in $@
+for a in "$@"
 do
+	((release)) && [[ -z $title ]] &&
+		title=$a &&
+		continue
 	case $a in
+	-an|-na) norun=1 all=1 ;;
 	-h|--help) help=1 ;;
-	-i|--ignore-update) ignore=1 ;;
 	-a|--all) all=1 ;;
+	-r|--release)
+		((release)) &&
+			echo "### Release can only be given once" &&
+			exit 1
+		release=1 ;;
 	-n|--norun) norun=1 ;;
-	*) args+="$a "
+	*)
+		[[ -z $pkgs ]] &&
+			pkgs=$a ||
+			pkgs+=" $a" multiple=1
 	esac
 done
+((all && release)) &&
+	echo "### Release and All can not both be given" &&
+	exit 1
 
-[[ -z $args && $norun = 1 ]] &&
+if ((release))
+then
+	[[ -z $title ]] &&
+		echo "### Release must have a title, as in: --release TITLE PKG" &&
+		exit 1
+
+	((multiple)) &&
+		echo "### Release can only have 1 package, as in: --release TITLE PKG" &&
+		exit 1
+fi
+
+[[ -z $pkgs && $norun = 1 ]] &&
 	all=1
 
 # Show suitable Go projects
-declare -A pkgs
+declare -A packages
 for f in $(find "$git" |grep "/$mod$")
 do
 	repo=$(cd ${f%$mod}; [[ -d .git ]] &&
@@ -34,22 +59,22 @@ do
 		[[ -f ${f%$mod}$main ]] &&
 		v=$(grep 'version [ ]*= "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"$' "${f%$mod}$main") &&
 		v=${v##* } v=${v//\"} p=${f#$git} p=${p%/$mod} &&
-		pkgs[$p]=$v
+		packages[$p]=$v
 done
-((${#pkgs[@]}==0)) &&
+((${#packages[@]}==0)) &&
 	echo "### No suitable packages found" &&
 	exit 1
 
-packages=$(grep -o '[^ ]*' <<<${!pkgs[@]} |sort |tr $'\n' ' ')
+packages=$(grep -o '[^ ]*' <<<${!packages[@]} |sort |tr $'\n' ' ')
 packages=${packages%?}
 echo -e "--- Suitable packages:\n    $packages\n"
 ((help)) &&
-	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] [-i|--ignore-update] -a|--all | <pkg>..." &&
+	echo "--- Usage:  ${0##*/} [-h|--help] | [-n|--norun] [-r|--release COMMIT_TILE PKG] -a|--all | PKG..." &&
 	exit
 
 ((all)) &&
 	set -- $packages ||
-	set -- $args
+	set -- $pkgs
 updates=
 declare -A failed
 for pkg in $@
@@ -68,19 +93,19 @@ do
 	if [[ -z $(git diff -- $sum) ]]
 	then
 		git checkout $mod 2>/dev/null
-		((!ignore)) &&
+		((!release)) &&
 			echo -e "=== No module updates: $pkg\n" &&
 			continue ||
 			echo "--- Ignoring module updates"
 	fi
 
-	((ignore && norun)) &&
+	((release && norun)) &&
    	echo &&
     continue
 
 	updates+="$pkg "
 	failed[$pkg]=1
-	if ((!ignore))
+	if ((!release))
 	then
 		echo -e "=== Updates found: $pkg\n$(head -1 <<<"$update")"
   	((norun)) &&
@@ -88,8 +113,10 @@ do
 	    continue
 	fi
 
-	curr=${pkgs[$pkg]}
-	patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1
+	curr=${packages[$pkg]}
+	((release)) &&
+		ver=${curr%.*} ver=${ver##*.} vp1=$((ver+1)) new=${curr%%.*}.$vp1.0 ||
+		patch=${curr##*.} pp1=$((patch+1)) new=${curr%.*}.$pp1
 	echo "--- Patching from $curr to $new"
 	! sed -i "s/ \"$curr\"/ \"$new\"/" $main &&
 	  echo -e "### Version update in main.go unsuccesful: $pkg\n" &&
@@ -100,9 +127,11 @@ do
 		continue
 
 	CGO_ENABLED=0 go install -ldflags="-s -w"
+	rm -f ~/bin/$pkg
 	cp ~/go/bin/$pkg ~/bin/
 	upx --best --lzma ~/bin/$pkg
-	git commit -a -m "Modules update"
+	: ${title:=Update deps}
+	git commit -a -m "$title"
 	git tag v$new -m $new
 	git push origin --all
 	goreleaser --clean

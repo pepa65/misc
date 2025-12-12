@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -vx -e  # Stop on any error
+set +vx -e  # Stop on any error
 # cargo-update - Update dependencies of Rust project(s)
 #  Searching $git for all git repos that are pushing to "$user" on "$host",
 #  with "$author" matching the 'authors' field in `Cargo.toml`.
@@ -9,10 +9,9 @@ set -vx -e  # Stop on any error
 git=$HOME/git/ host=github.com user=pepa65 author=pepa65 toml=Cargo.toml readme=README.md
 
 # Check flags
-help=0 all=0 release=0 norun=0 multiple=0 pkgs=
+help=0 all=0 release=0 norun=0 multiple=0 pkgs= title=
 (($#==0)) &&
 	help=1
-title=
 for a in "$@"
 do
 	((release)) && [[ -z $title ]] &&
@@ -151,6 +150,7 @@ do
 		grep -q " ELF " <<<$(file "$f") ||
 			continue
 		b=$HOME/bin/${f##*/}
+		rm -f "$b"
 		cp "$f" "$b"
 		upx --best --lzma "$b"
 		binaries+="$b "
