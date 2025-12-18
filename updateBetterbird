@@ -42,8 +42,8 @@ wget -qO $shafile "www.betterbird.eu/downloads/sha256-$s.txt"
 
 # Abort if still running
 (($(pgrep -c betterbird-bin))) &&
-	echo "### Betterbird is running, please close it first" &&
-	exit 1
+	echo "### Betterbird is running" &&
+	read -p ">>> Please close it now and then press Enter, or abort with Ctrl-C "
 
 # Install
 sudo mkdir -p "$installpath"
