@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set +x -e  # Stop on any error
+set +vx -e  # Stop on any error
 # gomod-update - Update modules in Go projects
 # Required: find grep sed go git goreleaser coreutils(cd rm head)
 # Usage:  gomod-update [-h|--help] | [-n|--norun] [-r|--release PKG] | -a|--all | PKG...
@@ -126,15 +126,20 @@ do
 	  echo -e "### Version update in $readme unsuccesful: $pkg\n" &&
 		continue
 
-	CGO_ENABLED=0 go install -ldflags="-s -w"
-	rm -f ~/bin/$pkg
-	cp ~/go/bin/$pkg ~/bin/
-	upx --best --lzma ~/bin/$pkg
+	if [[ -f build ]]
+	then ./build
+	else
+		CGO_ENABLED=0 go install -ldflags="-s -w"
+		rm -f ~/bin/$pkg
+		cp ~/go/bin/$pkg ~/bin/
+		upx --best --lzma ~/bin/$pkg
+	fi
 	: ${title:=Update deps}
 	git commit -a -m "$title"
 	git tag v$new -m $new
 	git push origin --all
-	goreleaser --clean
+	[[ ! -f build ]] &&
+		goreleaser --clean
 	echo -e "=== Update successful: $pkg\n"
 	unset failed[$pkg]
 done

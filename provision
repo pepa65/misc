@@ -103,3 +103,4 @@ chown PeterPasschier1965:PeterPasschier1965 /home/PeterPasschier1965/.ssh/author
 sudo adduser pp sudo
 systemctl daemon-reload
 systemctl restart ssh
+echo -e "RESUME=none\n" >>/etc/initramfs-tools/initramfs.conf

@@ -409,6 +409,7 @@ alias cpr="rsync -ah --inplace --no-whole-file --no-compress --info=progress2"
 alias qip='wget -q -O - "http://ip-api.com/csv/"'
 alias ffx='/usr/lib/firefox/firefox'
 alias gobuild='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" && upx --best --lzma "${PWD##*/}"'
+alias gobuildb='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" && upx --best --lzma "${PWD##*/}" && mv "${PWD##*/}" ~/bin/'
 alias lsdm='ls -AFl /dev/disk/by-id |gr dm-name |sed "s@.*dm-name-\([^ ]*\) -> \.\./\.\./\(.*\)@\2 \1@" |sort'
 alias reset='\reset;  tmux clear-history'
 alias memes='wget -O - -q reddit.com/r/memes.json | jq ".data.children[] |.data.url" | grep -v "/\"$" |xargs feh -xZ.'
