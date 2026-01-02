@@ -96,7 +96,6 @@ input:hover::placeholder {
 
 /* --- Player Stats Panel --- */
 .player-stats {
-	transform: scale(0.95);
 	border: 2px solid var(--bg-input);
 	font-size: 40px;
 	margin-top: -25px;
@@ -176,7 +175,6 @@ input:hover::placeholder {
 .period-box {
 	display: flex;
 	transform: scale(1.5);
-	margin-bottom: 5px;
 }
 .p-label {
 	background: var(--bg-input);
@@ -211,7 +209,7 @@ input:hover::placeholder {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	margin-bottom: 0px;
+	margin-top: -30px;
 }
 .digital-font {
 	font-family: 'Digital-7 Mono', monospace;
@@ -233,7 +231,7 @@ input:hover::placeholder {
 	text-shadow: 0 0 0.05em rgba(255, 255, 200, 0.8);
 }
 
-/* --- Buttons --- */
+/* --- Side Buttons --- */
 .sport-btn {
 	background: var(--btn-face);
 	border: 2px solid var(--btn-border);
@@ -286,11 +284,11 @@ input:hover::placeholder {
 /* Start/Stop */
 .start-btn-container {
 	text-align: center;
-	margin: 0;
+	margin-top: 30px;
 	position: relative;
 }
 .btn-start {
-	width: 130px;
+	width: 140px;
 	background: linear-gradient(180deg, #2f2 0%, #2c2 100%);
 	color: var(--led-white);
 	border: 2px solid #8f8;
@@ -319,6 +317,7 @@ input:hover::placeholder {
 	display: flex;
 	justify-content: center;
 	align-items: flex-start;
+	margin-top: 10px;
 	margin-bottom: 10px;
 	gap: 20px;
 }
@@ -363,6 +362,7 @@ input:hover::placeholder {
 	border-radius: 8px;
 }
 .score-controls {
+	transform: scale(1.1);
 	display: flex;
 	justify-content: center;
 	gap: 15px;
@@ -384,13 +384,19 @@ input:hover::placeholder {
 	border-top: 18px solid var(--led-red);
 	filter: drop-shadow(0 0 2px var(--led-red));
 }
+.score {
+	color: var(--led-green);
+	font-size: 40px;
+	font-weight: 600;
+}
 
+/* --- Lower Center --- */
 .center-column {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	width: 180px;
-	margin: 0;
+	margin-top: -20px;
 	position: relative;
 }
 .label-shot {
@@ -441,7 +447,6 @@ input:hover::placeholder {
 	position: relative;
 	padding: 0 10px;
 	gap: 190px;
-	margin-left: -15px;
 }
 .bonus-section {
 	display: flex;
@@ -454,7 +459,6 @@ input:hover::placeholder {
 .bonus-bar {
 	border: 3px solid var(--bg-input);
 	color: var(--bg-input);
-	padding: 10px 0;
 	border-radius: 6px;
 	font-size: 25px;
 	font-weight: 600;
@@ -466,7 +470,6 @@ input:hover::placeholder {
 	justify-content: center;
 	background: var(--bg);
 	transition: 0.3s;
-	margin-top: -30px;
 }
 .bonus-bar:hover {
 	border: 3px solid var(--btn-border);
@@ -677,6 +680,8 @@ input:hover::placeholder {
 					<input type="text" class="team-name" value="" placeholder="HOME" onfocus="this.select()">
 					<div class="score-display digital-font" id="score-home">000</div>
 					<div class="score-controls">
+						<div class="sport-btn btn-time score" onclick="updateScore('home', 3)">3</div>
+						<div class="sport-btn btn-time score" onclick="updateScore('home', 2)">2</div>
 						<div class="sport-btn btn-score" onclick="updateScore('home', 1)"><div class="tri-up"></div></div>
 						<div class="sport-btn btn-score" onclick="updateScore('home', -1)"><div class="tri-down"></div></div>
 					</div>
@@ -695,6 +700,8 @@ input:hover::placeholder {
 					<div class="score-controls">
 						<div class="sport-btn btn-score" onclick="updateScore('guest', -1)"><div class="tri-down"></div></div>
 						<div class="sport-btn btn-score" onclick="updateScore('guest', 1)"><div class="tri-up"></div></div>
+						<div class="sport-btn btn-time score" onclick="updateScore('guest', 2)">2</div>
+						<div class="sport-btn btn-time score" onclick="updateScore('guest', 3)">3</div>
 					</div>
 				</div>
 			</div>
