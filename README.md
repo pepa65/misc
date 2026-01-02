@@ -80,6 +80,11 @@ Example:
 bacme -e me@mail.me -w me@server:/var/www/html example.com www.example.com
 ```
 
+## basketball.html
+**Basketball Scoreboard**
+
+Standalone page for basketball score-keeping.
+
 ## bb
 **Wrapperscript around borgbackup**
 
