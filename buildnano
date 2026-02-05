@@ -3,7 +3,7 @@ set +vx
 # buildnano - Build nano from source (release or git repo) on Ubuntu or Debian
 # Required: coreutils(mkdir cd mktemp rm)
 #   git+autoconf+autopoint+automake/wget[git/release]
-#   pkg-config gettext libncursesw5-dev groff[optional html-help]
+#   pkg-config gettext libncurses-dev groff[optional html-help]
 #   texinfo make gcc libmagic-dev[optional filetype detection]
 
 Help(){
@@ -62,7 +62,7 @@ nanogit="http://git.savannah.gnu.org/git/nano.git"
 nanoreldir="https://ftp.gnu.org/gnu/nano"
 
 # Required packages
-req="pkg-config libncursesw5-dev libmagic-dev texinfo gettext groff build-essential dialog"
+req="pkg-config libncurses-dev libmagic-dev texinfo gettext groff build-essential dialog"
 
 
 Abort(){ # $1:message
@@ -319,7 +319,7 @@ if ((git))
 then ./autogen.sh || Abort "error in Autogen"
 fi
 
-# Needs: gcc pkg-config libncursesw5-dev gettext(groff)
+# Needs: gcc pkg-config libncurses-dev gettext(groff)
 ((!static))
 	! ./configure ${conf[@]/#/--} &&
 	Abort "error in Configure"
