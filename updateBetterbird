@@ -53,6 +53,7 @@ cd "$installpath"
 	old=$(sudo mktemp betterbird_XXXXXXXX) &&
 	sudo mv betterbird $old
 sudo mv $tmpdir/betterbird betterbird-$v
+sudo chown root:root betterbird-$v
 sudo ln -s betterbird-$v betterbird
 
 # Make .desktop file and update it
