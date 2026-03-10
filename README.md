@@ -898,3 +898,6 @@ Can view, edit and delete.
 
 * Usage: `yt2srt <input file>`
 
+## zigup
+**Manage Zig installs**
+
