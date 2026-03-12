@@ -2,8 +2,9 @@
 set +ex
 # fillform - Auto fill pdf/ps 'form' in batch
 # Usage: fillform [<dir> | <file.flp>]
-#   Directory <dir> (or the PWD) must have the input files.
-# Input: 'FORM.flpsed *.flp'  Output: 'FORM.pdf *.pdf'
+#   Directory <dir> (or the PWD) must have the input files:
+#     'FORM.flpsed' and '*.flp'
+#   Output: 'FORM.pdf' (all concatenated) and '*.pdf'
 # Required: flpsed sed ghostscript(ps2pdf) poppler-utils(pdfunite)
 #           coreutils(cd wc rm ls)
 #
