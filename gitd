@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# gitd - Git diff
+# Should live in /usr/local/bin/
+
+# 1:path 2:old-file 3:old-hex 4:old-mode 5:new-file 6:new-hex 7:new-mode
+
+echo "=== $1 $3/$6 $4/$7"
+colordiff "$2" "$5"
+
+while [[ $1 ]]
+do shift
+done

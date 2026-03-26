@@ -173,6 +173,7 @@ bind Sh-M-W zero all
 bind M-X cancel all
 bind Sh-M-L refresh main
 bind ^Q exit all
+bind ^K exit all
 bind ^O insert all
 bind M-I autoindent all
 bind M-K cutfromcursor all

@@ -13,6 +13,7 @@
 # difft: From https://github.com/Wilfred/difftastic/releases
 # bat: sudo wget -qO /usr/local/bin/c wget 4e4.in/c; chmod +x /usr/local/bin/c
 # exa: sudo wget -qO /usr/local/bin/l 4e4.in/l; chmod +x /usr/local/bin/l
+# nanorc: tar xf nanorc.tz -C ~
 
 # X:
 #  qpdfview clipit vlc smplayer xiphos yad gimp unoconv geany calibre numlockx weasyprint
