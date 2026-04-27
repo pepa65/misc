@@ -5,27 +5,39 @@
 # - Every empty line yields a paragraph
 # - Every '['...']' clause will be italicized and grayed
 # - Skip lineas starting with a '!'
-# Usage:  song2png <songfile>
-#  Output will be the .txt extension replaced (if present) or appended by .png
+# Usage:  song2png SONG.txt [PATH]
+#  Output will be the .txt extension replaced (if present) or appended by .png into PATH
 # Required: chromium imagemagick(mogrify) coreutils(mktemp cat ls)
 
-song=$1
-if [[ ! -f $song ]]
-then
+Usage(){ # 1:error
 	cat <<-EOM
 		song2png - Convert .txt input file (only argument) to .png
-		  FORMAT:
+		Usage:  song2png SONG.txt [PATH]
+		  Format of SONG.txt:
 		  - Fist line:     Title
 		  - Empty line:    Paragraph separator
 		  - Start with !:  Skipped
 		  - [...]:         Italicized & grayed
 
-		Abort: Input file '$song' not found
 	EOM
-	exit 1
-fi
+	[[ $1 ]] &&
+		echo "Abort: $1" &&
+		exit 1
+}
 
-htm=$(mktemp --suffix=.htm) png=${song%.txt}.png
+[[ -z $@ ]] &&
+	Usage &&
+	exit 0
+
+song=$1 path=$2
+[[ ! -f $song ]] &&
+	Usage "Input file '$song' not found"
+
+png=${song%.txt}.png
+[[ $path && -d $path ]] &&
+	png=$path/${png##*/} ||
+	png=$path
+htm=$(mktemp --suffix=.htm)
 
 Starthtml() { # I:title,htm
 	cat <<-EOH >"$htm"
