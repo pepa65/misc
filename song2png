@@ -11,23 +11,23 @@
 
 Usage(){ # 1:error
 	cat <<-EOM
-		song2png - Convert .txt input file (only argument) to .png
+		song2png - Convert .txt input file (first argument) to .png in PATH
 		Usage:  song2png SONG.txt [PATH]
 		  Format of SONG.txt:
 		  - Fist line:     Title
 		  - Empty line:    Paragraph separator
 		  - Start with !:  Skipped
 		  - [...]:         Italicized & grayed
-
 	EOM
-	[[ $1 ]] &&
-		echo "Abort: $1" &&
-		exit 1
+	[[ -z $1 ]] &&
+		exit
+
+	echo -e "\nAbort: $1" &&
+	exit 1
 }
 
-[[ -z $@ ]] &&
-	Usage &&
-	exit 0
+[[ ! $1 ]] &&
+	Usage
 
 song=$1 path=$2
 [[ ! -f $song ]] &&
