@@ -4,12 +4,12 @@ set +vx -e  # Stop on any error
 #  Searching $git for all git repos that are pushing to "$user" on "$host",
 #  with "$author" matching the 'authors' field in `Cargo.toml`.
 # Required: find grep sed git cargo coreutils(cd head ls)
-# Usage:  cargo-update [-h|--help] | [-n|--norun] [-r|--release COMMIT_TILE PKG] | -a|--all | PKG...
+# Usage:  cargo-update [-h|--help] | [-n|--norun] [-m|--mail] [-r|--release COMMIT_TILE PKG] | -a|--all | PKG...
 
 git=$HOME/git/ host=github.com user=pepa65 author=pepa65 toml=Cargo.toml readme=README.md
 
 # Check flags
-help=0 all=0 release=0 norun=0 multiple=0 pkgs= title=
+help=0 all=0 mail=0 release=0 norun=0 multiple=0 pkgs= title=
 (($#==0)) &&
 	help=1
 for a in "$@"
@@ -21,6 +21,7 @@ do
 	-an|-na) norun=1 all=1 ;;
 	-h|--help) help=1 ;;
 	-a|--all) all=1 ;;
+	-m|--mail) mail=1
 	-r|--release)
 		((release)) &&
 			echo "### Release can only be given once" &&
@@ -191,7 +192,9 @@ then
 	[[ $success ]] &&
 		echo "=== Updated okay:  $success"
 	[[ $failed ]] &&
-		echo "### Update failed: ${!failed[@]}"
+		echo "### Update failed: ${!failed[@]}" &&
+		((mail)) &&
+		mailer -o /etc/mailer.yml -s "Cargo-update failed: ${!failed[@]}" -m 'See the subject line'
 fi
 
 exit 0
