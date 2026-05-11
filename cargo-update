@@ -21,7 +21,7 @@ do
 	-an|-na) norun=1 all=1 ;;
 	-h|--help) help=1 ;;
 	-a|--all) all=1 ;;
-	-m|--mail) mail=1
+	-m|--mail) mail=1 ;;
 	-r|--release)
 		((release)) &&
 			echo "### Release can only be given once" &&
@@ -184,9 +184,13 @@ do
 	unset failed[$pkg]
 done
 
-[[ $updates ]] &&
-	echo "=== Updates found: $updates" ||
-	echo "=== No updates found at all"
+if [[ $updates ]]
+then
+	echo "=== Updates found: $updates"
+else
+	((!release)) &&
+		echo "=== No updates found at all"
+fi
 if ((!norun))
 then
 	[[ $success ]] &&
