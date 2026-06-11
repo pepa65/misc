@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -vx
+set +vx
 # song2png - Convert SONG.txt to [PNG or] SONG.png [in DIR]
 # song format:
 # - First line is the title (will be bolded)
@@ -9,6 +9,8 @@ set -vx
 # Usage:  song2png SONG.txt [PATH]
 #  Output will be the .txt extension replaced (if present) or appended by .png into PATH
 # Required: chromium|google-chrome-* imagemagick(mogrify) coreutils(mktemp cat ls)
+
+defaultpath=/data/photo/Songs
 
 Usage(){ # 1:error
 	cat <<-EOM
@@ -36,7 +38,7 @@ txt=$1 path=$2
 
 for chrom in chromium google-chrome-{stable,beta,unstable,canary} __X
 do
-	type -p $chrom &&
+	type -p $chrom >/dev/null &&
 		break
 	[[ $chrom = __X ]] &&
 		echo "Abort: no chromium/chrome binary found" &&
@@ -44,12 +46,11 @@ do
 done
 
 png=${txt%.txt}.png
-if [[ $path ]]
-then
-	[[ -d $path ]] &&
-		png=$path/${png##*/} ||
-		png=$path
-fi
+[[ -z $path ]] &&
+	path=$defaultpath
+[[ -d $path ]] &&
+	png=$path/${png##*/} ||
+	png=$path
 htm=$(mktemp --suffix=.htm)
 
 Starthtml() { # I:title,htm
@@ -88,4 +89,5 @@ done <"$txt"
 # htm2png
 $chrom --headless=new --window-size=1024,4096 --disable-gpu --disable-software-rasterizer --enable-chrome-browser-cloud-management --force-device-scale-factor=2 --screenshot="$png" "$htm" 2>/dev/null &&
 	rm "$htm" &&
-	mogrify -depth 3 -trim +repage -bordercolor white -border 24 -define png:color-type=3 "$png"
+	mogrify -depth 3 -trim +repage -bordercolor white -border 24 -define png:color-type=3 "$png" &&
+	command ls -l "$png"
