@@ -16,6 +16,9 @@
 
 # Based on original work from: www.dumpzilla.org
 
+# Alias 'fpw' defined!
+# Use: LD_LIBRARY_PATH=/usr/lib/firefox /data/git/misc/fpw -ftabular |encp >fpw.encp
+
 from __future__ import annotations
 
 import argparse
@@ -36,6 +39,7 @@ from subprocess import run, PIPE, DEVNULL
 from urllib.parse import urlparse
 from configparser import ConfigParser
 from typing import Optional, Iterator, Any
+from contextlib import contextmanager
 
 LOG: logging.Logger
 VERBOSE = False

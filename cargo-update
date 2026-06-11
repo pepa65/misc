@@ -21,7 +21,7 @@ do
 	-an|-na) norun=1 all=1 ;;
 	-h|--help) help=1 ;;
 	-a|--all) all=1 ;;
-	-m|--mail) mail=1 ;;
+	-m|--mail) mail=1; set +e ;;
 	-r|--release)
 		((release)) &&
 			echo "### Release can only be given once" &&

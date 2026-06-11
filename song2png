@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# song2png - Convert song to png
+set -vx
+# song2png - Convert SONG.txt to [PNG or] SONG.png [in DIR]
 # song format:
 # - First line is the title (will be bolded)
 # - Every empty line yields a paragraph
@@ -7,12 +8,12 @@
 # - Skip lineas starting with a '!'
 # Usage:  song2png SONG.txt [PATH]
 #  Output will be the .txt extension replaced (if present) or appended by .png into PATH
-# Required: chromium imagemagick(mogrify) coreutils(mktemp cat ls)
+# Required: chromium|google-chrome-* imagemagick(mogrify) coreutils(mktemp cat ls)
 
 Usage(){ # 1:error
 	cat <<-EOM
-		song2png - Convert .txt input file (first argument) to .png in PATH
-		Usage:  song2png SONG.txt [PATH]
+		song2png - Convert SONG.txt to [PNG or] SONG.png [in DIR]
+		Usage:  song2png SONG.txt [PNG|DIR]
 		  Format of SONG.txt:
 		  - Fist line:     Title
 		  - Empty line:    Paragraph separator
@@ -29,14 +30,26 @@ Usage(){ # 1:error
 [[ ! $1 ]] &&
 	Usage
 
-song=$1 path=$2
-[[ ! -f $song ]] &&
-	Usage "Input file '$song' not found"
+txt=$1 path=$2
+[[ ! -f $txt ]] &&
+	Usage "Input file '$txt' not found"
 
-png=${song%.txt}.png
-[[ $path && -d $path ]] &&
-	png=$path/${png##*/} ||
-	png=$path
+for chrom in chromium google-chrome-{stable,beta,unstable,canary} __X
+do
+	type -p $chrom &&
+		break
+	[[ $chrom = __X ]] &&
+		echo "Abort: no chromium/chrome binary found" &&
+		exit 2
+done
+
+png=${txt%.txt}.png
+if [[ $path ]]
+then
+	[[ -d $path ]] &&
+		png=$path/${png##*/} ||
+		png=$path
+fi
 htm=$(mktemp --suffix=.htm)
 
 Starthtml() { # I:title,htm
@@ -70,8 +83,9 @@ do # Process line
 
 	line=${line//[/<i>[} line=${line//]/]</i>}
 	echo "$line<br>" >>"$htm"
-done <"$song"
+done <"$txt"
 
-chromium --headless=new --window-size=1024,4096 --disable-gpu --disable-software-rasterizer --enable-chrome-browser-cloud-management --force-device-scale-factor=2 --screenshot="$png" "$htm" 2>/dev/null
-rm "$htm"
-mogrify -depth 3 -trim +repage -bordercolor white -border 24 -define png:color-type=3 "$png"
+# htm2png
+$chrom --headless=new --window-size=1024,4096 --disable-gpu --disable-software-rasterizer --enable-chrome-browser-cloud-management --force-device-scale-factor=2 --screenshot="$png" "$htm" 2>/dev/null &&
+	rm "$htm" &&
+	mogrify -depth 3 -trim +repage -bordercolor white -border 24 -define png:color-type=3 "$png"
