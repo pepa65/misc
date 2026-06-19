@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -xe
+# fixlibmateweather
+
+dir=$(mktemp -d)
+cd $dir
+for a in $(apt-get install --reinstall --print-uris -qq libmateweather-common)
+do # Gets libmateweather-common and libmateweather1t64
+	[[ $a = \'http* ]] &&
+		wget -q "${a//\'}"
+done
+apt-get source libmateweather
+cd libmateweather_1*
+file=libmateweather/weather-metar.c
+sed -i 's@aviationweather.gov/cgi-bin/data/dataserver.php@aviationweather.gov/api/data/dataserver@' $file
+sed -i 's@<raw_text>%s@<raw_text>METAR %s@' $file
+dpkg-buildpackage -rfakeroot -uc -b
+sudo apt install ../libmateweather-common_*_all.deb ../libmateweather1t64_*_amd64.deb
+echo "Select 'Reload'"
+pkill -hup clock-app

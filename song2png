@@ -36,14 +36,16 @@ txt=$1 path=$2
 [[ ! -f $txt ]] &&
 	Usage "Input file '$txt' not found"
 
-for chrom in chromium google-chrome-{stable,beta,unstable,canary} __X
+chrom=
+for b in chromium google-chrome-{{,un}stable,beta,canary}
 do
-	type -p $chrom >/dev/null &&
+	type -p $b >/dev/null &&
+		chrom=$b &&
 		break
-	[[ $chrom = __X ]] &&
-		echo "Abort: no chromium/chrome binary found" &&
-		exit 2
 done
+[[ -z $chrom ]] &&
+	echo "Abort: no chromium/chrome binary found" &&
+	exit 2
 
 png=${txt%.txt}.png
 [[ -z $path ]] &&
