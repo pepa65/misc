@@ -19,5 +19,6 @@ sed -i 's@aviationweather.gov/cgi-bin/data/dataserver.php@aviationweather.gov/ap
 sed -i 's@<raw_text>%s@<raw_text>METAR %s@' $file
 dpkg-buildpackage -rfakeroot -uc -b
 sudo apt install ../libmateweather-common_*_all.deb ../libmateweather1t64_*_amd64.deb
+sudo apt-mark hold libmateweather-common libmateweather1t64
 echo "!!!Select 'Reload'!"
 pkill -hup clock-app
