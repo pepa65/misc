@@ -319,6 +319,7 @@ erasedrive(){ # Completely hardformat
 	[[ $reset = enabled ]] && echo "Reset of security password failed" && return 8
 	echo "Drive '$hd' should be completely erased now"
 }
+is(){ for e in "$@"; do bc -l <<<"$e"; done; }
 
 alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
@@ -339,7 +340,6 @@ alias tt='echo "$(TZ=Asia/Bangkok LC_TIME="th_TH.UTF-8" date +"%T วัน%A �
 alias vlcs='vlc -R -f --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
 alias vlcp='vlc -R -f --video-on-top --no-video-title-show --no-qt-fs-controller --mouse-hide-timeout 1 --aspect-ratio 16:9'
 alias lb='lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,SCHED,FSUSE%,MOUNTPOINT -x START --tree' # lsblk recent enough for START
-alias is='bc -l <<<'
 alias m="mount |sed 's/ on / /g' |sed 's/ type / /g' |column -t"
 alias be='(head -5; echo; tail -5) <'  ## requires a file to 'analyze'
 alias ripvcd='vcdxrip -i /dev/sr0 -v -p -t 0'
