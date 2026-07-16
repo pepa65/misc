@@ -87,10 +87,10 @@ do
     echo -e "### Given package not suitable: $pkg\n" &&
     continue
 
+	cd "$git$pkg"
 	if ((!release))
 	then
 		# Check updates
-		cd "$git$pkg"
 		echo "*** Start checking package: $pkg"
 		update=$(cargo update --verbose -n 2>&1)
 		unch=$(grep -o ' Unchanged .*' <<<"$update") &&
