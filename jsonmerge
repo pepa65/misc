@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set +vx
+# jsonmerge - Merge JSON files
+# Usage:  jsonmerge FILE.json [...]
+# Example:  jsonmerge a.json b.json c.json >d.json
+# Requires: jq coreutils(mktemp rm cp)
+
+((!$#)) &&
+	cat <<-EOH
+		jsonmerge - Merge JSON files
+		Usage:  jsonmerge FILE.json [...]
+		Example:  jsonmerge a.json b.json c.json >d.json
+		Requires: jq coreutils(mktemp rm cp)
+	EOH
+((!$#)) &&
+	exit 0
+
+tmp=$(mktemp) out=$(mktemp)
+trap 'rm -f "$tmp" "$out"' EXIT
+
+Err(){ # 1:file
+	echo "ABORT: Merge of $1 failed"
+	exit 1
+}
+
+Merge(){ # 1:file1 2:file2 I:tmp
+	jq -s --arg f "$2" '
+		def deepmerge($p; $a; $b):
+			if $b == null then
+				$a
+			elif $a == null then
+				$b
+			elif ($a|type) == "object" and ($b|type) == "object" then
+				reduce ($b|keys[]) as $k
+					($a; .[$k] = if has($k) then deepmerge($p + [$k]; .[$k]; $b[$k]) else $b[$k] end)
+			elif ($a|type) == "array" and ($b|type) == "array" then
+				($a + $b) | unique
+			else
+				("discarding " + ($p|join(".")) + " " + ($a|tojson) + " for " + ($b|tojson) + " by " + $f) | debug,
+				$b
+			end;
+			deepmerge([]; .[0]; .[1])
+	' "$1" "$2" >$tmp || Err "$2"
+}
+
+cp "$1" $out
+shift
+while (($#))
+do
+	Merge $out "$1"
+	shift
+	cp $tmp $out
+done
+
+jq . $out

@@ -370,6 +370,13 @@ healbitrot [-h|--help] [<dir>...]
 
 * Usage: 'instai [-l|--list] [-u|--uninstall] <AppImage>'
 
+## jsonmerge
+**Merge JSON files**
+
+* Usage:  jsonmerge FILE.json [...]
+* Example:  jsonmerge a.json b.json c.json >d.json
+* Requires: jq coreutils(mktemp rm cp)
+
 ## parsejson
 **Parse JSON with bash**
 * Usage:  `parsejson [ -h|--help | <string> | <filename> ]`
