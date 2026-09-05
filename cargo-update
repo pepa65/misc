@@ -80,7 +80,7 @@ echo
 	set -- $pkgs
 
 updates= success=
-declare -A failed
+declare -A failed auditfailed
 for pkg in $@
 do
   [[ ! ,${packages// /,}, = *,$pkg,* ]] &&
@@ -122,6 +122,9 @@ do
 		continue
 
 	# Patch
+	! cargo audit --deny warnings &&
+		echo -e "### Audit failed: $pkg\n" &&
+		auditfailed[$pkg]=1
 	((!release)) &&
 		echo "--- Cargo update done"
 	((release)) &&
@@ -195,10 +198,12 @@ if ((!norun))
 then
 	[[ $success ]] &&
 		echo "=== Updated okay:  $success"
-	[[ $failed ]] &&
-		echo "### Update failed: ${!failed[@]}" &&
+	((${#failed[@]})) &&
+		echo "### Updates failed: ${!failed[@]}" &&
 		((mail)) &&
 		mailer -o /etc/mailer.yml -s "Cargo-update failed: ${!failed[@]}" -m 'See the subject line'
 fi
+((${#auditfailed[@]})) &&
+	echo "### Audit failed: ${!auditfailed[@]}"
 
 exit 0

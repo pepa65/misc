@@ -263,6 +263,9 @@ ffpw [<filter>] [<file>] [-v|--verbose] [-h|--help]
     -h/--help:     This help text
 ```
 
+## fpw
+**View Firefox passwords**
+
 ## fillform
 **Auto fill form for multiple cases**
 

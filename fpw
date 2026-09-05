@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+
+# fpw - View Firefox passwords
+
+# While libnss3 is older than 3.113, we need Firefox's version
+read -rd '' fpw <<'EOF'
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -17,7 +23,7 @@
 # Based on original work from: www.dumpzilla.org
 
 # Alias 'fpw' defined!
-# Use: LD_LIBRARY_PATH=/usr/lib/firefox /data/git/misc/fpw -ftabular |encp >fpw.encp
+# Use: /data/git/misc/fpw |encp >fpw.encp
 
 from __future__ import annotations
 
@@ -1232,3 +1238,10 @@ def run_ffdecrypt():
 
 if __name__ == "__main__":
     run_ffdecrypt()
+EOF
+
+
+[[ $1 ]] &&
+	LD_LIBRARY_PATH=/usr/lib/firefox python3 <(echo "$fpw") -ftabular |grep --color=auto $1 |command c --paging always --tabs 1 --plain ||
+	LD_LIBRARY_PATH=/usr/lib/firefox python3 <(echo "$fpw") -ftabular |command c --paging always --tabs 1 --plain
+reset
