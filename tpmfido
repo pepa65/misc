@@ -23,9 +23,9 @@ cmd2=~/git/tpm-fido/tpm-fido
 
 # Load and set uhid device
 [[ -z $(lsmod |grep '^uhid\b') ]] &&
-	sudo modprobe uhid &&
-	sudo chgrp tss /dev/uhid &&
-	sudo chmod g+rw /dev/uhid
+	sudo modprobe uhid
+sudo chgrp tss /dev/uhid
+sudo chmod g+rw /dev/uhid
 
 # Setup curent user in tss group and try running in background
 echo "$(date +'%Y/%m/%d %H:%M:%S') Trying to start $cmd 2>>$log" >>"$log"

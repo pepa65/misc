@@ -1,0 +1,2 @@
+define t(x) { return s(x)/c(x);}
+define p(x,y) { if (scale(y) == 0) return x^y; return e(y*l(x));}

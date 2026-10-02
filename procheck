@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# procheck - Check servers if they are on Ubuntu Pro
+# Usage:  procheck [server]
+#   If no server given, check $allservers
+
+allservers='server backup mail0 mail1 mail2 mail3 thmi micro pp papercut'
+
+[[ $1 ]] &&
+	servers=$1 ||
+	servers=$allservers
+
+for host in $servers
+do
+	echo -n "$host: "
+	out=$(ssh $host "pro status && cat /etc/lsb-release" 2>/dev/null)
+	if [[ $1 ]]
+	then echo -e "$out"
+	else
+		inf=$(grep -e Account: -e '\[info]' -e DISTRIB_DESCRIPTION <<<"$out" |
+			sed 's/DISTRIB_DESCRIPTION=//g; s/Account://g')
+		echo $inf
+	fi
+done

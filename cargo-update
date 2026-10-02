@@ -143,17 +143,25 @@ do
 		echo -e "--- Versions in $readme increased:\n$(sed 's/^/    /' <<<"$lines")\n" ||
 		echo -e "--- Old version $curr not found in $readme\n"
 	! build=$(cargo rel 2>&1) &&
-		echo -e "$build\n### Skip: Cargo release build failed: $pkg\n" &&
+		echo -e "$build\n### Skip: Cargo amd64 release build failed: $pkg\n" &&
+		continue
+
+	grep -q package.metadata.binstall.overrides.aarch64-linux-android "$toml" &&
+		! build=$(cargo andr 2>&1) &&
+		echo -e "$build\n### Skip: Cargo android release build failed: $pkg\n" &&
 		continue
 
 	# Compress the binaries
 	binaries=
 	## Fails if targets of symlinks have space(s)!
+	f=not_empty_so_no_warning_on_libs
 	for f in $(command ls -l |grep ^l |sed 's/.* -> //')
 	do
 		grep -q " ELF " <<<$(file "$f") ||
 			continue
 		b=$HOME/bin/${f##*/}
+		[[ $f = */aarch64-linux-android/* ]] &&
+			b+=_android
 		rm -f "$b"
 		cp "$f" "$b"
 		upx --best --lzma "$b"
@@ -173,8 +181,9 @@ do
 
 	# Make release
 	gh repo set-default "$host/$user/$pkg"
-	gh release create $new $binaries -t "$title" --verify-tag -n ''
-	echo "--- Release $new created"
+	gh release create $new --title "$title" --verify-tag --notes ''
+	gh release upload $new $binaries --clobber
+	echo "--- Release $new created on $host/$user/$pkg with $binaries"
 
 	# Publish on crates.io
 	! cargo pub --allow-dirty &&

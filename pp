@@ -240,7 +240,7 @@ backlight(){ # $1:level (0/1/2, if empty: toggle)
 assh(){ #$1:host
 	[[ -z $1 ]] && echo "ERROR: hostname as argument needed" && return 1
 	autossh -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -o "ControlMaster auto" -o "ControlPersist 2h" -o "ExitOnForwardFailure yes" -R 2222:localhost:5691 -l PeterPasschier1965 $1;}
-kd(){ reset; local o; o=$(kdbxviewer -t "$@") && less -R <<<"$o" && reset;}
+kd(){ command reset; local o; o=$(kdbxviewer -t "$@") && less -R <<<"$o" && command reset;}
 bzlist(){ [[ ! -f "$1" ]] && echo "not a file: '$1'" && return; local d=$(mktemp -d); s=$(stat -c %s "$1")00; cp "$1" "$d" || return 2; bunzip2 "$d"/* || return 3; i=$(stat -c "%n %s" "$d"/* |sed "s@$d/@@"); echo "$i $((s/${i##* }))%"; rm -r "$d";}
 gcd(){ (($1%$2)) && gcd $2 $(($1%$2)) || echo $2;}
 aspect(){ identify -format "%[fx:(w/h)]:%M\n" "$@" |sort -n;}
@@ -263,7 +263,7 @@ transfer(){ # Required: tty curl zip cd cat
 di(){ [[ ! -n $1 ]] && echo "Need docker container_id to inspect" && return || docker inspect -f 'docker run --name {{printf "%q" .Name}} {{- with .HostConfig}} {{- if .Privileged}} --privileged {{- end}} {{- if .AutoRemove}} --rm {{- end}} {{- if .Runtime}} --runtime {{printf "%q" .Runtime}} {{- end}} {{- range $b := .Binds}} --volume {{printf "%q" $b}} {{- end}} {{- range $v := .VolumesFrom}} --volumes-from {{printf "%q" $v}} {{- end}} {{- range $l := .Links}} --link {{printf "%q" $l}} {{- end}} {{- if .PublishAllPorts}} --publish-all {{- end}} {{- if .UTSMode}} --uts {{printf "%q" .UTSMode}} {{- end}} {{- with .LogConfig}} --log-driver {{printf "%q" .Type}} {{- range $o, $v := .Config}} --log-opt {{$o}}={{printf "%q" $v}} {{- end}} {{- end}} {{- with .RestartPolicy}} --restart "{{.Name -}} {{- if eq .Name "on-failure"}}:{{.MaximumRetryCount}} {{- end}}" {{- end}} {{- range $e := .ExtraHosts}} --add-host {{printf "%q" $e}} {{- end}} {{- range $v := .CapAdd}} --cap-add {{printf "%q" $v}} {{- end}} {{- range $v := .CapDrop}} --cap-drop {{printf "%q" $v}} {{- end}} {{- range $d := .Devices}} --device {{printf "%q" (index $d).PathOnHost}}:{{printf "%q" (index $d).PathInContainer}}:{{(index $d).CgroupPermissions}} {{- end}} {{- end}} {{- with .NetworkSettings -}} {{- range $p, $conf := .Ports}} {{- with $conf}} --publish " {{- if $h := (index $conf 0).HostIp}}{{$h}}: {{- end}} {{- (index $conf 0).HostPort}}:{{$p}}" {{- end}} {{- end}} {{- range $n, $conf := .Networks}} {{- with $conf}} --network {{printf "%q" $n}} {{- range $a := $conf.Aliases}} --network-alias {{printf "%q" $a}} {{- end}} {{- end}} {{- end}} {{- end}} {{- with .Config}} {{- if .Hostname}} --hostname {{printf "%q" .Hostname}} {{- end}} {{- if .Domainname}} --domainname {{printf "%q" .Domainname}} {{- end}} {{- range $p, $conf := .ExposedPorts}} --expose {{printf "%q" $p}} {{- end}} {{- range $e := .Env}} --env {{printf "%q" $e}} {{- end}} {{- range $l, $v := .Labels}} --label {{printf "%q" $l}}={{printf "%q" $v}} {{- end}} {{- if not (or .AttachStdin (or .AttachStdout .AttachStderr))}} --detach {{- end}} {{- if .AttachStdin}} --attach stdin {{- end}} {{- if .AttachStdout}} --attach stdout {{- end}} {{- if .AttachStderr}} --attach stderr {{- end}} {{- if .Tty}} --tty {{- end}} {{- if .OpenStdin}} --interactive {{- end}} {{- if .Entrypoint}} {{- if eq (len .Entrypoint) 1 }} --entrypoint " {{- range $i, $v := .Entrypoint}} {{- if $i}} {{end}} {{- $v}} {{- end}}" {{- end}} {{- end}} {{printf "%q" .Image}} {{range .Cmd}}{{printf "%q " .}}{{- end}} {{- end}}' "$1" |sed 's/ --/ \\\n  --/g' |less;}
 vp(){ ffprobe -hide_banner "$1" 2>&1 |grep -e Duration: -e Video:;}
 i(){ convert -colors 16 "$1" sixel:-;}
-fpw(){ LD_LIBRARY_PATH=/usr/lib/firefox /data/git/misc/fpw -ftabular |grep $1 |command c --paging always --tabs 1 --plain; reset;}
+fpw(){ LD_LIBRARY_PATH=/usr/lib/firefox /data/git/misc/fpw -ftabular |grep $1 |command c --paging always --tabs 1 --plain; command reset;}
 pg23(){ if [[ $1 ]]
 	then
 		xmodmap -e "keycode 68 = F2 F2 F2 NoSymbol F2 F2 XF86Switch_VT_2 F2 F2"
@@ -319,7 +319,13 @@ erasedrive(){ # Completely hardformat
 	[[ $reset = enabled ]] && echo "Reset of security password failed" && return 8
 	echo "Drive '$hd' should be completely erased now"
 }
-is(){ for e in "$@"; do bc -l <<<"$e"; done; }
+is(){ for e in "$@"; do bc ~/.bc -l <<<"$e"; done; }
+ssl(){ # 1:domain [2:port]
+	[[ -z $1 ]] && echo "Usage: ssl DOMAIN [PORT]" && return
+	local port=$2
+	[[ -z $port ]] && port=443
+	openssl s_client -servername $1 -connect $1:$port 2>&1 <<<'' |g NotAfter: |head -1
+}
 
 alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'
@@ -412,7 +418,7 @@ alias ffx='/usr/lib/firefox/firefox'
 alias gobuild='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" && upx --best --lzma "${PWD##*/}"'
 alias gobuildb='CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" && upx --best --lzma "${PWD##*/}" && mv "${PWD##*/}" ~/bin/'
 alias lsdm='ls -AFl /dev/disk/by-id |gr dm-name |sed "s@.*dm-name-\([^ ]*\) -> \.\./\.\./\(.*\)@\2 \1@" |sort'
-alias reset='\reset;  tmux clear-history'
+alias reset='command reset; [[ $TMUX ]] && tmux clear-history'
 alias memes='wget -O - -q reddit.com/r/memes.json | jq ".data.children[] |.data.url" | grep -v "/\"$" |xargs feh -xZ.'
 alias tf=twofat
 alias sun='sunclock -map -dottedlines -twilight -meridianmode 3 -tropics -decimal'

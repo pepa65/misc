@@ -197,6 +197,12 @@ buildnano [<version> | -g|--git | -c|--current]
 ## debsizes
 **List deb packages from small to large**
 
+## deploy
+**Provision virtual machine**
+* Usage: `deploy <host> [=]`
+  - `<host>`: Host from ~/.ssh/config
+  - `=`: If `=` is given, setting up the authorized_key is skipped
+
 ## difth
 **Show differences between 2 Thai language sources in html or terminal**
 
@@ -379,11 +385,6 @@ healbitrot [-h|--help] [<dir>...]
 * Usage:  jsonmerge FILE.json [...]
 * Example:  jsonmerge a.json b.json c.json >d.json
 * Requires: jq coreutils(mktemp rm cp)
-
-## parsejson
-**Parse JSON with bash**
-* Usage:  `parsejson [ -h|--help | <string> | <filename> ]`
-* When no argument is given, input is read on stdin.
 
 ## keepassx.sh
 **Unpack selfmake archive script**
@@ -586,6 +587,11 @@ Usage: mkuki [<option>...]
 
 See the file for instructions to compile and use.
 
+## parsejson
+**Parse JSON with bash**
+* Usage:  `parsejson [ -h|--help | <string> | <filename> ]`
+* When no argument is given, input is read on stdin.
+
 ## pdfsig
 **Sign pdf with an image with GUI**
 
@@ -613,11 +619,12 @@ Usage:  pdfslice [-h|--help ] | <range> <in.pdf> [<out.pdf>]
 ## pp
 **Settings to be included in .bashrc**
 
-## deploy
-**Provision virtual machine**
-* Usage: `deploy <host> [=]`
-  - `<host>`: Host from ~/.ssh/config
-  - `=`: If `=` is given, setting up the authorized_key is skipped
+## procheck
+**Check servers if they are on Ubuntu Pro**
+```
+Usage: procheck [server]
+       If no server given, check $allserver
+```
 
 ## qemu-create-os-img
 **Create a fresh Debian/Ubuntu qemu image**
