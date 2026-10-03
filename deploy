@@ -55,7 +55,7 @@ set -xv
 sudo -S apt update
 sudo -S dpkg-reconfigure tzdata
 sudo -S apt-get install -y ne dfc iftop iotop colordiff dwdiff caca-utils git tmux aptitude rsync csvtool jq psmisc lsof telnet
-sudo -S apt purge snapd
+sudo -S apt purge -y snapd
 sudo -S apt-mark hold snapd
 [[ -d git ]] || mkdir git
 cd git

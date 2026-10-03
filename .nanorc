@@ -1,0 +1,155 @@
+# ~/.nanorc
+# Syntaxfiles:
+#include /usr/local/share/nano/*.nanorc
+include /home/pp/git/misc/nanorc/*.nanorc
+
+# Colors: [bold|italic,][light]white|black|blue|green|red|cyan|yellow|magenta |
+#  pink|purple|mauve|lagoon|mint|lime|peach|orange|latte|normal
+set errorcolor black,lightred
+set functioncolor cyan,white
+set spotlightcolor black,white
+set keycolor blue,yellow
+set numbercolor black,lightcyan
+set promptcolor black,lightyellow
+#set scrollercolor yellow,cyan
+set selectedcolor black,orange
+set statuscolor brightwhite,cyan
+set stripecolor brightred,normal
+set titlecolor black,lightgreen
+
+unset afterends
+unset allow_insecure_backup
+unset atblanks # softwrap at whitespace
+unset autoindent
+unset backup
+#set backupdir <dir>
+unset boldtext
+unset bookstyle
+#set brackets <string> # default: ""')>]}"
+###unset breaklonglines
+set casesensitive
+set constantshow # overrides: set quickblank
+unset cutfromcursor
+unset emptyline
+##set fill -1 # conflicts with: set breaklonglines; last option given wins
+#set guidestripe 80
+set historylog
+unset indicator
+unset jumpyscrolling
+unset linenumbers
+unset locking
+#set magic
+#set matchbrackets "(<[{)>]}"
+set minibar
+##set morespace
+###unset mouse
+set multibuffer
+set noconvert # overrides: set unix
+set nohelp
+set nonewlines
+##unset nopauses
+##set breaklonglines # conflicts with: set fill; last option given wins
+#set operatingdir <directory>
+set positionlog
+unset preserve
+#set punct "!.?"
+unset quickblank # overridden by: set constantshow
+#set quotestr "^([ 	]*[!#%:;>|}]|//))+" # "> " if no EREGEX
+unset rawsequences
+unset rebinddelete # set this when Backspace behaves like Delete
+unset regexp
+unset saveonexit
+set showcursor
+unset smarthome
+##set smooth
+set softwrap
+#set speller enchant
+set stateflags
+set tabsize 2
+unset tabstospaces
+unset trimblanks
+unset unix # overridden by: set noconvert
+#set whitespace "»⋅" (non-utf8: ">.")
+##set whitespace $'[32m'" "$'[0m'
+set wordbounds # overridden by: set wordchars
+#set wordchars <string> # overrides: set wordbounds
+#set zap
+#set zero
+
+#bind ^\ nextbookmark all
+# ^@ ^] ^\ ^, ^_ ^Space M-[^[] F1-16
+unbind ^H all
+bind ^H help all
+bind ^H exit help
+bind Sh-M-W zero all
+bind M-X cancel all
+bind Sh-M-L refresh main
+bind ^Q exit all
+bind ^O insert all
+bind M-I autoindent all
+bind M-K cutfromcursor all
+bind M-B flipnewbuffer insert
+bind ^F whereis all
+bind M-F wherewas all
+bind ^G findnext all
+bind M-G findprevious all
+bind M-V verbatim all
+bind ^Y cut all
+bind ^X cut all
+bind ^U paste all
+bind ^V paste all
+bind M-A firstline all
+bind M-E lastline all
+bind ^L gotoline all
+bind ^R replace all
+bind ^B mark all
+bind ^C copy main
+bind M-B findbracket all
+bind Sh-M-N prevbuf all
+bind M-N nextbuf all
+bind Sh-M-C wordcount all
+bind M-R regexp search
+bind M-R regexp replace
+bind M-S flipreplace search
+bind M-S flipreplace replace
+bind M-D backwards search
+bind M-D backwards replace
+bind M-C casesens search
+bind M-C casesens replace
+#bind M-C complete main
+bind ^Z undo all
+bind M-Z redo all
+bind Sh-M-Z suspend all
+bind M-W whitespacedisplay all
+bind ^S savefile all
+bind M-S writeout all
+bind M-| recordmacro all
+bind M-\ runmacro all
+bind M-' nosyntax all
+bind ^T anchor all
+bind M-, prevanchor all
+bind M-< nextanchor all
+
+bind M-L linenumbers all
+bind ^W softwrap all
+# cut all forward
+unbind M-T all
+# delete
+unbind ^D all
+
+unbind F9 all
+# Unbind un-undoable actions:
+
+# Justify keys
+unbind ^J main
+unbind F4 main
+unbind M-J all
+#bind M-J speller main
+
+# Spell checker
+#unbind ^T main
+unbind F12 all
+
+## Make sure no 'formatter' option is set!
+bind Ins "" all
+#bind ^J bookmark all

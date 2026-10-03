@@ -1,0 +1,29 @@
+## Syntax highlighting for TOML files.
+
+## Original authors:  Vincent Yang and Benno Schulenberg
+## License:  GPL version 3 or newer
+
+syntax toml "\.toml$"
+comment "#"
+
+# Values
+color sage "[+-]?\<([0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?|[0-9]{4}-[0-9]{2}-[0-9]{2}([T ][0-9:.-]+)Z?)?\>"
+color sage "\<0x[[:xdigit:]][[:xdigit:]_]*|0o[0-7]+|0b[01]+|[+-]?\<(inf|nan)\>"
+color lime "\<(true|false)\>"
+
+# Keys
+color sky "^[[:blank:]]*[^="[:blank:]][^=]*"
+
+# Strings
+color latte ""([^"]|\\.)*"|'([^']|\\.)*'"
+color latte start="\"\"\"" end="\"\"\""
+color latte start="'''" end="'''"
+
+# Table headers
+color orange "^[[:blank:]]*(\[[^][]+\]|\[\[[^][]+\]\])"
+
+# Comments
+color italic,cyan "(^|[[:blank:]])#.*"
+
+# Trailing whitespace
+color ,red "[[:space:]]+$"
