@@ -326,6 +326,17 @@ ssl(){ # 1:domain [2:port]
 	[[ -z $port ]] && port=443
 	openssl s_client -servername $1 -connect $1:$port 2>&1 <<<'' |g NotAfter: |head -1
 }
+binout(){
+	[[ -z $1 ]] &&
+		echo "Need file in ~/bin/ to transfer to servers" &&
+		return 1
+	[[ ! -f ~/bin/$1 ]] &&
+		echo "Does not exist: ~/bin/$1" &&
+		return 1
+	for d in mail{0,1,2,3} backup pp
+	do scp ~/bin/$1 $d:
+	done
+}
 
 alias ach='dpkg --get-selections | egrep hold$' # check holds
 alias python2='PYTHONPATH=/usr/lib/python2.7/dist-packages; python2.7'

@@ -3,6 +3,7 @@ set +vx -e  # Stop on any error
 # gomod-update - Update modules in Go projects
 # Required: find grep sed go git goreleaser coreutils(cd rm head)
 # Usage:  gomod-update [-h|--help] | [-n|--norun] [-r|--release PKG] | -a|--all | PKG...
+# Suitable: have .git & main.go, go.mod has ^module github.com/pepa65, `git r` has: github.com/pepa65, version in main.rs
 
 git=$HOME/git/ readme=README.md mod=go.mod sum=go.sum main=main.go
 
@@ -52,7 +53,7 @@ fi
 # Show suitable Go projects
 declare -A packages
 for f in $(find "$git" |grep "/$mod$")
-do
+do # With all go.mod
 	repo=$(cd ${f%$mod}; [[ -d .git ]] &&
 			git remote -v |grep '^origin' |grep ' (push)$' |grep 'github\.com.pepa65/' |head -1) &&
 		grep -q '^module github.com/pepa65/' "$f" &&
@@ -133,6 +134,7 @@ do
 		rm -f ~/bin/$pkg
 		cp ~/go/bin/$pkg ~/bin/
 		upx --best --lzma ~/bin/$pkg
+		scp ~/bin/$pkg mail1:
 	fi
 	: ${title:=Update deps}
 	git commit -a -m "$title"

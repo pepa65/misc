@@ -6,7 +6,7 @@ set +vx -e  # Stop on any error
 # Required: find grep sed git cargo coreutils(cd head ls)
 # Usage:  cargo-update [-h|--help] | [-n|--norun] [-m|--mail] [-r|--release COMMIT_TILE PKG] | -a|--all | PKG...
 
-git=$HOME/git/ host=github.com user=pepa65 author=pepa65 toml=Cargo.toml readme=README.md
+git=$HOME/git/ host=github.com user=pepa65 author=pepa65 toml=Cargo.toml readme=README.md cfg=.cargo/config.toml
 
 # Check flags
 help=0 all=0 mail=0 release=0 norun=0 multiple=0 pkgs= title=
@@ -113,9 +113,13 @@ do
 	grep -q 'Untracked files:' <<<"$status" &&
 		echo -e "### Uncommitted files, will be ignored:\n$(grep -P '^\t' <<<"${status//$'\n'    /$'\n'###}")"
 
-	grep -q 'use "git push"' <<<"$status" &&
-		echo -e "### Skip: Unpushed commits:\n$(grep ' commits\.$' <<<"$status") in: $pkg\n" &&
-		continue
+	if grep -q 'use "git push"' <<<"$status"
+	then
+		#((!release)) &&
+		#	echo -e "### Skip: Unpushed commits:\n$(grep ' commits\.$' <<<"$status") in: $pkg\n" &&
+		#	continue ||
+		echo -e "--- Unpushed commits:\n$(grep ' commits\.$' <<<"$status") in: $pkg\n"
+	fi
 
 	! update=$(cargo update 2>&1) &&
 		echo -e "$update\n### Skip: Cargo update failed: $pkg\n" &&
@@ -146,6 +150,11 @@ do
 		echo -e "$build\n### Skip: Cargo amd64 release build failed: $pkg\n" &&
 		continue
 
+	grep -q '"gui"' "$cfg" &&
+		! build=$(cargo gui 2>&1) &&
+		echo -e "$build\n### Skip: Cargo gui release build failed: $pkg\n" &&
+		continue
+
 	grep -q package.metadata.binstall.overrides.aarch64-linux-android "$toml" &&
 		! build=$(cargo andr 2>&1) &&
 		echo -e "$build\n### Skip: Cargo android release build failed: $pkg\n" &&
@@ -165,9 +174,10 @@ do
 		rm -f "$b"
 		cp "$f" "$b"
 		upx --best --lzma "$b"
+		scp "$b" mail1:
 		binaries+="$b "
 	done
-	[[ -z $f ]] &&
+	[[ -z $f && -f src/main.rs ]] &&
 		echo -e "--- Warning: No binaries symlinked: $pkg\n"
 
 	# Commit, tag and push to Github
@@ -182,7 +192,9 @@ do
 	# Make release
 	gh repo set-default "$host/$user/$pkg"
 	gh release create $new --title "$title" --verify-tag --notes ''
-	gh release upload $new $binaries --clobber
+	[[ -f src/main.rs ]] &&
+		gh release upload $new $binaries --clobber ||
+		binaries='no binaries (a library)'
 	echo "--- Release $new created on $host/$user/$pkg with $binaries"
 
 	# Publish on crates.io
