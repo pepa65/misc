@@ -180,6 +180,16 @@ do
 	[[ -z $f && -f src/main.rs ]] &&
 		echo -e "--- Warning: No binaries symlinked: $pkg\n"
 
+	# Add pkgs to the binaries if present
+	if [[ -d dist ]]
+	then # generate new pkgs into dist with buildpkgs
+		rm dist/*
+		./buildpkgs &>/dev/null
+		shopt -s nullglob
+		echo Packages: dist/*.deb dist/*.rpm
+		binaries+="$(echo dist/*.deb dist/*.rpm) "
+	fi
+
 	# Commit, tag and push to Github
 	: ${title:=Update deps}
 	git commit -a -m "$title"
