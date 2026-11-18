@@ -215,7 +215,7 @@ do
 		echo "--- Target cache $git$pkg/target deleted!"
 	echo -e "=== Release published to crates.io: $pkg\n"
 	success+="$pkg "
-	unset failed[$pkg]
+	unset "failed[$pkg]"
 done
 
 if [[ $updates ]]
